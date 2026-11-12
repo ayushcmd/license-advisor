@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>License Explorer — GitHub License Advisor</title>
+  <meta name="description" content="Search and inspect 12 verified SPDX open-source licenses with plain-language obligations, official links, and customizable LICENSE generation.">
+  <link rel="icon" type="image/svg+xml" href="assets/logo.svg">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css">
+</head>
+<body data-page="explorer">
+  <a href="#main-content" class="skip-link">Skip to main content</a>
+
+  <header class="site-header">
+    <div class="container site-header-inner">
+      <a href="index.html" class="brand-link">
+        <img src="assets/logo.svg" alt="" class="brand-logo" width="26" height="26">
+        <span>GitHub License Advisor</span>
+      </a>
+      <nav class="site-nav" aria-label="Primary">
+        <a href="index.html" class="nav-link">Overview</a>
+        <a href="explorer.html" class="nav-link" aria-current="page">Explorer</a>
+        <a href="questionnaire.html" class="nav-link">Advisor Wizard</a>
+        <a href="compare.html" class="nav-link">Compare</a>
+        <a href="analyzer.html" class="nav-link">Repo Analyzer</a>
+        <a href="app-install.html" class="nav-link">GitHub App</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main-content" class="container stack-md">
+    <section class="page-header stack-sm">
+      <h1>SPDX License Explorer &amp; Generator</h1>
+      <p>
+        Filter verified open-source licenses by reciprocity posture or patent clause, inspect plain-language
+        rights and obligations, and generate a ready-to-commit <code>LICENSE</code> file or source header.
+      </p>
+    </section>
+
+    <section aria-label="Catalog filters" class="filter-bar">
+      <div class="form-group" style="flex: 1 1 220px;">
+        <label for="explorer-search" class="form-label">Search SPDX Catalog</label>
+        <input id="explorer-search" type="search" class="input" placeholder="Search by ID, name, or keyword (e.g. Apache, patent, network)...">
+      </div>
+      <div class="form-group" style="flex: 0 1 200px;">
+        <label for="explorer-category" class="form-label">Category</label>
+        <select id="explorer-category" class="select">
+          <option value="all">All categories (12)</option>
+          <option value="permissive">Permissive</option>
+          <option value="weak-copyleft">Weak Copyleft</option>
+          <option value="strong-copyleft">Strong Copyleft</option>
+          <option value="network-copyleft">Network Copyleft</option>
+          <option value="public-domain">Public Domain</option>
+        </select>
+      </div>
+      <div class="form-group" style="padding-top: 22px;">
+        <label class="option-row" style="margin:0;background:#fff;">
+          <input id="explorer-patent" type="checkbox">
+          <span>Explicit patent grant only</span>
+        </label>
+      </div>
+    </section>
+
+    <p id="explorer-count" class="text-small text-muted" aria-live="polite"></p>
+
+    <div class="sidebar-layout">
+      <section aria-label="Matching licenses" id="explorer-list" class="stack-sm"></section>
+      <section aria-label="Selected license details" id="explorer-detail" class="stack-md" aria-live="polite"></section>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container cluster-between">
+      <span>GitHub License Advisor &middot; MIT Licensed &middot; Informational only, not legal advice.</span>
+      <nav class="footer-links" aria-label="Footer">
+        <a href="app-install.html">GitHub App</a>
+        <a href="privacy.html">Privacy Policy</a>
+        <a href="support.html">Support</a>
+        <a href="https://github.com/ayushcmd/license-advisor" target="_blank" rel="noopener noreferrer">GitHub Repo</a>
+      </nav>
+    </div>
+  </footer>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
+
