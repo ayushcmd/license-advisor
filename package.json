@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "Database-free open-source license recommendation engine, GitHub repository analyzer, and automated GitHub App pull request advisor.",
   "type": "module",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "main": "src/server.js",
   "engines": {
     "node": ">=20.0.0"

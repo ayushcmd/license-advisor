@@ -9,7 +9,7 @@
 [![GitHub Marketplace](https://img.shields.io/badge/GitHub%20Marketplace-Open%20License%20Advisor-2DA44E?style=flat-square&logo=github&logoColor=white)](https://github.com/marketplace/open-license-advisor)
 [![GitHub App](https://img.shields.io/badge/GitHub%20App-open--license--advisor-0969DA?style=flat-square&logo=github&logoColor=white)](https://github.com/apps/open-license-advisor)
 [![Live Web App](https://img.shields.io/badge/Live%20App-license--advisor.onrender.com-24292F?style=flat-square&logo=render&logoColor=white)](https://license-advisor.onrender.com)
-[![License: MIT](https://img.shields.io/badge/License-MIT-0969DA?style=flat-square&logo=opensourceinitiative&logoColor=white)](./LICENSE)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg?style=flat-square)](./LICENSE)
 [![Node.js](https://img.shields.io/badge/Node.js-%3E%3D20.0.0-2DA44E?style=flat-square&logo=nodedotjs&logoColor=white)](https://nodejs.org/)
 
 <p>
@@ -63,7 +63,7 @@
 | **API Health Check** | [license-advisor.onrender.com/api/health](https://license-advisor.onrender.com/api/health) | Live JSON status, configuration flags, and catalog count |
 | **Privacy Policy** | [license-advisor.onrender.com/privacy.html](https://license-advisor.onrender.com/privacy.html) | Zero-persistence data handling and privacy commitments |
 | **Support & Help** | [license-advisor.onrender.com/support.html](https://license-advisor.onrender.com/support.html) | User support channels and troubleshooting references |
-| **Source Repository** | [github.com/ayushcmd/license-advisor](https://github.com/ayushcmd/license-advisor) | Full MIT-licensed source code, tests, and documentation |
+| **Source Repository** | [github.com/ayushcmd/license-advisor](https://github.com/ayushcmd/license-advisor) | Full Apache-2.0-licensed source code, tests, and documentation |
 
 ---
 
@@ -230,7 +230,7 @@ Available npm scripts:
 
 ---
 
-## Developer, Maintainer & Licensing
+## Developer & Maintainer
 
 Built and maintained by **Ayush Raj** (`@ayushcmd`).
 
@@ -238,8 +238,15 @@ Built and maintained by **Ayush Raj** (`@ayushcmd`).
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-Ayush%20Raj-0A66C2?style=flat-square&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/ayushcmd)
 [![Email](https://img.shields.io/badge/Email-ayush__24a12res897%40iitp.ac.in-0969DA?style=flat-square&logo=gmail&logoColor=white)](mailto:ayush_24a12res897@iitp.ac.in)
 
-### Attribution & License
+---
 
-- **Project License:** Released under the [MIT License](./LICENSE) (`Copyright (c) 2026 ayushcmd`).
+## License & Attribution
+
+- **Project License:** Released under the **[Apache License 2.0](./LICENSE)** (`SPDX-License-Identifier: Apache-2.0`), `Copyright 2026 Ayush Raj (@ayushcmd)`.
+- **Attribution & `NOTICE` Preservation:** Under Section 4 of the Apache License 2.0, downstream distributions and derivative works must:
+  1. Include a copy of the root **[LICENSE](./LICENSE)** file.
+  2. Retain all copyright, patent, trademark, and attribution notices from the source work.
+  3. Preserve the attribution credit to **Ayush Raj (`@ayushcmd`)** in the root **[NOTICE](./NOTICE)** file (`Open License Advisor`, `Copyright 2026 Ayush Raj`).
+  4. Carry prominent notices stating any modifications in changed files.
 - **SPDX Attribution:** Standard SPDX identifiers and canonical license texts follow the [SPDX License List](https://spdx.org/licenses/) (SPDX License List Data is licensed under `CC0-1.0`).
 - **Disclaimer:** Open License Advisor provides structured technical summaries based on SPDX metadata and deterministic policy rules. It does not constitute formal legal advice; consult qualified legal counsel for jurisdiction-specific or commercial compliance reviews.
