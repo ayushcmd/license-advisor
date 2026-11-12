@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GitHub App &amp; Automated PR Guide — GitHub License Advisor</title>
+  <meta name="description" content="Least-privilege GitHub App installation, HMAC webhook verification, automated LICENSE pull request workflow, and Marketplace documentation.">
+  <link rel="icon" type="image/svg+xml" href="assets/logo.svg">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css">
+</head>
+<body data-page="app-install">
+  <a href="#main-content" class="skip-link">Skip to main content</a>
+
+  <header class="site-header">
+    <div class="container site-header-inner">
+      <a href="index.html" class="brand-link">
+        <img src="assets/logo.svg" alt="" class="brand-logo" width="26" height="26">
+        <span>GitHub License Advisor</span>
+      </a>
+      <nav class="site-nav" aria-label="Primary">
+        <a href="index.html" class="nav-link">Overview</a>
+        <a href="explorer.html" class="nav-link">Explorer</a>
+        <a href="questionnaire.html" class="nav-link">Advisor Wizard</a>
+        <a href="compare.html" class="nav-link">Compare</a>
+        <a href="analyzer.html" class="nav-link">Repo Analyzer</a>
+        <a href="app-install.html" class="nav-link" aria-current="page">GitHub App</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main-content" class="container stack-lg">
+    <section class="page-header stack-sm">
+      <div class="cluster">
+        <span class="badge badge-success">Free Tier</span>
+        <span class="badge badge-info">Least Privilege</span>
+      </div>
+      <h1>GitHub App Setup &amp; Automated Pull Request Workflow</h1>
+      <p>
+        Approve adding a verified <code>LICENSE</code> file to your repository via an isolated feature
+        branch and an explanatory pull request—never pushing directly to your default branch.
+      </p>
+    </section>
+
+    <div id="server-status-banner" class="flash flash-info" aria-live="polite">
+      Static preview mode: automated PR submission activates when running behind the Node.js GitHub App server (Phases 4–5).
+    </div>
+
+    <div class="wizard-layout">
+      <section class="box" aria-labelledby="pr-form-heading">
+        <div class="box-header">
+          <h2 id="pr-form-heading" class="box-title">Configure License Pull Request</h2>
+        </div>
+        <div class="box-body stack-md">
+          <div class="form-group">
+            <label for="pr-repo" class="form-label">Installed GitHub Repository</label>
+            <input id="pr-repo" type="text" class="input" placeholder="owner/repository">
+            <span class="form-help">The GitHub App must be installed on this repository.</span>
+          </div>
+
+          <div class="form-group">
+            <label for="pr-license" class="form-label">SPDX License</label>
+            <select id="pr-license" class="select"></select>
+          </div>
+
+          <div class="grid-2">
+            <div class="form-group">
+              <label for="pr-year" class="form-label">Copyright Year</label>
+              <input id="pr-year" type="text" class="input" placeholder="2026">
+            </div>
+            <div class="form-group">
+              <label for="pr-holder" class="form-label">Copyright Holder</label>
+              <input id="pr-holder" type="text" class="input" placeholder="Your Name or Org">
+            </div>
+          </div>
+
+          <div class="cluster">
+            <button id="pr-trigger-btn" type="button" class="btn btn-primary" disabled>
+              Create License Pull Request
+            </button>
+            <a href="questionnaire.html" class="btn btn-secondary">Pick License in Wizard</a>
+          </div>
+          <div id="pr-trigger-status" class="flash flash-info" hidden aria-live="polite"></div>
+        </div>
+      </section>
+
+      <section class="box" aria-labelledby="pr-preview-heading">
+        <div class="box-header">
+          <h2 id="pr-preview-heading" class="box-title">Automated PR Preview</h2>
+        </div>
+        <div class="box-body stack-sm">
+          <div class="text-small">
+            <strong>Branch:</strong> <code id="pr-branch-preview">add-license-mit</code>
+          </div>
+          <div class="text-small">
+            <strong>PR Title:</strong> <span id="pr-title-preview">Add MIT LICENSE</span>
+          </div>
+          <div class="form-label">Pull Request Description</div>
+          <pre id="pr-body-preview" class="license-preview"></pre>
+        </div>
+      </section>
+    </div>
+
+    <section aria-labelledby="permissions-heading" class="box">
+      <div class="box-header">
+        <h2 id="permissions-heading" class="box-title">Least-Privilege GitHub App Permissions &amp; Security</h2>
+      </div>
+      <div class="box-body stack-md">
+        <div class="table-scroll">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th scope="col">Permission</th>
+                <th scope="col">Access Level</th>
+                <th scope="col">Purpose</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row">Metadata</th>
+                <td>Read-only</td>
+                <td>Verify repository existence, default branch, and installation visibility.</td>
+              </tr>
+              <tr>
+                <th scope="row">Contents</th>
+                <td>Read &amp; write</td>
+                <td>Detect existing <code>LICENSE</code> files, create a feature branch, and commit <code>LICENSE</code>.</td>
+              </tr>
+              <tr>
+                <th scope="row">Pull requests</th>
+                <td>Read &amp; write</td>
+                <td>Open a reviewable pull request explaining permissions, conditions, and limitations.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <ul class="text-small text-muted">
+          <li>Every incoming webhook payload is verified using <code>X-Hub-Signature-256</code> HMAC SHA-256 validation.</li>
+          <li>Duplicate webhook delivery IDs are safely ignored without database persistence.</li>
+          <li>GitHub License Advisor operates on a completely free plan tier with zero telemetry tracking.</li>
+        </ul>
+
+        <div class="cluster text-small">
+          <a href="privacy.html">Read Privacy Policy</a>
+          <span>&middot;</span>
+          <a href="support.html">Support &amp; Troubleshooting</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container cluster-between">
+      <span>GitHub License Advisor &middot; MIT Licensed &middot; Informational only, not legal advice.</span>
+      <nav class="footer-links" aria-label="Footer">
+        <a href="app-install.html">GitHub App</a>
+        <a href="privacy.html">Privacy Policy</a>
+        <a href="support.html">Support</a>
+        <a href="https://github.com/ayushcmd/license-advisor" target="_blank" rel="noopener noreferrer">GitHub Repo</a>
+      </nav>
+    </div>
+  </footer>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
+

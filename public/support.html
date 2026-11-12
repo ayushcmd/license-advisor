@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Support &amp; Troubleshooting — GitHub License Advisor</title>
+  <meta name="description" content="Support documentation, troubleshooting tips, and maintainer contact details for GitHub License Advisor.">
+  <link rel="icon" type="image/svg+xml" href="assets/logo.svg">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css">
+</head>
+<body data-page="support">
+  <a href="#main-content" class="skip-link">Skip to main content</a>
+
+  <header class="site-header">
+    <div class="container site-header-inner">
+      <a href="index.html" class="brand-link">
+        <img src="assets/logo.svg" alt="" class="brand-logo" width="26" height="26">
+        <span>GitHub License Advisor</span>
+      </a>
+      <nav class="site-nav" aria-label="Primary">
+        <a href="index.html" class="nav-link">Overview</a>
+        <a href="explorer.html" class="nav-link">Explorer</a>
+        <a href="questionnaire.html" class="nav-link">Advisor Wizard</a>
+        <a href="compare.html" class="nav-link">Compare</a>
+        <a href="analyzer.html" class="nav-link">Repo Analyzer</a>
+        <a href="app-install.html" class="nav-link">GitHub App</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main-content" class="container stack-md">
+    <section class="page-header stack-sm">
+      <h1>Support &amp; Troubleshooting</h1>
+      <p>Answers to common questions about repository analysis, rate limits, and GitHub App pull requests.</p>
+    </section>
+
+    <article class="box">
+      <div class="box-body stack-md">
+        <h2>Common Questions</h2>
+
+        <div>
+          <h3>Why did the Repository Analyzer hit a GitHub rate limit?</h3>
+          <p class="text-muted">
+            Unauthenticated browser requests to <code>api.github.com</code> are capped by GitHub at 60 requests
+            per hour per IP address. Wait for the reset timestamp displayed below the analyzer or run the
+            Node.js backend with GitHub App authentication.
+          </p>
+        </div>
+
+        <div>
+          <h3>Why does the analyzer show "Unrecognized License File"?</h3>
+          <p class="text-muted">
+            GitHub's Licensee detector matches standard SPDX templates. Adding custom header banners, combining
+            two licenses into one file, or editing license clauses can produce <code>NOASSERTION</code>. Use the
+            <a href="explorer.html">License Explorer</a> to generate a verbatim SPDX-compliant <code>LICENSE</code>.
+          </p>
+        </div>
+
+        <div>
+          <h3>Why can't I trigger an automated pull request in static mode?</h3>
+          <p class="text-muted">
+            Opening pull requests securely requires a signed GitHub App JWT and installation token generated on
+            the Node.js server. Never place private keys in client-side code.
+          </p>
+        </div>
+
+        <hr>
+
+        <h2>Get Help</h2>
+        <ul>
+          <li>
+            Report bugs or request SPDX additions on
+            <a href="https://github.com/ayushcmd/license-advisor/issues" target="_blank" rel="noopener noreferrer">GitHub Issues</a>.
+          </li>
+          <li>
+            Direct maintainer email: <a href="mailto:ayush_24a12res897@iitp.ac.in">ayush_24a12res897@iitp.ac.in</a>.
+          </li>
+        </ul>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container cluster-between">
+      <span>GitHub License Advisor &middot; MIT Licensed &middot; Informational only, not legal advice.</span>
+      <nav class="footer-links" aria-label="Footer">
+        <a href="app-install.html">GitHub App</a>
+        <a href="privacy.html">Privacy Policy</a>
+        <a href="support.html">Support</a>
+        <a href="https://github.com/ayushcmd/license-advisor" target="_blank" rel="noopener noreferrer">GitHub Repo</a>
+      </nav>
+    </div>
+  </footer>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
+
