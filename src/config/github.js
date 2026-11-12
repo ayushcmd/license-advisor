@@ -138,6 +138,22 @@ export function createGitHubContext(env = process.env, options = {}) {
       return app.getInstallationOctokit(numericId);
     },
 
+    async resolveRepoInstallation(owner, repo) {
+      if (!app) {
+        return { installed: false, installation: null, octokit: null };
+      }
+      try {
+        const { data: installation } = await app.octokit.rest.apps.getRepoInstallation({ owner, repo });
+        const octokit = await this.getInstallationOctokit(installation.id);
+        return { installed: true, installation, octokit };
+      } catch (err) {
+        if (err?.status === 404) {
+          return { installed: false, installation: null, octokit: null };
+        }
+        throw err;
+      }
+    },
+
     createPublicOctokit() {
       return new Octokit(publicToken ? { auth: publicToken } : {});
     }

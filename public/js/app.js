@@ -15,7 +15,7 @@ import {
   resolveLicense
 } from './engine.js';
 import { generateLicensePackage } from './generator.js';
-import { analyzePublicRepository } from './analyzer.js';
+import { analyzePublicRepository, parseRepoInput } from './analyzer.js';
 
 const CATEGORY_BADGE_CLASS = Object.freeze({
   permissive: 'badge-permissive',
@@ -816,7 +816,35 @@ function initAnalyzerPage() {
     if (submitBtn) submitBtn.disabled = true;
 
     try {
-      const report = await analyzePublicRepository(targetRepo);
+      let report = null;
+      if (window.location.protocol.startsWith('http')) {
+        try {
+          const apiRes = await fetch('/api/analyze', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ repo: targetRepo })
+          });
+          const contentType = apiRes.headers.get('content-type') || '';
+          if (contentType.includes('application/json')) {
+            const payload = await apiRes.json();
+            if (!apiRes.ok) {
+              throw new Error(payload.error || `Repository analysis failed (${apiRes.status})`);
+            }
+            report = payload;
+          }
+        } catch (backendErr) {
+          if (backendErr instanceof TypeError) {
+            // Network unreachable when static-only; fall through to browser API call
+          } else {
+            throw backendErr;
+          }
+        }
+      }
+
+      if (!report) {
+        report = await analyzePublicRepository(targetRepo);
+      }
+
       clearNode(resultMount);
 
       const repo = report.repository;
@@ -827,11 +855,16 @@ function initAnalyzerPage() {
             ? el('span', { className: 'badge badge-warning' }, 'Unrecognized License File')
             : el('span', { className: 'badge badge-danger' }, 'No LICENSE Detected');
 
+      const sourceBadge = report.analysisSource === 'github-app-installation'
+        ? el('span', { className: 'badge badge-info' }, 'GitHub App Installation')
+        : el('span', { className: 'badge badge-neutral' }, 'Public REST API');
+
       const repoBox = el('div', { className: 'box' }, [
         el('div', { className: 'box-header' }, [
           el('div', { className: 'cluster' }, [
             el('h2', { className: 'box-title text-mono' }, repo.fullName),
-            statusBadge
+            statusBadge,
+            sourceBadge
           ]),
           isSafeHttpUrl(repo.htmlUrl)
             ? el('a', { className: 'btn btn-secondary btn-sm', href: repo.htmlUrl, target: '_blank', rel: 'noopener noreferrer' }, 'View on GitHub')
@@ -986,6 +1019,7 @@ function initAppInstallPage() {
   const previewTitle = document.getElementById('pr-title-preview');
   const previewBody = document.getElementById('pr-body-preview');
   const serverStatusEl = document.getElementById('server-status-banner');
+  const installAppLink = document.getElementById('install-app-link');
   const triggerBtn = document.getElementById('pr-trigger-btn');
   const triggerStatus = document.getElementById('pr-trigger-status');
 
@@ -1006,9 +1040,9 @@ function initAppInstallPage() {
   function updatePrPreview() {
     const licenseId = licenseSelect.value;
     const explanation = explainLicense(licenseId);
-    const branchSlug = licenseId.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-    if (previewBranch) previewBranch.textContent = `add-license-${branchSlug}`;
-    if (previewTitle) previewTitle.textContent = `Add ${licenseId} LICENSE`;
+    const branchSlug = licenseId.toLowerCase().replace(/[^a-z0-9.-]+/g, '-').replace(/^-+|-+$/g, '');
+    if (previewBranch) previewBranch.textContent = `chore/add-license-${branchSlug}`;
+    if (previewTitle) previewTitle.textContent = `chore: add ${licenseId} LICENSE`;
     if (previewBody && explanation) {
       const canLines = explanation.canDo.map((i) => `- ${i.label}: ${i.description}`).join('\n');
       const mustLines = explanation.mustDo.length
@@ -1017,12 +1051,15 @@ function initAppInstallPage() {
       const limitLines = explanation.cannotDo.map((i) => `- ${i.label}: ${i.description}`).join('\n');
       previewBody.textContent = [
         `## Summary`,
-        `Adds a \`LICENSE\` file under **${explanation.name} (${explanation.id})**.`,
+        `This automated pull request adds a \`LICENSE\` file under **${explanation.name} (\`${explanation.id}\`)**.`,
         ``,
-        `### Policy Highlights`,
-        `- **Copyleft:** ${explanation.policyHighlights.copyleftObligation}`,
-        `- **Patents:** ${explanation.policyHighlights.patentClause}`,
-        `- **Network Trigger:** ${explanation.policyHighlights.networkUseTrigger}`,
+        explanation.plainSummary,
+        ``,
+        `### Key Policy Highlights`,
+        `- **Copyleft Obligation:** ${explanation.policyHighlights.copyleftObligation}`,
+        `- **Patent Clause:** ${explanation.policyHighlights.patentClause}`,
+        `- **Network-Use Trigger:** ${explanation.policyHighlights.networkUseTrigger}`,
+        `- **Distribution Rules:** ${explanation.policyHighlights.distributionRequirements}`,
         ``,
         `### Permissions`,
         canLines,
@@ -1031,7 +1068,10 @@ function initAppInstallPage() {
         mustLines,
         ``,
         `### Limitations`,
-        limitLines
+        limitLines,
+        ``,
+        `### Reference`,
+        `- SPDX Specification: ${explanation.sourceUrls.spdx}`
       ].join('\n');
     }
   }
@@ -1041,38 +1081,58 @@ function initAppInstallPage() {
 
   // Probe optional backend endpoint gracefully when served over HTTP(S)
   let backendReady = false;
+  let appConfigured = false;
   if (window.location.protocol.startsWith('http') && serverStatusEl) {
-    fetch('/api/health')
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (data && data.status === 'ok') {
-          backendReady = true;
-          serverStatusEl.className = data.githubAppConfigured ? 'flash flash-success' : 'flash flash-warning';
-          serverStatusEl.textContent = data.githubAppConfigured
-            ? 'Backend server connected and GitHub App credentials are configured for automated PRs.'
-            : 'Backend server connected, but GitHub App credentials (.env) are not configured yet.';
-          if (triggerBtn && data.githubAppConfigured) {
-            triggerBtn.disabled = false;
-          }
+    Promise.all([
+      fetch('/api/health').then((res) => (res.ok ? res.json() : null)).catch(() => null),
+      fetch('/api/config').then((res) => (res.ok ? res.json() : null)).catch(() => null)
+    ]).then(([health, config]) => {
+      if (health && health.status === 'ok') {
+        backendReady = true;
+        appConfigured = Boolean(health.githubAppConfigured);
+        serverStatusEl.className = appConfigured ? 'flash flash-success' : 'flash flash-warning';
+        serverStatusEl.textContent = appConfigured
+          ? 'Backend server connected and GitHub App credentials are configured for automated Pull Requests.'
+          : 'Backend server connected, but GitHub App credentials (.env) are not configured yet.';
+        if (triggerBtn && appConfigured) {
+          triggerBtn.disabled = false;
         }
-      })
-      .catch(() => {
-        // Running statically without Express server — keep default informational notice
-      });
+      }
+      if (installAppLink && config && isSafeHttpUrl(config.installUrl)) {
+        installAppLink.setAttribute('href', config.installUrl);
+        installAppLink.setAttribute('target', '_blank');
+        installAppLink.setAttribute('rel', 'noopener noreferrer');
+        installAppLink.hidden = false;
+      }
+    });
   }
 
   if (triggerBtn && triggerStatus) {
     triggerBtn.addEventListener('click', async () => {
-      if (!backendReady) {
+      if (!backendReady || !appConfigured) {
         triggerStatus.className = 'flash flash-warning';
-        triggerStatus.textContent = 'Automated PR creation requires the Node.js GitHub App backend server (configured in Phases 4–5).';
+        triggerStatus.textContent = 'Automated PR creation requires the Express server with configured GitHub App credentials.';
+        triggerStatus.hidden = false;
+        return;
+      }
+
+      try {
+        parseRepoInput(repoInput?.value || '');
+        generateLicensePackage(licenseSelect.value, {
+          year: yearInput?.value || '',
+          holder: holderInput?.value || '',
+          strict: true
+        });
+      } catch (validationErr) {
+        triggerStatus.className = 'flash flash-error';
+        triggerStatus.textContent = validationErr.message;
         triggerStatus.hidden = false;
         return;
       }
 
       triggerBtn.disabled = true;
       triggerStatus.className = 'flash flash-info';
-      triggerStatus.textContent = 'Submitting automated Pull Request via GitHub App...';
+      triggerStatus.textContent = 'Creating feature branch and opening Pull Request via GitHub App...';
       triggerStatus.hidden = false;
 
       try {
@@ -1092,7 +1152,11 @@ function initAppInstallPage() {
         }
         clearNode(triggerStatus);
         triggerStatus.className = 'flash flash-success';
-        triggerStatus.appendChild(document.createTextNode(`Pull request #${payload.pullNumber} created: `));
+        triggerStatus.appendChild(
+          document.createTextNode(
+            `Pull request #${payload.pullNumber} opened on branch ${payload.branch} -> ${payload.baseBranch}: `
+          )
+        );
         if (isSafeHttpUrl(payload.pullUrl)) {
           triggerStatus.appendChild(
             el('a', { href: payload.pullUrl, target: '_blank', rel: 'noopener noreferrer' }, payload.pullUrl)
