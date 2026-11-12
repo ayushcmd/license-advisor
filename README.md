@@ -1,120 +1,245 @@
-# GitHub License Advisor
+<div align="center">
 
-A lightweight, database-free web application and least-privilege GitHub App that helps developers choose, compare, generate, and add verified SPDX open-source licenses to their repositories via automated pull requests.
+<a href="https://github.com/marketplace/open-license-advisor">
+  <img src="./public/assets/banner.svg" alt="Open License Advisor Banner" width="100%">
+</a>
 
-## Core Features
+<br>
 
-- **Policy-First Recommendations:** Never guesses licenses from programming languages. Evaluates permissions, distribution obligations, copyleft scope, explicit patent grants/retaliation, non-endorsement clauses, network-use triggers (`AGPL-3.0-only`), and inbound dependency compatibility.
-- **12 Verified OSI-Approved SPDX Licenses:** Complete official texts, permissions, conditions, limitations, and plain-language guides for `MIT`, `ISC`, `BSD-2-Clause`, `BSD-3-Clause`, `Apache-2.0`, `MPL-2.0`, `EPL-2.0`, `LGPL-3.0-only`, `GPL-2.0-only`, `GPL-3.0-only`, `AGPL-3.0-only`, and `Unlicense`.
-- **Side-by-Side Comparison & Compatibility Checker:** Compare up to 4 licenses across 12 policy dimensions and audit inbound dependency conflicts (`compatible`, `conditional`, `incompatible`).
-- **Live Repository Analyzer:** Inspect public repositories (and GitHub App-installed private repositories via `POST /api/analyze`) for existing `LICENSE` files, `NOTICE` files, and dependency manifests.
-- **Customizable LICENSE & Header Generator:** Populate copyright year/holder templates cleanly and export `LICENSE` files or per-file SPDX headers.
-- **Automated GitHub App PR Workflow:** Creates an isolated feature branch (`chore/add-license-<spdx>`), refuses (`409 Conflict`) to overwrite an existing license file, commits `LICENSE`, and opens an explanatory Pull Request.
-- **GitHub Native Minimal UI:** Built strictly with semantic HTML5, pure vanilla CSS (`public/css/base.css`, `components.css`), and ES6 modules with zero build step or external databases.
+[![GitHub Marketplace](https://img.shields.io/badge/GitHub%20Marketplace-Open%20License%20Advisor-2DA44E?style=flat-square&logo=github&logoColor=white)](https://github.com/marketplace/open-license-advisor)
+[![GitHub App](https://img.shields.io/badge/GitHub%20App-open--license--advisor-0969DA?style=flat-square&logo=github&logoColor=white)](https://github.com/apps/open-license-advisor)
+[![Live Web App](https://img.shields.io/badge/Live%20App-license--advisor.onrender.com-24292F?style=flat-square&logo=render&logoColor=white)](https://license-advisor.onrender.com)
+[![License: MIT](https://img.shields.io/badge/License-MIT-0969DA?style=flat-square&logo=opensourceinitiative&logoColor=white)](./LICENSE)
+[![Node.js](https://img.shields.io/badge/Node.js-%3E%3D20.0.0-2DA44E?style=flat-square&logo=nodedotjs&logoColor=white)](https://nodejs.org/)
 
-## Project Structure
+<p>
+  <a href="https://license-advisor.onrender.com"><strong>Launch Web App</strong></a>
+  &nbsp;&middot;&nbsp;
+  <a href="https://github.com/apps/open-license-advisor"><strong>Install GitHub App</strong></a>
+  &nbsp;&middot;&nbsp;
+  <a href="https://github.com/marketplace/open-license-advisor"><strong>Marketplace Listing</strong></a>
+  &nbsp;&middot;&nbsp;
+  <a href="https://license-advisor.onrender.com/app-install.html"><strong>Automated PR Flow</strong></a>
+  &nbsp;&middot;&nbsp;
+  <a href="#local-development--self-hosting"><strong>Self-Host</strong></a>
+</p>
 
-```text
-license-advisor/
-├── public/                     # Static vanilla HTML5, CSS, assets, and shared ES6 modules
-│   ├── index.html              # Overview & policy-first guide
-│   ├── explorer.html           # Searchable 12-license SPDX catalog & generator
-│   ├── questionnaire.html      # Interactive recommendation wizard + dependency filter
-│   ├── compare.html            # Side-by-side matrix & compatibility checker
-│   ├── analyzer.html           # On-demand GitHub repository analyzer
-│   ├── app-install.html        # GitHub App setup & automated PR trigger UI
-│   ├── privacy.html            # Privacy policy (Marketplace URL)
-│   ├── support.html            # Support & troubleshooting (Marketplace URL)
-│   ├── assets/
-│   │   ├── logo.svg            # Crisp vector brand icon
-│   │   └── logo-200x200.png    # 200x200 px PNG icon for GitHub Marketplace
-│   ├── css/
-│   │   ├── base.css            # GitHub Primer light tokens, typography, layout
-│   │   └── components.css      # Buttons, boxes, badges, tables, alerts, forms
-│   └── js/
-│       ├── catalog-data.js     # Verified SPDX license metadata & official texts
-│       ├── engine.js           # Deterministic policy & compatibility engine
-│       ├── generator.js        # Copyright template & SPDX header formatter
-│       ├── analyzer.js         # GitHub REST API client & root tree auditor
-│       └── app.js              # XSS-safe UI coordinator
-├── src/                        # Express.js & Octokit backend
-│   ├── config/github.js        # PEM key loader & @octokit/app setup
-│   ├── routes/
-│   │   ├── api.js              # REST API endpoints
-│   │   └── webhooks.js         # HMAC SHA-256 webhook receiver
-│   ├── services/
-│   │   ├── licenseService.js   # Backend validation & repo audit orchestration
-│   │   └── prService.js        # Feature branch, commit & PR generator
-│   └── server.js               # Helmet CSP, CORS, raw webhook & static server
-├── docs/                       # Architecture, dev, setup, Marketplace & security guides
-├── tests/                      # Native node:test unit & HTTP integration suites
-├── .env.example
-├── LICENSE
-└── package.json
+</div>
+
+---
+
+## Purpose & Why Open License Advisor
+
+<table>
+  <tr>
+    <td width="128" align="center" valign="middle">
+      <a href="https://github.com/marketplace/open-license-advisor">
+        <img src="./public/assets/logo.svg" alt="Open License Advisor Logo" width="96">
+      </a>
+    </td>
+    <td valign="middle">
+      <strong>Open License Advisor</strong> (<code>open-license-advisor[bot]</code>) is a deterministic open-source license recommendation tool, repository license inspector, and least-privilege GitHub App. It evaluates project requirements against <strong>12 OSI-approved and FSF-libre SPDX licenses</strong>, inspects existing repositories for license files, and opens clean, isolated Pull Requests on <code>chore/add-license-&lt;spdx&gt;</code> without overwriting existing licenses or storing repository code.
+    </td>
+  </tr>
+</table>
+
+### Key Engineering Principles
+
+- **Deterministic Policy Engine:** Recommendations, compatibility checks, and plain-language permission/condition/limitation summaries are driven by rule-based logic in shared ES modules (`public/js/catalog-data.js`, `public/js/engine.js`, `public/js/generator.js`), eliminating black-box variance.
+- **Non-Destructive GitHub App Automation:** Checks whether `LICENSE` or `LICENSE.md` already exists on the repository default branch and aborts with HTTP `409 Conflict` if present; otherwise commits to an isolated `chore/add-license-<spdx-lower>` branch and opens a documented Pull Request.
+- **Stateless & Database-Free:** Runs with zero external database dependencies, using bounded in-memory webhook replay deduplication and strict Helmet Content Security Policy (CSP) headers.
+- **Single Source of Truth:** Frontend vanilla HTML/JS pages and Node.js Express services import the exact same SPDX catalog, engine, and template generator modules.
+
+---
+
+## Public URLs & Live Endpoints Directory
+
+| Resource | Public URL | Description |
+| :--- | :--- | :--- |
+| **GitHub Marketplace Listing** | [github.com/marketplace/open-license-advisor](https://github.com/marketplace/open-license-advisor) | Official GitHub Marketplace Free plan listing |
+| **GitHub App Installation** | [github.com/apps/open-license-advisor](https://github.com/apps/open-license-advisor) | Install `open-license-advisor[bot]` on personal or org repositories |
+| **Live Web Application** | [license-advisor.onrender.com](https://license-advisor.onrender.com) | Main web advisor, explorer, questionnaire, and comparison UI |
+| **Automated PR UI** | [license-advisor.onrender.com/app-install.html](https://license-advisor.onrender.com/app-install.html) | Web interface to trigger and preview automated `LICENSE` Pull Requests |
+| **API Health Check** | [license-advisor.onrender.com/api/health](https://license-advisor.onrender.com/api/health) | Live JSON status, configuration flags, and catalog count |
+| **Privacy Policy** | [license-advisor.onrender.com/privacy.html](https://license-advisor.onrender.com/privacy.html) | Zero-persistence data handling and privacy commitments |
+| **Support & Help** | [license-advisor.onrender.com/support.html](https://license-advisor.onrender.com/support.html) | User support channels and troubleshooting references |
+| **Source Repository** | [github.com/ayushcmd/license-advisor](https://github.com/ayushcmd/license-advisor) | Full MIT-licensed source code, tests, and documentation |
+
+---
+
+## How It Works
+
+<div align="center">
+  <img src="./public/assets/workflow.svg" alt="Open License Advisor 4-Stage Architecture Workflow" width="100%">
+</div>
+
+1. **Stage 1 — Policy Evaluation:** Developers answer clear licensing questions (commercial use, patent grant expectations, copyleft boundary, and network SaaS obligations). The deterministic engine scores and ranks matching SPDX licenses with transparent rules.
+2. **Stage 2 — Repository Audit:** Before generating changes, the analyzer inspects `owner/repo` via the GitHub API (public API or installed `@octokit/app` installation token) to check the default branch for an existing `LICENSE` or `LICENSE.md` file.
+3. **Stage 3 — Isolated Branch:** If no license exists, `prService` exchanges the App private key for a short-lived installation token and creates a dedicated feature branch (`chore/add-license-<spdx-lower>`), leaving the repository default branch untouched.
+4. **Stage 4 — Pull Request Review:** `generator.js` formats the verified SPDX license text with the specified copyright year and holder, commits `LICENSE` via the GitHub Contents API, and opens a Pull Request summarizing permissions, conditions, limitations, and the official SPDX identifier.
+
+---
+
+## Detailed How-To-Use Guide
+
+### Workflow 1: Interactive License Exploration, Questionnaire & Comparison
+
+1. Open **[license-advisor.onrender.com](https://license-advisor.onrender.com)** (or your local instance at `http://localhost:3000`).
+2. Browse all 12 curated licenses in **`explorer.html`** to inspect permissions, conditions, limitations, patent grants, and network-use triggers.
+3. Complete the guided policy assessment in **`questionnaire.html`** to receive ranked recommendations tailored to your project goals.
+4. Open **`compare.html`** to evaluate multiple candidate licenses side by side, customize copyright year and holder fields, and preview or download the generated `LICENSE` file.
+
+### Workflow 2: On-Demand Repository Inspection
+
+1. Open **`analyzer.html`** (or invoke `POST /api/analyze` directly).
+2. Enter any target repository as `owner/repo` (or full GitHub URL).
+3. Inspect the repository's default branch status to verify whether a `LICENSE` or `LICENSE.md` file is already present before requesting a Pull Request.
+
+```bash
+curl -s -X POST https://license-advisor.onrender.com/api/analyze \
+  -H "Content-Type: application/json" \
+  -d '{"repo":"ayushcmd/license-advisor"}'
 ```
 
-## Quick Start
+### Workflow 3: Automated Pull Request Creation via GitHub App
 
-1. **Install dependencies** (requires Node.js `>=20.0.0`):
-   ```bash
-   npm install
-   ```
-2. **Configure environment variables** (optional for static UI/public analysis; required for automated PRs and webhooks):
-   ```bash
-   cp .env.example .env
-   ```
-3. **Run tests & syntax verification:**
-   ```bash
-   npm test
-   npm run lint:syntax
-   ```
-4. **Start the server:**
-   ```bash
-   npm start
-   # or with watch mode during development:
-   npm run dev
-   ```
-   Open [http://localhost:3000](http://localhost:3000).
+1. Install **Open License Advisor** from **[github.com/apps/open-license-advisor](https://github.com/apps/open-license-advisor)** (or the **[GitHub Marketplace](https://github.com/marketplace/open-license-advisor)**) and grant access to one or more repositories.
+2. Open **[license-advisor.onrender.com/app-install.html](https://license-advisor.onrender.com/app-install.html)** (or invoke `POST /api/trigger-pr`).
+3. Provide the target `owner/repo`, choose your SPDX license identifier (e.g., `MIT` or `Apache-2.0`), copyright year, and copyright holder name.
+4. Submit to create `chore/add-license-<spdx-lower>` and open a ready-to-review Pull Request—or receive a safe `409 Conflict` warning if the repository is already licensed.
 
-## Environment Variables
+```bash
+curl -s -X POST https://license-advisor.onrender.com/api/trigger-pr \
+  -H "Content-Type: application/json" \
+  -d '{"repo":"owner/repo","licenseId":"MIT","year":"2026","holder":"Your Name"}'
+```
 
-| Variable | Required | Default | Purpose |
+### REST API & Shared Module Reference
+
+| Endpoint | Method | Purpose | Request / Notes |
 | :--- | :--- | :--- | :--- |
-| `PORT` | No | `3000` | HTTP server port |
-| `NODE_ENV` | No | `development` | Node runtime mode |
-| `APP_URL` | No | `http://localhost:3000` | Public base URL of the app |
-| `ALLOWED_ORIGINS` | No | `APP_URL` | Comma-separated CORS allowed origins |
-| `GITHUB_APP_ID` | For App/PRs | — | Numeric GitHub App ID |
-| `GITHUB_APP_SLUG` | No | `github-license-advisor` | App URL slug for install links |
-| `GITHUB_WEBHOOK_SECRET` | For Webhooks | — | HMAC SHA-256 webhook secret |
-| `GITHUB_PRIVATE_KEY_PATH` | For App/PRs* | — | Path to local `.pem` private key |
-| `GITHUB_PRIVATE_KEY` | For App/PRs* | — | Inline PEM key with `\n` escapes (alternative to path) |
-| `GITHUB_PUBLIC_TOKEN` | No | — | Optional token for higher public REST rate limits |
-| `WEBHOOK_PROXY_URL` | No | — | Optional `smee.io` proxy URL for local dev |
+| `/api/health` | `GET` | Health & readiness check | Returns `{ status, service, mode, timestamp, githubAppConfigured, webhookConfigured, catalogCount }` |
+| `/api/config` | `GET` | Public App configuration | Returns App slug, install URL, `planTier`, `supportedPermissions`, `spdxCatalogVersion`, and `licenseCount` |
+| `/api/recommend` | `POST` | Deterministic recommendation | Validates questionnaire policy payload and returns ranked SPDX recommendations |
+| `/api/analyze` | `POST` | Repository license inspection | Body: `{ "repo": "owner/repo" }` — works on public repos and App-installed private repos |
+| `/api/trigger-pr` | `POST` | Automated `LICENSE` Pull Request | Body: `{ "repo", "licenseId", "year", "holder" }` — returns HTTP `201` with PR URL/number or `409` if licensed |
+| `/api/webhooks` | `POST` | Signed GitHub App webhook intake | Verifies `X-Hub-Signature-256` on raw body; handles `ping`, `installation`, `installation_repositories`, `repository` |
 
-*\*Provide either `GITHUB_PRIVATE_KEY_PATH` or `GITHUB_PRIVATE_KEY` when enabling the GitHub App.*
+> **Note on Catalog & Comparison:** Full SPDX catalog inspection (`public/js/catalog-data.js`) and side-by-side comparison logic (`compareLicenses` in `public/js/engine.js`) execute directly via shared ES6 modules with zero server round-trips required.
 
-## API & Webhook Endpoints
+---
 
-| Method & Path | Purpose |
-| :--- | :--- |
-| `GET /api/health` | Service readiness, database-free mode, and App/webhook configuration status |
-| `GET /api/config` | Public non-secret metadata (`appSlug`, `installUrl`, `planTier`, permissions, SPDX version) |
-| `POST /api/recommend` | Deterministic policy recommendation from criteria and `dependencyLicenses` |
-| `POST /api/analyze` | Server-side inspection of public or App-installed private repositories (`{ "repo": "owner/repo" }`) |
-| `POST /api/trigger-pr` | Creates feature branch, commits `LICENSE`, and opens PR (`{ "repo", "licenseId", "year", "holder" }`) |
-| `POST /api/webhooks` | Receives signed `ping`, `installation`, `installation_repositories`, and `repository` webhooks |
+## Core Features & Verified SPDX Catalog
 
-## Documentation
+- **12 Verified SPDX Licenses:** Curated set covering permissive, weak-copyleft, strong-copyleft, network-copyleft, and public-domain dedication models.
+- **Template Placeholder Injection:** Accurately populates copyright `[year]` and `[fullname]` / holder lines across official SPDX license bodies (`generator.js`).
+- **GitHub-Native Accessible UI:** High-contrast light theme (`#FFFFFF` / `#24292F` / `#0969DA` / `#1F883D`), keyboard navigable controls, and zero third-party analytics trackers.
+- **Compatibility Guidance:** Highlights patent-grant differences, file- vs. library- vs. work-level copyleft boundaries, and AGPL network triggers.
 
-- [Architecture Overview](docs/ARCHITECTURE.md)
-- [Local Development & `smee.io` Webhook Guide](docs/DEVELOPMENT.md)
-- [GitHub App Registration Guide](docs/GITHUB_APP_SETUP.md)
-- [GitHub Marketplace Listing Checklist](docs/MARKETPLACE_GUIDELINES.md)
-- [Security Policy & Threat Controls](docs/SECURITY.md)
+### Verified SPDX License Matrix
 
-## Attribution & License
+| SPDX Identifier | Official Name | Category | Copyleft Strength / Scope | Patent Grant | Network Use Trigger |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `MIT` | MIT License | `permissive` | `none` / `none` | `none` | `false` |
+| `ISC` | ISC License | `permissive` | `none` / `none` | `none` | `false` |
+| `BSD-2-Clause` | BSD 2-Clause "Simplified" License | `permissive` | `none` / `none` | `none` | `false` |
+| `BSD-3-Clause` | BSD 3-Clause "New" or "Revised" License | `permissive` | `none` / `none` | `none` | `false` |
+| `Apache-2.0` | Apache License 2.0 | `permissive` | `none` / `none` | `explicit` | `false` |
+| `MPL-2.0` | Mozilla Public License 2.0 | `weak-copyleft` | `weak` / `file` | `explicit` | `false` |
+| `EPL-2.0` | Eclipse Public License 2.0 | `weak-copyleft` | `weak` / `module` | `explicit` | `false` |
+| `LGPL-3.0-only` | GNU Lesser General Public License v3.0 only | `weak-copyleft` | `weak` / `library` | `explicit` | `false` |
+| `GPL-2.0-only` | GNU General Public License v2.0 only | `strong-copyleft` | `strong` / `work` | `none` | `false` |
+| `GPL-3.0-only` | GNU General Public License v3.0 only | `strong-copyleft` | `strong` / `work` | `explicit` | `false` |
+| `AGPL-3.0-only` | GNU Affero General Public License v3.0 only | `network-copyleft` | `network` / `network` | `explicit` | `true` |
+| `Unlicense` | The Unlicense | `public-domain` | `none` / `none` | `none` | `false` |
 
-- **Project License:** Licensed under the [MIT License](LICENSE) (`Copyright (c) 2026 ayushcmd`).
-- **SPDX License Data:** Official license texts and SPDX metadata in `public/js/catalog-data.js` are sourced from [spdx/license-list-data](https://github.com/spdx/license-list-data) (CC0-1.0).
-- **Disclaimer:** All licensing explanations and recommendations are educational and informational only and do not constitute formal legal advice.
+---
+
+## Security, Privacy & Least-Privilege Model
+
+### GitHub App Permissions
+
+Open License Advisor requests only the minimum permissions required to inspect repository licensing state and open Pull Requests:
+
+| Permission Scope | Access Level | Justification |
+| :--- | :--- | :--- |
+| **Metadata** | Read-only | Resolve repository default branch and basic repository metadata |
+| **Contents** | Read & write | Check for existing `LICENSE` / `LICENSE.md`, create `chore/add-license-*` branch, and commit `LICENSE` |
+| **Pull requests** | Read & write | Open documented Pull Requests referencing the generated branch |
+
+### Defense-in-Depth Safeguards
+
+- **Raw-Body HMAC-SHA256 Webhook Verification:** `src/server.js` preserves the raw request buffer for `/api/webhooks` so `@octokit/webhooks` strictly validates `X-Hub-Signature-256` before any payload is processed.
+- **Replay & Duplicate Delivery Protection:** Tracks `X-GitHub-Delivery` UUIDs to prevent duplicate handling of replayed webhook deliveries.
+- **Default-Branch Overwrite Prevention:** Never commits directly to `main` or the configured default branch; detects `LICENSE` or `LICENSE.md` beforehand and aborts safely with HTTP `409 Conflict`.
+- **Zero-Secret & Zero-Code Persistence:** No database stores source files, access tokens, or repository snapshots. Private keys remain strictly in environment variables or untracked `.pem` files excluded by `.gitignore`.
+- **Strict Content Security Policy:** Configured via `helmet` allowing only self-hosted styles and scripts.
+
+For full threat modeling and architecture notes, read [docs/SECURITY.md](./docs/SECURITY.md) and [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md).
+
+---
+
+## Local Development & Self-Hosting
+
+### Prerequisites
+
+- **Node.js `>=20.0.0`** (verified with Node.js v24 LTS; see `package.json`)
+- **npm**
+
+### Quick Start
+
+```bash
+git clone https://github.com/ayushcmd/license-advisor.git
+cd license-advisor
+npm install
+cp .env.example .env
+npm test
+npm start
+```
+
+Available npm scripts:
+
+- `npm start` — Start the Express server (`src/server.js`)
+- `npm run dev` — Run with Node file-watch mode (`node --watch src/server.js`)
+- `npm test` — Execute the native `node:test` unit and integration suite (`tests/*.test.js`)
+- `npm run lint:syntax` — Validate JavaScript module syntax across `src/` and `public/js/`
+
+### Environment Variables (`.env.example`)
+
+| Variable | Required | Default / Example | Description |
+| :--- | :--- | :--- | :--- |
+| `PORT` | No | `3000` | HTTP port bound by Express |
+| `NODE_ENV` | No | `development` | Runtime mode (`development` or `production`) |
+| `APP_URL` | No | `http://localhost:3000` | Public base URL used in config metadata and CORS defaults |
+| `ALLOWED_ORIGINS` | No | *(empty)* | Comma-separated additional allowed CORS origins |
+| `GITHUB_APP_ID` | For App PRs | *(empty)* | Numeric GitHub App ID for `@octokit/app` authentication |
+| `GITHUB_APP_SLUG` | No | `license-advisor` | Public GitHub App URL slug |
+| `GITHUB_WEBHOOK_SECRET` | For Webhooks | *(empty)* | Shared HMAC-SHA256 webhook secret (`X-Hub-Signature-256`) |
+| `GITHUB_PRIVATE_KEY_PATH` | Optional | *(empty)* | Filesystem path to GitHub App `.pem` private key |
+| `GITHUB_PRIVATE_KEY` | Optional | *(empty)* | Inline PEM private key (use `\n` escapes in single-line env vars) |
+| `GITHUB_PUBLIC_TOKEN` | No | *(empty)* | Optional token to raise rate limits on public repo inspection |
+| `WEBHOOK_PROXY_URL` | No | *(empty)* | Optional `smee.io` proxy URL for local webhook forwarding |
+
+### Project Documentation Guides
+
+- [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) — Database-free modular architecture and shared ES module design
+- [docs/DEVELOPMENT.md](./docs/DEVELOPMENT.md) — Local environment setup, test execution, and `smee.io` webhook forwarding
+- [docs/GITHUB_APP_SETUP.md](./docs/GITHUB_APP_SETUP.md) — Registering the GitHub App, least-privilege permissions, and `.pem` setup
+- [docs/MARKETPLACE_GUIDELINES.md](./docs/MARKETPLACE_GUIDELINES.md) — GitHub Marketplace submission checklist and Free plan compliance
+- [docs/SECURITY.md](./docs/SECURITY.md) — Security architecture, HMAC verification, CSP policy, and secret hygiene
+
+---
+
+## Developer, Maintainer & Licensing
+
+Built and maintained by **Ayush Raj** (`@ayushcmd`).
+
+[![GitHub](https://img.shields.io/badge/GitHub-%40ayushcmd-24292F?style=flat-square&logo=github&logoColor=white)](https://github.com/ayushcmd)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-Ayush%20Raj-0A66C2?style=flat-square&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/ayushcmd)
+[![Email](https://img.shields.io/badge/Email-ayush__24a12res897%40iitp.ac.in-0969DA?style=flat-square&logo=gmail&logoColor=white)](mailto:ayush_24a12res897@iitp.ac.in)
+
+### Attribution & License
+
+- **Project License:** Released under the [MIT License](./LICENSE) (`Copyright (c) 2026 ayushcmd`).
+- **SPDX Attribution:** Standard SPDX identifiers and canonical license texts follow the [SPDX License List](https://spdx.org/licenses/) (SPDX License List Data is licensed under `CC0-1.0`).
+- **Disclaimer:** Open License Advisor provides structured technical summaries based on SPDX metadata and deterministic policy rules. It does not constitute formal legal advice; consult qualified legal counsel for jurisdiction-specific or commercial compliance reviews.
