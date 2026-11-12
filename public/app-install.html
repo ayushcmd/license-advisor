@@ -31,10 +31,6 @@
 
   <main id="main-content" class="container stack-lg">
     <section class="page-header stack-sm">
-      <div class="cluster">
-        <span class="badge badge-success">Free Tier</span>
-        <span class="badge badge-info">Least Privilege</span>
-      </div>
       <h1>GitHub App Setup &amp; Automated Pull Request Workflow</h1>
       <p>
         Approve adding a verified <code>LICENSE</code> file to your repository via an isolated feature
@@ -42,9 +38,7 @@
       </p>
     </section>
 
-    <div id="server-status-banner" class="flash flash-info" aria-live="polite">
-      Static preview mode: run the Node.js Express server with GitHub App credentials in <code>.env</code> to enable automated Pull Requests.
-    </div>
+    <div id="server-status-banner" class="flash flash-error" aria-live="polite" hidden></div>
 
     <div class="wizard-layout">
       <section class="box" aria-labelledby="pr-form-heading">
@@ -76,7 +70,7 @@
           </div>
 
           <div class="cluster">
-            <button id="pr-trigger-btn" type="button" class="btn btn-primary" disabled>
+            <button id="pr-trigger-btn" type="button" class="btn btn-primary">
               Create License Pull Request
             </button>
             <a href="questionnaire.html" class="btn btn-secondary">Pick License in Wizard</a>

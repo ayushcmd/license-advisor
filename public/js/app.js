@@ -5,7 +5,7 @@
  * construction (never interpolating untrusted inputs into innerHTML).
  */
 
-import { LICENSE_CATALOG, SPDX_DATA_VERSION, getLicenseById } from './catalog-data.js';
+import { LICENSE_CATALOG, getLicenseById } from './catalog-data.js';
 import {
   RECOMMENDATION_CRITERIA_SCHEMA,
   checkCompatibility,
@@ -300,11 +300,6 @@ function markActiveNav() {
    Page 1: Overview (index.html)
    ========================================================================== */
 function initHomePage() {
-  const versionTarget = document.getElementById('spdx-version-label');
-  if (versionTarget) {
-    versionTarget.textContent = `SPDX License List ${SPDX_DATA_VERSION}`;
-  }
-
   const quickGrid = document.getElementById('home-catalog-preview');
   if (!quickGrid) return;
 
@@ -812,7 +807,7 @@ function initAnalyzerPage() {
 
   async function runAnalysis(targetRepo) {
     clearNode(resultMount);
-    resultMount.appendChild(el('div', { className: 'flash flash-info' }, `Inspecting ${targetRepo} via GitHub REST API...`));
+    resultMount.appendChild(el('div', { className: 'flash flash-info' }, `Inspecting ${targetRepo}...`));
     if (submitBtn) submitBtn.disabled = true;
 
     try {
@@ -855,16 +850,11 @@ function initAnalyzerPage() {
             ? el('span', { className: 'badge badge-warning' }, 'Unrecognized License File')
             : el('span', { className: 'badge badge-danger' }, 'No LICENSE Detected');
 
-      const sourceBadge = report.analysisSource === 'github-app-installation'
-        ? el('span', { className: 'badge badge-info' }, 'GitHub App Installation')
-        : el('span', { className: 'badge badge-neutral' }, 'Public REST API');
-
       const repoBox = el('div', { className: 'box' }, [
         el('div', { className: 'box-header' }, [
           el('div', { className: 'cluster' }, [
             el('h2', { className: 'box-title text-mono' }, repo.fullName),
-            statusBadge,
-            sourceBadge
+            statusBadge
           ]),
           isSafeHttpUrl(repo.htmlUrl)
             ? el('a', { className: 'btn btn-secondary btn-sm', href: repo.htmlUrl, target: '_blank', rel: 'noopener noreferrer' }, 'View on GitHub')
@@ -958,9 +948,12 @@ function initAnalyzerPage() {
       ]);
       resultMount.appendChild(actionBar);
 
-      if (report.rateLimit && report.rateLimit.remaining !== null) {
+      if (report.rateLimit && report.rateLimit.remaining === 0) {
+        const resetHint = report.rateLimit.resetAt
+          ? ` Resets at ${new Date(report.rateLimit.resetAt).toLocaleTimeString()}.`
+          : '';
         resultMount.appendChild(
-          el('p', { className: 'text-small text-muted' }, `GitHub REST API rate limit remaining: ${report.rateLimit.remaining} / ${report.rateLimit.limit || 60}`)
+          el('div', { className: 'flash flash-warning' }, `GitHub API rate limit reached (0 / ${report.rateLimit.limit || 60} requests remaining).${resetHint}`)
         );
       }
     } catch (err) {
@@ -1079,25 +1072,32 @@ function initAppInstallPage() {
   licenseSelect.addEventListener('change', updatePrPreview);
   updatePrPreview();
 
-  // Probe optional backend endpoint gracefully when served over HTTP(S)
+  // Check backend availability quietly; surface errors only on actual failure or user action
   let backendReady = false;
   let appConfigured = false;
-  if (window.location.protocol.startsWith('http') && serverStatusEl) {
-    Promise.all([
-      fetch('/api/health').then((res) => (res.ok ? res.json() : null)).catch(() => null),
-      fetch('/api/config').then((res) => (res.ok ? res.json() : null)).catch(() => null)
-    ]).then(([health, config]) => {
-      if (health && health.status === 'ok') {
+  let statusProbe = Promise.resolve();
+  if (window.location.protocol.startsWith('http')) {
+    statusProbe = Promise.all([
+      fetch('/api/health')
+        .then(async (res) => (res.ok ? { ok: true, data: await res.json().catch(() => null) } : { ok: false, status: res.status }))
+        .catch((err) => ({ ok: false, networkError: err })),
+      fetch('/api/config')
+        .then((res) => (res.ok ? res.json().catch(() => null) : null))
+        .catch(() => null)
+    ]).then(([healthResult, config]) => {
+      if (healthResult.ok && healthResult.data?.status === 'ok') {
         backendReady = true;
-        appConfigured = Boolean(health.githubAppConfigured);
-        serverStatusEl.className = appConfigured ? 'flash flash-success' : 'flash flash-warning';
-        serverStatusEl.textContent = appConfigured
-          ? 'Backend server connected and GitHub App credentials are configured for automated Pull Requests.'
-          : 'Backend server connected, but GitHub App credentials (.env) are not configured yet.';
-        if (triggerBtn && appConfigured) {
-          triggerBtn.disabled = false;
+        appConfigured = Boolean(healthResult.data.githubAppConfigured);
+        if (serverStatusEl) {
+          serverStatusEl.hidden = true;
+          serverStatusEl.textContent = '';
         }
+      } else if (serverStatusEl && (healthResult.networkError || (healthResult.status && healthResult.status >= 500))) {
+        serverStatusEl.className = 'flash flash-error';
+        serverStatusEl.textContent = 'Unable to reach the automated PR backend service. Please try again shortly.';
+        serverStatusEl.hidden = false;
       }
+
       if (installAppLink && config && isSafeHttpUrl(config.installUrl)) {
         installAppLink.setAttribute('href', config.installUrl);
         installAppLink.setAttribute('target', '_blank');
@@ -1109,9 +1109,13 @@ function initAppInstallPage() {
 
   if (triggerBtn && triggerStatus) {
     triggerBtn.addEventListener('click', async () => {
+      await statusProbe;
+
       if (!backendReady || !appConfigured) {
         triggerStatus.className = 'flash flash-warning';
-        triggerStatus.textContent = 'Automated PR creation requires the Express server with configured GitHub App credentials.';
+        triggerStatus.textContent = backendReady
+          ? 'Automated Pull Requests require GitHub App credentials configured on the server.'
+          : 'Automated PR creation requires the Express server with configured GitHub App credentials.';
         triggerStatus.hidden = false;
         return;
       }
@@ -1146,7 +1150,7 @@ function initAppInstallPage() {
             holder: holderInput?.value || ''
           })
         });
-        const payload = await res.json();
+        const payload = await res.json().catch(() => ({}));
         if (!res.ok) {
           throw new Error(payload.error || `Request failed (${res.status})`);
         }
