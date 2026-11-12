@@ -1,0 +1,39 @@
+{
+  "name": "license-advisor",
+  "version": "0.1.0",
+  "description": "Database-free open-source license recommendation engine, GitHub repository analyzer, and automated GitHub App pull request advisor.",
+  "type": "module",
+  "main": "src/server.js",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "test": "node --test tests/*.test.js",
+    "lint:syntax": "node -e \"import('node:fs').then(({readdirSync,statSync})=>{const walk=d=>readdirSync(d).flatMap(f=>{const p=d+'/'+f;return f==='node_modules'||f==='.git'?[]:statSync(p).isDirectory()?walk(p):p.endsWith('.js')?[p]:[]});console.log('JS files found:',walk('.').length);})\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ayushcmd/license-advisor.git"
+  },
+  "keywords": [
+    "github-app",
+    "open-source",
+    "licensing",
+    "spdx",
+    "license-advisor",
+    "github-marketplace"
+  ],
+  "author": "ayushcmd <ayush_24a12res897@iitp.ac.in>",
+  "dependencies": {
+    "@octokit/app": "^16.1.4",
+    "@octokit/rest": "^22.0.1",
+    "@octokit/webhooks": "^14.2.0",
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.10",
+    "express": "^5.3.0",
+    "helmet": "^8.3.0"
+  }
+}
+
