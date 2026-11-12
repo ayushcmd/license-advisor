@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 220" width="1100" height="220" role="img" aria-labelledby="workflowTitle workflowDesc">
+  <title id="workflowTitle">Open License Advisor 4-Stage Architecture Workflow</title>
+  <desc id="workflowDesc">Horizontal diagram depicting Policy Evaluation, Repository Audit, Isolated Branch creation, and Pull Request Review.</desc>
+
+  <!-- Outer container -->
+  <rect x="1" y="1" width="1098" height="218" rx="12" fill="#FFFFFF" stroke="#D0D7DE" stroke-width="2" />
+
+  <!-- Stage 1: Policy Evaluation -->
+  <g>
+    <rect x="34" y="34" width="228" height="152" rx="10" fill="#FFFFFF" stroke="#D0D7DE" stroke-width="2" />
+    <rect x="34" y="34" width="228" height="6" rx="3" fill="#24292F" />
+    <text x="52" y="70" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" font-weight="700" fill="#24292F">1. Policy Evaluation</text>
+    <text x="52" y="98" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" fill="#57606A">Inputs: Distribution,</text>
+    <text x="52" y="118" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" fill="#57606A">Copyleft, Patents, and</text>
+    <text x="52" y="138" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" fill="#57606A">Network-Use triggers</text>
+    <rect x="52" y="154" width="128" height="20" rx="10" fill="#F6F8FA" stroke="#D0D7DE" stroke-width="1" />
+    <text x="116" y="168" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" fill="#24292F">Language-Agnostic</text>
+  </g>
+
+  <!-- Arrow 1 -> 2 -->
+  <line x1="266" y1="110" x2="290" y2="110" stroke="#2DA44E" stroke-width="3" />
+  <polygon points="288,103 300,110 288,117" fill="#2DA44E" />
+
+  <!-- Stage 2: Repository Audit -->
+  <g>
+    <rect x="302" y="34" width="228" height="152" rx="10" fill="#FFFFFF" stroke="#D0D7DE" stroke-width="2" />
+    <rect x="302" y="34" width="228" height="6" rx="3" fill="#0969DA" />
+    <text x="320" y="70" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" font-weight="700" fill="#24292F">2. Repository Audit</text>
+    <text x="320" y="98" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" fill="#57606A">Checks LICENSE, NOTICE,</text>
+    <text x="320" y="118" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" fill="#57606A">&amp; dependency manifests</text>
+    <text x="320" y="138" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" fill="#57606A">via GitHub REST API</text>
+    <rect x="320" y="154" width="126" height="20" rx="10" fill="#DDF4FF" stroke="#54AEFF" stroke-width="1" />
+    <text x="383" y="168" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" fill="#0969DA">Stateless Lookup</text>
+  </g>
+
+  <!-- Arrow 2 -> 3 -->
+  <line x1="534" y1="110" x2="558" y2="110" stroke="#2DA44E" stroke-width="3" />
+  <polygon points="556,103 568,110 556,117" fill="#2DA44E" />
+
+  <!-- Stage 3: Isolated Branch -->
+  <g>
+    <rect x="570" y="34" width="228" height="152" rx="10" fill="#FFFFFF" stroke="#D0D7DE" stroke-width="2" />
+    <rect x="570" y="34" width="228" height="6" rx="3" fill="#24292F" />
+    <text x="588" y="70" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" font-weight="700" fill="#24292F">3. Isolated Branch</text>
+    <text x="588" y="98" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" fill="#57606A">Creates branch</text>
+    <text x="588" y="118" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12" fill="#0969DA">chore/add-license-&lt;spdx&gt;</text>
+    <text x="588" y="138" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" fill="#57606A">Aborts 409 if LICENSE exists</text>
+    <rect x="588" y="154" width="144" height="20" rx="10" fill="#F6F8FA" stroke="#D0D7DE" stroke-width="1" />
+    <text x="660" y="168" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" fill="#24292F">Default Branch Safe</text>
+  </g>
+
+  <!-- Arrow 3 -> 4 -->
+  <line x1="802" y1="110" x2="826" y2="110" stroke="#2DA44E" stroke-width="3" />
+  <polygon points="824,103 836,110 824,117" fill="#2DA44E" />
+
+  <!-- Stage 4: Pull Request Review -->
+  <g>
+    <rect x="838" y="34" width="228" height="152" rx="10" fill="#FFFFFF" stroke="#2DA44E" stroke-width="2" />
+    <rect x="838" y="34" width="228" height="6" rx="3" fill="#2DA44E" />
+    <text x="856" y="70" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" font-weight="700" fill="#24292F">4. Pull Request Review</text>
+    <text x="856" y="98" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" fill="#57606A">Opens formatted PR via</text>
+    <text x="856" y="118" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12" fill="#2DA44E">open-license-advisor[bot]</text>
+    <text x="856" y="138" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" fill="#57606A">for maintainer merge</text>
+    <rect x="856" y="154" width="136" height="20" rx="10" fill="#DAFBE1" stroke="#4AC26B" stroke-width="1" />
+    <text x="924" y="168" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" fill="#1A7F37">Human Merge Control</text>
+  </g>
+</svg>
+
