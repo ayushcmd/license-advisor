@@ -26,6 +26,10 @@ function createMockInstallationOctokit(overrides = {}) {
   const octokit = {
     rest: {
       repos: {
+        getReadme: async (params) => {
+          if (overrides.onReadReadme) return overrides.onReadReadme(params);
+          return { data: { type: 'file', path: 'README.md', sha: 'readme-sha', encoding: 'base64', content: Buffer.from('# Demo\n\nOriginal content.\n').toString('base64') } };
+        },
         get: async () => ({
           data: {
             full_name: 'ayushcmd/demo-app',
@@ -185,6 +189,52 @@ describe('Backend License Validation Service', () => {
 });
 
 describe('Automated Pull Request Service (prService.js)', () => {
+  it('adds README mentions on the same PR branch for every placement', async () => {
+    for (const readmePlacement of ['top', 'bottom', 'both']) {
+      const { octokit, calls } = createMockInstallationOctokit({
+        onReadReadme: async (params) => {
+          assert.equal(params.ref, 'base-sha-main-999');
+          return { data: { type: 'file', path: 'docs/Readme.md', sha: 'readme-sha', encoding: 'base64', content: Buffer.from('# Demo\n').toString('base64') } };
+        }
+      });
+      await createLicensePullRequest({ repo: 'ayushcmd/demo-app', licenseId: 'Apache-2.0', holder: 'XYZ', readmePlacement, githubContext: createMockGitHubContext({ octokit }) });
+      assert.equal(calls.createOrUpdateFileContents.length, 2);
+      const [license, readme] = calls.createOrUpdateFileContents;
+      assert.equal(readme.branch, license.branch);
+      assert.equal(readme.path, 'docs/Readme.md');
+      assert.equal(readme.sha, 'readme-sha');
+      const text = Buffer.from(readme.content, 'base64').toString('utf8');
+      assert.ok(text.includes('# Demo\n'));
+      assert.ok(text.includes('(../LICENSE)'));
+      assert.equal(text.includes('img.shields.io'), readmePlacement !== 'bottom');
+      assert.equal(text.includes('## License'), readmePlacement !== 'top');
+      assert.match(calls.pullsCreate[0].body, /docs\/Readme.md/);
+    }
+  });
+
+  it('creates a missing README and does not open a PR if its write fails', async () => {
+    const { octokit, calls } = createMockInstallationOctokit({
+      onReadReadme: async () => { const err = new Error('Missing'); err.status = 404; throw err; },
+      onCreateFile: async (params) => {
+        if (params.path === 'README.md') { assert.equal(params.sha, undefined); throw new Error('Write failed'); }
+        return { data: { commit: { sha: 'license-commit' } } };
+      }
+    });
+    await assert.rejects(createLicensePullRequest({ repo: 'ayushcmd/demo-app', licenseId: 'MIT', holder: 'XYZ', readmePlacement: 'bottom', githubContext: createMockGitHubContext({ octokit }) }), (err) => err.code === 'README_WRITE_FAILED');
+    assert.equal(calls.pullsCreate.length, 0);
+  });
+
+  it('rejects unsupported or unreadable READMEs before creating a branch', async () => {
+    for (const onReadReadme of [
+      async () => ({ data: { path: 'README.rst', type: 'file' } }),
+      async () => { throw new Error('Network failure'); }
+    ]) {
+      const { octokit, calls } = createMockInstallationOctokit({ onReadReadme });
+      await assert.rejects(createLicensePullRequest({ repo: 'ayushcmd/demo-app', licenseId: 'MIT', holder: 'XYZ', readmePlacement: 'both', githubContext: createMockGitHubContext({ octokit }) }), (err) => ['UNSUPPORTED_README', 'README_READ_FAILED'].includes(err.code));
+      assert.equal(calls.createRef.length, 0);
+    }
+    await assert.rejects(createLicensePullRequest({ readmePlacement: 'bad' }), (err) => err.code === 'INVALID_INPUT');
+  });
   it('replaces an existing MIT license with Apache in place on a separate branch', async () => {
     for (const path of ['LICENSE', 'LICENSE.md', 'COPYING']) {
       const { octokit, calls } = createMockInstallationOctokit({
@@ -446,10 +496,13 @@ describe('HTTP Integration: POST /api/analyze & POST /api/trigger-pr', () => {
     assert.equal((await send(payload)).status, 409);
     assert.equal(calls.createRef.length, 0);
     assert.equal((await send({ ...payload, replaceExisting: 'true' })).status, 400);
-    const response = await send({ ...payload, replaceExisting: true });
+    const response = await send({ ...payload, replaceExisting: true, readmePlacement: 'both' });
     assert.equal(response.status, 201);
     assert.equal((await response.json()).branch, 'chore/replace-license-apache-2.0');
     assert.equal(calls.createOrUpdateFileContents[0].path, 'LICENSE.md');
+    const readme = calls.createOrUpdateFileContents[1];
+    assert.equal(readme.path, 'README.md');
+    assert.match(Buffer.from(readme.content, 'base64').toString('utf8'), /\]\(LICENSE.md\)/);
   });
 
   it('executes /api/analyze and /api/trigger-pr end-to-end over HTTP with accurate status codes', async () => {

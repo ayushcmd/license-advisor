@@ -15,6 +15,7 @@ import {
   resolveLicense
 } from './engine.js';
 import { generateLicensePackage } from './generator.js';
+import { licenseReadmeSnippets } from './readme.js';
 import { analyzePublicRepository, parseRepoInput } from './analyzer.js';
 
 const CATEGORY_BADGE_CLASS = Object.freeze({
@@ -1065,6 +1066,7 @@ function initAppInstallPage() {
   const holderInput = document.getElementById('pr-holder');
   const yearInput = document.getElementById('pr-year');
   const actionSelect = document.getElementById('pr-action');
+  const readmeSelect = document.getElementById('pr-readme');
   const previewBranch = document.getElementById('pr-branch-preview');
   const previewTitle = document.getElementById('pr-title-preview');
   const previewBody = document.getElementById('pr-body-preview');
@@ -1088,6 +1090,14 @@ function initAppInstallPage() {
   if (yearInput && !yearInput.value) yearInput.value = String(new Date().getFullYear());
 
   function updatePrPreview() {
+    const readmePlacement = readmeSelect?.value || 'none';
+    const selectedLicense = getLicenseById(licenseSelect.value);
+    const readmePreview = document.getElementById('pr-readme-preview');
+    if (readmePreview && selectedLicense) {
+      const snippets = licenseReadmeSnippets(selectedLicense);
+      readmePreview.textContent = readmePlacement === 'none' ? 'README will not be changed.'
+        : readmePlacement === 'both' ? `${snippets.top}\n\n… existing README …\n\n${snippets.bottom}` : snippets[readmePlacement];
+    }
     const copyrightPreview = document.getElementById('pr-copyright-preview');
     if (copyrightPreview) copyrightPreview.textContent = licenseSelect.value === 'Unlicense'
       ? 'Public-domain dedication · no copyright notice'
@@ -1109,6 +1119,7 @@ function initAppInstallPage() {
         action === 'replace'
           ? `This automated pull request replaces the existing license with **${explanation.name} (\`${explanation.id}\`)**. Review the license diff before merging.`
           : `This automated pull request adds a \`LICENSE\` file under **${explanation.name} (\`${explanation.id}\`)**.`,
+        readmePlacement === 'none' ? 'README will not be changed.' : `Also adds a license mention to the repository README (${readmePlacement}). Existing license wording is preserved for review.`,
         ``,
         explanation.plainSummary,
         ``,
@@ -1135,6 +1146,7 @@ function initAppInstallPage() {
 
   licenseSelect.addEventListener('change', updatePrPreview);
   actionSelect?.addEventListener('change', updatePrPreview);
+  readmeSelect?.addEventListener('change', updatePrPreview);
   holderInput?.addEventListener('input', updatePrPreview);
   yearInput?.addEventListener('input', updatePrPreview);
   updatePrPreview();
@@ -1215,7 +1227,8 @@ function initAppInstallPage() {
             licenseId: licenseSelect.value,
             year: yearInput?.value || '',
             holder: holderInput?.value || '',
-            replaceExisting: actionSelect?.value === 'replace'
+            replaceExisting: actionSelect?.value === 'replace',
+            readmePlacement: readmeSelect?.value || 'none'
           })
         });
         const payload = await res.json().catch(() => ({}));

@@ -64,6 +64,17 @@
             <span id="pr-action-help" class="form-help">Replacement updates the existing license file in a PR. Review the changes before merging.</span>
           </div>
 
+          <div class="form-group">
+            <label for="pr-readme" class="form-label">Mention in README</label>
+            <select id="pr-readme" class="select" aria-describedby="pr-readme-help">
+              <option value="bottom">Bottom — short license section</option>
+              <option value="top">Top — license badge</option>
+              <option value="both">Both — top badge and bottom section</option>
+              <option value="none">Do not change README</option>
+            </select>
+            <span id="pr-readme-help" class="form-help">Included in the same PR. Existing text stays unchanged. A missing README is created; existing license wording should be reviewed.</span>
+          </div>
+
           <div class="grid-2">
             <div class="form-group">
               <label for="pr-year" class="form-label">Copyright Year</label>
@@ -96,7 +107,9 @@
           <div class="text-small">
             <strong>PR Title:</strong> <span id="pr-title-preview">chore: add MIT LICENSE</span>
           </div>
-          <p id="pr-copyright-preview" class="text-muted"></p><details class="disclosure"><summary>Full PR description</summary><pre id="pr-body-preview" class="license-preview"></pre></details>
+          <p id="pr-copyright-preview" class="text-muted"></p>
+          <details class="disclosure"><summary>README addition preview</summary><pre id="pr-readme-preview" class="license-preview"></pre></details>
+          <details class="disclosure"><summary>Full PR description</summary><pre id="pr-body-preview" class="license-preview"></pre></details>
         </div>
       </section>
     </div>

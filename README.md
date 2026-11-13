@@ -107,6 +107,7 @@ curl -s -X POST https://license-advisor.onrender.com/api/analyze \
 2. Open **[license-advisor.onrender.com/app-install.html](https://license-advisor.onrender.com/app-install.html)** (or invoke `POST /api/trigger-pr`).
 3. Provide the target `owner/repo`, choose your SPDX license identifier (e.g., `MIT` or `Apache-2.0`), copyright year, and copyright holder name.
 4. Choose **Add new license** or **Replace existing license**, then submit to open a ready-to-review Pull Request. Replacement preserves the existing filename (such as `LICENSE.md` or `COPYING`) and updates it only on a feature branch. Review the diff before merging. API clients opt in with `replaceExisting: true`; omitting it keeps existing licenses protected.
+5. Choose where to mention the license in the target repository's README: **bottom** (default in the form), **top badge**, **both**, or **do not change README**. Both file changes are included in the same PR. A missing README is created as `README.md`; existing Markdown READMEs keep their filename and other content. Custom license sections and badges are preserved and flagged for review. Unsupported README formats can be left unchanged by choosing the last option. API clients pass `readmePlacement: "top"`, `"bottom"`, or `"both"`; omitted or `"none"` leaves the README untouched.
 
 ```bash
 curl -s -X POST https://license-advisor.onrender.com/api/trigger-pr \

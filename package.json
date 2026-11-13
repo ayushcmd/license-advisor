@@ -1,6 +1,6 @@
 {
   "name": "license-advisor",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Database-free open-source license recommendation engine, GitHub repository analyzer, and automated GitHub App pull request advisor.",
   "type": "module",
   "license": "Apache-2.0",

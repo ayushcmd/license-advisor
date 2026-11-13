@@ -103,6 +103,7 @@ export function createApiRouter({ githubContext, env = process.env }) {
         year: req.body?.year,
         holder: req.body?.holder,
         replaceExisting: req.body?.replaceExisting,
+        readmePlacement: req.body?.readmePlacement,
         githubContext
       });
       res.status(201).json(result);
