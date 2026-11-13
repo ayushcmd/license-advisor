@@ -9,6 +9,11 @@
 import { Router } from 'express';
 import { CAPABILITIES, getCapability } from '../core/capabilities/registry.js';
 import { listTemplates, generateDocument } from '../modules/community/engine.js';
+import {
+  auditCommunityRepository,
+  previewCommunityPr,
+  createCommunityPullRequest
+} from '../modules/community/communityService.js';
 import { authorizeRepositoryWrite } from '../core/github/authorize.js';
 import { LICENSE_CATALOG, SPDX_DATA_VERSION } from '../../public/js/catalog-data.js';
 import {
@@ -52,8 +57,50 @@ export function createApiRouter({ githubContext, env = process.env, createUserCl
     const capability = getCapability(req.params.id);
     return capability ? res.json(capability) : res.status(404).json({ error: 'Unknown capability.', code: 'UNKNOWN_CAPABILITY' });
   });
-  router.get('/community/templates', (_req, res) => res.json({ templates: listTemplates() }));
+  router.get('/community/templates', (req, res) => {
+    const category = req.query?.category;
+    res.json({ templates: listTemplates(category ? { category } : {}) });
+  });
   router.post('/community/generate', withServiceErrorHandling(async (req, res) => res.json(generateDocument(req.body))));
+  router.post(
+    '/community/analyze',
+    withServiceErrorHandling(async (req, res) => {
+      const repoInput = req.body?.repo;
+      const report = await auditCommunityRepository({ repoInput, githubContext });
+      res.json(report);
+    })
+  );
+  router.post(
+    '/community/preview-pr',
+    withServiceErrorHandling(async (req, res) => {
+      const preview = await previewCommunityPr({
+        repoInput: req.body?.repo,
+        documents: req.body?.documents,
+        replaceExisting: req.body?.replaceExisting,
+        githubContext
+      });
+      res.json(preview);
+    })
+  );
+  router.post(
+    '/community/trigger-pr',
+    withServiceErrorHandling(async (req, res) => {
+      await authorizeRepositoryWrite({
+        authorization: req.get('authorization'),
+        repoInput: req.body?.repo,
+        githubContext,
+        createUserClient
+      });
+      const result = await createCommunityPullRequest({
+        repoInput: req.body?.repo,
+        documents: req.body?.documents,
+        replaceExisting: req.body?.replaceExisting,
+        customBranch: req.body?.branch,
+        githubContext
+      });
+      res.status(201).json(result);
+    })
+  );
 
   router.get('/health', (_req, res) => {
     res.json({

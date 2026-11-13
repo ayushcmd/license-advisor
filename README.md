@@ -12,7 +12,7 @@ Open Workers is a multi-purpose GitHub automation assistant for licensing, commu
 - **Community:** `/community.html` generates `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`, and `SUPPORT.md`. Customize fields, preview Markdown source, copy, or download. No installation is required.
 - **Upcoming:** issue templates, PR templates, repository security checks, documentation tools, issue management, and automation. Community repository writes are not enabled.
 
-## Phase 1�2 architecture
+## Phase 1–2 architecture
 
 The stack remains Node.js 20+, Express 5, and vanilla ES modules, without a database.
 
@@ -137,7 +137,7 @@ Serve through Express rather than opening HTML files directly. Community preview
 | **API Health Check** | [license-advisor.onrender.com/api/health](https://license-advisor.onrender.com/api/health) | Live JSON status, configuration flags, and catalog count |
 | **Privacy Policy** | [license-advisor.onrender.com/privacy.html](https://license-advisor.onrender.com/privacy.html) | Zero-persistence data handling and privacy commitments |
 | **Support & Help** | [license-advisor.onrender.com/support.html](https://license-advisor.onrender.com/support.html) | User support channels and troubleshooting references |
-| **Source Repository** | [github.com/ayushcmd/license-advisor](https://github.com/ayushcmd/license-advisor) | Full Apache-2.0-licensed source code, tests, and documentation |
+| **Source Repository** | [github.com/ayushcmd/open-workers](https://github.com/ayushcmd/open-workers) | Full Apache-2.0-licensed source code, tests, and documentation |
 
 ---
 
@@ -147,10 +147,10 @@ Serve through Express rather than opening HTML files directly. Community preview
   <img src="./public/assets/workflow.svg" alt="Open License Advisor 4-Stage Architecture Workflow" width="100%">
 </div>
 
-1. **Stage 1 — Policy Evaluation:** Developers answer clear licensing questions (commercial use, patent grant expectations, copyleft boundary, and network SaaS obligations). The deterministic engine scores and ranks matching SPDX licenses with transparent rules.
-2. **Stage 2 — Repository Audit:** Before generating changes, the analyzer inspects `owner/repo` via the GitHub API (public API or installed `@octokit/app` installation token) to check the default branch for an existing `LICENSE` or `LICENSE.md` file.
-3. **Stage 3 — Isolated Branch:** If no license exists, `prService` exchanges the App private key for a short-lived installation token and creates a dedicated feature branch (`chore/add-license-<spdx-lower>`), leaving the repository default branch untouched.
-4. **Stage 4 — Pull Request Review:** `generator.js` formats the verified SPDX license text with the specified copyright year and holder, commits `LICENSE` via the GitHub Contents API, and opens a Pull Request summarizing permissions, conditions, limitations, and the official SPDX identifier.
+1. **Stage 1 â€” Policy Evaluation:** Developers answer clear licensing questions (commercial use, patent grant expectations, copyleft boundary, and network SaaS obligations). The deterministic engine scores and ranks matching SPDX licenses with transparent rules.
+2. **Stage 2 â€” Repository Audit:** Before generating changes, the analyzer inspects `owner/repo` via the GitHub API (public API or installed `@octokit/app` installation token) to check the default branch for an existing `LICENSE` or `LICENSE.md` file.
+3. **Stage 3 â€” Isolated Branch:** If no license exists, `prService` exchanges the App private key for a short-lived installation token and creates a dedicated feature branch (`chore/add-license-<spdx-lower>`), leaving the repository default branch untouched.
+4. **Stage 4 â€” Pull Request Review:** `generator.js` formats the verified SPDX license text with the specified copyright year and holder, commits `LICENSE` via the GitHub Contents API, and opens a Pull Request summarizing permissions, conditions, limitations, and the official SPDX identifier.
 
 ---
 
@@ -172,7 +172,7 @@ Serve through Express rather than opening HTML files directly. Community preview
 ```bash
 curl -s -X POST https://license-advisor.onrender.com/api/analyze \
   -H "Content-Type: application/json" \
-  -d '{"repo":"ayushcmd/license-advisor"}'
+  -d '{"repo":"ayushcmd/open-workers"}'
 ```
 
 ### Workflow 3: Automated Pull Request Creation via GitHub App
@@ -197,8 +197,8 @@ curl -s -X POST https://license-advisor.onrender.com/api/trigger-pr \
 | `/api/health` | `GET` | Health & readiness check | Returns `{ status, service, mode, timestamp, githubAppConfigured, webhookConfigured, catalogCount }` |
 | `/api/config` | `GET` | Public App configuration | Returns App slug, install URL, `planTier`, `supportedPermissions`, `spdxCatalogVersion`, and `licenseCount` |
 | `/api/recommend` | `POST` | Deterministic recommendation | Validates questionnaire policy payload and returns ranked SPDX recommendations |
-| `/api/analyze` | `POST` | Repository license inspection | Body: `{ "repo": "owner/repo" }` — works on public repos and App-installed private repos |
-| `/api/trigger-pr` | `POST` | Automated `LICENSE` Pull Request | Body: `{ "repo", "licenseId", "year", "holder" }` — returns HTTP `201` with PR URL/number or `409` if licensed |
+| `/api/analyze` | `POST` | Repository license inspection | Body: `{ "repo": "owner/repo" }` â€” works on public repos and App-installed private repos |
+| `/api/trigger-pr` | `POST` | Automated `LICENSE` Pull Request | Body: `{ "repo", "licenseId", "year", "holder" }` â€” returns HTTP `201` with PR URL/number or `409` if licensed |
 | `/api/webhooks` | `POST` | Signed GitHub App webhook intake | Verifies `X-Hub-Signature-256` on raw body; handles `ping`, `installation`, `installation_repositories`, `repository` |
 
 > **Note on Catalog & Comparison:** Full SPDX catalog inspection (`public/js/catalog-data.js`) and side-by-side comparison logic (`compareLicenses` in `public/js/engine.js`) execute directly via shared ES6 modules with zero server round-trips required.
@@ -265,8 +265,8 @@ For full threat modeling and architecture notes, read [docs/SECURITY.md](./docs/
 ### Quick Start
 
 ```bash
-git clone https://github.com/ayushcmd/license-advisor.git
-cd license-advisor
+git clone https://github.com/ayushcmd/open-workers.git
+cd open-workers
 npm install
 cp .env.example .env
 npm test
@@ -275,10 +275,10 @@ npm start
 
 Available npm scripts:
 
-- `npm start` — Start the Express server (`src/server.js`)
-- `npm run dev` — Run with Node file-watch mode (`node --watch src/server.js`)
-- `npm test` — Execute the native `node:test` unit and integration suite (`tests/*.test.js`)
-- `npm run lint:syntax` — Validate JavaScript module syntax across `src/` and `public/js/`
+- `npm start` â€” Start the Express server (`src/server.js`)
+- `npm run dev` â€” Run with Node file-watch mode (`node --watch src/server.js`)
+- `npm test` â€” Execute the native `node:test` unit and integration suite (`tests/*.test.js`)
+- `npm run lint:syntax` â€” Validate JavaScript module syntax across `src/` and `public/js/`
 
 ### Environment Variables (`.env.example`)
 
@@ -298,11 +298,11 @@ Available npm scripts:
 
 ### Project Documentation Guides
 
-- [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) — Database-free modular architecture and shared ES module design
-- [docs/DEVELOPMENT.md](./docs/DEVELOPMENT.md) — Local environment setup, test execution, and `smee.io` webhook forwarding
-- [docs/GITHUB_APP_SETUP.md](./docs/GITHUB_APP_SETUP.md) — Registering the GitHub App, least-privilege permissions, and `.pem` setup
-- [docs/MARKETPLACE_GUIDELINES.md](./docs/MARKETPLACE_GUIDELINES.md) — GitHub Marketplace submission checklist and Free plan compliance
-- [docs/SECURITY.md](./docs/SECURITY.md) — Security architecture, HMAC verification, CSP policy, and secret hygiene
+- [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) â€” Database-free modular architecture and shared ES module design
+- [docs/DEVELOPMENT.md](./docs/DEVELOPMENT.md) â€” Local environment setup, test execution, and `smee.io` webhook forwarding
+- [docs/GITHUB_APP_SETUP.md](./docs/GITHUB_APP_SETUP.md) â€” Registering the GitHub App, least-privilege permissions, and `.pem` setup
+- [docs/MARKETPLACE_GUIDELINES.md](./docs/MARKETPLACE_GUIDELINES.md) â€” GitHub Marketplace submission checklist and Free plan compliance
+- [docs/SECURITY.md](./docs/SECURITY.md) â€” Security architecture, HMAC verification, CSP policy, and secret hygiene
 
 ---
 

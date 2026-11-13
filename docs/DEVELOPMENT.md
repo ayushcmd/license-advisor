@@ -9,8 +9,8 @@
 ## 2. Initial Setup
 
 ```bash
-git clone https://github.com/ayushcmd/license-advisor.git
-cd license-advisor
+git clone https://github.com/ayushcmd/open-workers.git
+cd open-workers
 npm install
 cp .env.example .env
 ```
