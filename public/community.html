@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Community Documents - Open Workers</title>
-  <meta name="description" content="Generate contribution guidelines, a code of conduct, a security policy, and support documents. Preview, copy, and download Markdown.">
+  <title>Community Standards &amp; Automation — Open Workers</title>
+  <meta name="description" content="Generate community profile documents, configure issue and PR templates, audit repository health, and open consolidated Pull Requests.">
   <link rel="icon" type="image/svg+xml" href="assets/logo.svg">
   <link rel="stylesheet" href="css/base.css">
   <link rel="stylesheet" href="css/components.css">
@@ -36,14 +36,248 @@
   </header>
 
   <main id="main-content" class="container stack-lg">
-    <section class="page-header stack-sm"><h1>Community documents</h1><p>Set clear expectations for contributors and users.</p><p class="text-small text-muted">Preview, copy, and download. No GitHub installation needed. Repository PR integration is planned.</p></section>
-    <div class="form-group"><label for="community-template" class="form-label">Choose a document</label><select id="community-template" class="select" disabled></select></div>
-    <p id="community-warning" class="flash flash-info" hidden>Contributor Covenant 3.0 requires a real, private enforcement contact. Generation is blocked until you provide one.</p>
-    <div class="community-layout">
-      <form id="community-form" class="box box-body stack-md"><p class="text-small text-muted">* Required. Instructions are treated as plain text. Empty optional sections are omitted.</p><div id="community-fields" class="stack-md"></div><button id="community-generate" class="btn btn-primary" type="submit" disabled>Generate Markdown</button></form>
-      <section class="box box-body stack-md" aria-labelledby="community-filename"><h2 id="community-filename">Markdown preview</h2><p class="text-small text-muted">Review the source below before adding it to your project.</p><div class="cluster"><button id="community-copy" class="btn btn-secondary" disabled>Copy</button><button id="community-download" class="btn btn-secondary" disabled>Download .md</button></div><p id="community-status" role="status" aria-live="polite"></p><pre id="community-preview" class="license-preview" tabindex="0">Loading templates�</pre></section>
-    </div>
-    <section class="grid-2" aria-label="Upcoming tools"><article class="card"><span class="eyebrow">Upcoming</span><h2>Issue Templates</h2><code>.github/ISSUE_TEMPLATE/</code><p>Structured bug reports and feature requests.</p></article><article class="card"><span class="eyebrow">Upcoming</span><h2>Pull Request Template</h2><code>.github/PULL_REQUEST_TEMPLATE.md</code><p>Consistent information for reviewers.</p></article></section>
+    <section class="page-header stack-sm">
+      <h1>Community Standards &amp; Automation</h1>
+      <p>Set clear expectations for contributors, maintainers, and security researchers.</p>
+      <nav class="cluster" aria-label="Community quick navigation" style="margin-top: var(--space-2);">
+        <a href="#section-documents" class="btn btn-secondary btn-sm">1. Community Documents</a>
+        <a href="#section-templates" class="btn btn-secondary btn-sm">2. Issue &amp; PR Templates</a>
+        <a href="#section-health" class="btn btn-secondary btn-sm">3. Health Audit</a>
+        <a href="#section-pr" class="btn btn-primary btn-sm">4. Create Community PR</a>
+      </nav>
+    </section>
+
+    <!-- Section 1: Community Documents -->
+    <section id="section-documents" class="stack-md" aria-labelledby="heading-documents">
+      <div class="box-header" style="border-radius: var(--radius-md); border: 1px solid var(--color-border-default);">
+        <div>
+          <h2 id="heading-documents" class="box-title">1. Community Documents</h2>
+          <p class="text-small text-muted">Generate standard repository guidelines: CONTRIBUTING, CODE_OF_CONDUCT, SECURITY, and SUPPORT.</p>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="community-template" class="form-label">Choose a community document</label>
+        <select id="community-template" class="select" disabled></select>
+      </div>
+
+      <p id="community-warning" class="flash flash-info" hidden>
+        Contributor Covenant 3.0 requires a real, private enforcement contact. Generation is blocked until you provide one.
+      </p>
+
+      <div class="community-layout">
+        <form id="community-form" class="box box-body stack-md">
+          <p class="text-small text-muted">* Required. Instructions are treated as plain text. Empty optional sections are omitted.</p>
+          <div id="community-fields" class="stack-md"></div>
+          <button id="community-generate" class="btn btn-primary" type="submit" disabled>Generate Document</button>
+        </form>
+
+        <section class="box box-body stack-md" aria-labelledby="community-filename">
+          <h3 id="community-filename" class="box-title">Markdown preview</h3>
+          <p class="text-small text-muted">Review the generated Markdown before copying or saving.</p>
+          <div class="cluster">
+            <button id="community-copy" class="btn btn-secondary" disabled>Copy Markdown</button>
+            <button id="community-download" class="btn btn-secondary" disabled>Download .md</button>
+          </div>
+          <p id="community-status" role="status" aria-live="polite" class="text-small text-muted"></p>
+          <pre id="community-preview" class="license-preview" tabindex="0">Loading community document templates…</pre>
+        </section>
+      </div>
+    </section>
+
+    <!-- Section 2: Issue & PR Templates -->
+    <section id="section-templates" class="stack-md" aria-labelledby="heading-templates" style="margin-top: var(--space-4);">
+      <div class="box-header" style="border-radius: var(--radius-md); border: 1px solid var(--color-border-default);">
+        <div>
+          <h2 id="heading-templates" class="box-title">2. Issue &amp; Pull Request Templates</h2>
+          <p class="text-small text-muted">Create GitHub issue forms under <code>.github/ISSUE_TEMPLATE/</code> and pull request templates.</p>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="template-select" class="form-label">Choose a template</label>
+        <select id="template-select" class="select" disabled></select>
+      </div>
+
+      <div class="community-layout">
+        <form id="template-form" class="box box-body stack-md">
+          <p class="text-small text-muted">* Required. YAML frontmatter and Markdown sections are validated automatically.</p>
+          <div id="template-fields" class="stack-md"></div>
+          <button id="template-generate" class="btn btn-primary" type="submit" disabled>Generate Template</button>
+        </form>
+
+        <section class="box box-body stack-md" aria-labelledby="template-filename">
+          <h3 id="template-filename" class="box-title">Template preview</h3>
+          <p class="text-small text-muted">Review the generated template with YAML front matter.</p>
+          <div class="cluster">
+            <button id="template-copy" class="btn btn-secondary" disabled>Copy Template</button>
+            <button id="template-download" class="btn btn-secondary" disabled>Download File</button>
+          </div>
+          <p id="template-status" role="status" aria-live="polite" class="text-small text-muted"></p>
+          <pre id="template-preview" class="license-preview" tabindex="0">Loading issue &amp; PR templates…</pre>
+        </section>
+      </div>
+    </section>
+
+    <!-- Section 3: Community Health Audit -->
+    <section id="section-health" class="stack-md" aria-labelledby="heading-health" style="margin-top: var(--space-4);">
+      <div class="box-header" style="border-radius: var(--radius-md); border: 1px solid var(--color-border-default);">
+        <div>
+          <h2 id="heading-health" class="box-title">3. Repository Community Health Audit</h2>
+          <p class="text-small text-muted">Audit standard community documents across root, <code>.github/</code>, and <code>docs/</code> directories.</p>
+        </div>
+      </div>
+
+      <form id="health-form" class="box box-body stack-md">
+        <div class="form-group">
+          <label for="health-repo-input" class="form-label">Target GitHub Repository *</label>
+          <div class="cluster">
+            <input type="text" id="health-repo-input" class="input" style="flex: 1;" placeholder="e.g. facebook/react or https://github.com/owner/project" required>
+            <button type="submit" id="health-submit-btn" class="btn btn-primary">Audit Health</button>
+          </div>
+          <span class="form-help">Works with public repositories and private repositories with the Open Workers GitHub App installed.</span>
+        </div>
+        <p id="health-status" role="status" aria-live="polite" class="text-small text-muted"></p>
+      </form>
+
+      <div id="health-results" class="box box-body stack-md" hidden>
+        <div class="cluster-between">
+          <h3 id="health-repo-title" class="box-title">Health Results</h3>
+          <span id="health-score-badge" class="badge badge-success">Score: 100%</span>
+        </div>
+
+        <div class="stat-grid">
+          <div class="stat-card">
+            <div id="health-stat-score" class="stat-value">0%</div>
+            <div class="stat-label">Community Score</div>
+          </div>
+          <div class="stat-card">
+            <div id="health-stat-present" class="stat-value">0 / 6</div>
+            <div class="stat-label">Standards Present</div>
+          </div>
+          <div class="stat-card">
+            <div id="health-stat-missing" class="stat-value">0 / 6</div>
+            <div class="stat-label">Standards Missing</div>
+          </div>
+        </div>
+
+        <div class="table-scroll">
+          <table class="data-table" id="health-table">
+            <thead>
+              <tr>
+                <th>Standard</th>
+                <th>Status</th>
+                <th>Path</th>
+                <th>Recommendation</th>
+              </tr>
+            </thead>
+            <tbody id="health-tbody"></tbody>
+          </table>
+        </div>
+
+        <div class="cluster" style="margin-top: var(--space-2);">
+          <button type="button" id="health-populate-pr-btn" class="btn btn-secondary btn-sm">Populate Missing Standards in PR Creator</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 4: Create Consolidated Community PR -->
+    <section id="section-pr" class="stack-md" aria-labelledby="heading-pr" style="margin-top: var(--space-4);">
+      <div class="box-header" style="border-radius: var(--radius-md); border: 1px solid var(--color-border-default);">
+        <div>
+          <h2 id="heading-pr" class="box-title">4. Create Consolidated Community PR</h2>
+          <p class="text-small text-muted">Select multiple documents and templates, customize project parameters, preview proposed files, and commit via GitHub App.</p>
+        </div>
+      </div>
+
+      <form id="comm-pr-form" class="box box-body stack-md">
+        <div class="grid-2">
+          <div class="form-group">
+            <label for="comm-pr-repo" class="form-label">Target Repository *</label>
+            <input type="text" id="comm-pr-repo" class="input" placeholder="owner/repo" required>
+            <span class="form-help">The repository where the Pull Request will be opened.</span>
+          </div>
+
+          <div class="form-group">
+            <label for="comm-pr-token" class="form-label">GitHub Personal Access Token *</label>
+            <input type="password" id="comm-pr-token" class="input" placeholder="ghp_..." required autocomplete="off">
+            <span class="form-help">Verified in-memory for repository write authorization; never stored or logged.</span>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="form-group">
+            <label for="comm-pr-project-name" class="form-label">Project / Organization Name</label>
+            <input type="text" id="comm-pr-project-name" class="input" placeholder="e.g. My Project">
+            <span class="form-help">Used as default name across selected documents.</span>
+          </div>
+
+          <div class="form-group">
+            <label for="comm-pr-contact" class="form-label">Security &amp; Conduct Contact Email</label>
+            <input type="text" id="comm-pr-contact" class="input" placeholder="security@example.com">
+            <span class="form-help">Required for Code of Conduct and Security policy generation.</span>
+          </div>
+        </div>
+
+        <fieldset class="form-group" style="border: none; padding: 0;">
+          <legend class="form-label">Select Standards &amp; Templates to Include *</legend>
+          <div class="checkbox-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--space-2); margin-top: var(--space-2);">
+            <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px;">
+              <input type="checkbox" name="doc-select" value="contributing" checked>
+              <span>Contribution Guidelines (<code>CONTRIBUTING.md</code>)</span>
+            </label>
+            <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px;">
+              <input type="checkbox" name="doc-select" value="code-of-conduct">
+              <span>Code of Conduct (<code>CODE_OF_CONDUCT.md</code>)</span>
+            </label>
+            <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px;">
+              <input type="checkbox" name="doc-select" value="security">
+              <span>Security Policy (<code>SECURITY.md</code>)</span>
+            </label>
+            <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px;">
+              <input type="checkbox" name="doc-select" value="support">
+              <span>Support Guidelines (<code>SUPPORT.md</code>)</span>
+            </label>
+            <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px;">
+              <input type="checkbox" name="doc-select" value="issue-bug-report" checked>
+              <span>Bug Report Template (<code>bug_report.md</code>)</span>
+            </label>
+            <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px;">
+              <input type="checkbox" name="doc-select" value="issue-feature-request" checked>
+              <span>Feature Request (<code>feature_request.md</code>)</span>
+            </label>
+            <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px;">
+              <input type="checkbox" name="doc-select" value="issue-documentation">
+              <span>Documentation Issue (<code>documentation.md</code>)</span>
+            </label>
+            <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px;">
+              <input type="checkbox" name="doc-select" value="pull-request-template" checked>
+              <span>Pull Request Template (<code>PULL_REQUEST_TEMPLATE.md</code>)</span>
+            </label>
+          </div>
+        </fieldset>
+
+        <div class="form-group">
+          <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px;">
+            <input type="checkbox" id="comm-pr-replace-existing">
+            <span>Overwrite existing community files if they already exist in the repository</span>
+          </label>
+        </div>
+
+        <div class="cluster">
+          <button type="button" id="comm-pr-preview-btn" class="btn btn-secondary">Preview Proposed PR</button>
+          <button type="submit" id="comm-pr-submit-btn" class="btn btn-primary">Submit Community Pull Request</button>
+        </div>
+
+        <p id="comm-pr-status" role="status" aria-live="polite" class="text-small text-muted"></p>
+
+        <!-- Preview / Result Output -->
+        <div id="comm-pr-output" class="box box-body stack-sm" hidden>
+          <h3 id="comm-pr-output-title" class="box-title">Pull Request Preview</h3>
+          <div id="comm-pr-output-content"></div>
+        </div>
+      </form>
+    </section>
   </main>
 
   <footer class="site-footer">
@@ -53,7 +287,7 @@
         <a href="app-install.html">Create PR</a>
         <a href="privacy.html">Privacy Policy</a>
         <a href="support.html">Support</a>
-        <a href="https://github.com/ayushcmd/license-advisor" target="_blank" rel="noopener noreferrer">GitHub Repo</a>
+        <a href="https://github.com/ayushcmd/open-workers" target="_blank" rel="noopener noreferrer">GitHub Repo</a>
       </nav>
     </div>
   </footer>
