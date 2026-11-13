@@ -313,18 +313,6 @@ function buildGeneratorWidget(licenseId, defaults = {}) {
   return container;
 }
 
-function markActiveNav() {
-  const path = window.location.pathname.split('/').pop() || 'index.html';
-  document.querySelectorAll('.site-nav .nav-link').forEach((link) => {
-    const href = link.getAttribute('href');
-    if (href === path) {
-      link.setAttribute('aria-current', 'page');
-    } else {
-      link.removeAttribute('aria-current');
-    }
-  });
-}
-
 /* ==========================================================================
    Page 1: Overview (index.html)
    ========================================================================== */
@@ -1265,7 +1253,6 @@ function initAppInstallPage() {
    Bootstrap
    ========================================================================== */
 document.addEventListener('DOMContentLoaded', () => {
-  markActiveNav();
   const page = document.body.dataset.page;
   if (page === 'home') initHomePage();
   else if (page === 'explorer') initExplorerPage();
