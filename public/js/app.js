@@ -1219,9 +1219,13 @@ function initAppInstallPage() {
       triggerStatus.hidden = false;
 
       try {
+        const tokenInput = document.getElementById('pr-user-token');
+        const token = tokenInput.value.trim();
+        tokenInput.value = '';
+        if (!token) throw new Error('Enter a GitHub user access token to verify repository write access.');
         const res = await fetch('/api/trigger-pr', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify({
             repo: repoInput?.value || '',
             licenseId: licenseSelect.value,

@@ -549,3 +549,9 @@ body[data-page="app-install"] .wizard-layout > section:last-child { position: st
   #wizard-form { padding: 16px; }
   .box-header, .box-body { padding: 16px; }
 }
+
+.community-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+.community-layout > * { min-width: 0; }
+.community-layout textarea { resize: vertical; min-height: 90px; }
+#community-preview { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 75vh; }
+@media (max-width: 800px) { .community-layout { grid-template-columns: minmax(0, 1fr); } }

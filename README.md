@@ -1,3 +1,77 @@
+# Open Workers
+
+One GitHub App. Multiple Capabilities.
+
+Open Workers is a multi-purpose GitHub automation assistant for licensing, community standards, security policies, documentation, and repository maintenance through recommendations and reviewable pull requests.
+
+**Development expansion:** Phase 1 and Phase 2 add a modular capability registry and community document generators. The production GitHub App and Marketplace listing remain **Open License Advisor**. Repository name, App slug, webhook configuration, Render service, and production URLs are unchanged. Production rebranding is a separate future release.
+
+## Available now
+
+- **Licensing:** explorer, questionnaire, recommendations, comparison, compatibility checks, repository analysis, personalized license text, add/replace license PRs, and README preview/mentions.
+- **Community:** `/community.html` generates `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`, and `SUPPORT.md`. Customize fields, preview Markdown source, copy, or download. No installation is required.
+- **Upcoming:** issue templates, PR templates, repository security checks, documentation tools, issue management, and automation. Community repository writes are not enabled.
+
+## Phase 1–2 architecture
+
+The stack remains Node.js 20+, Express 5, and vanilla ES modules, without a database.
+
+| Location | Responsibility |
+| --- | --- |
+| `public/js/capabilities.js` | Shared immutable capability metadata for frontend and backend |
+| `src/core/capabilities/registry.js` | Backend registry entry point |
+| `src/core/github/authorize.js` | GitHub user identity and repository write-permission verification |
+| `src/core/repository/service.js` | Repository metadata, file reads, existence checks, root listing, and base SHA |
+| `src/core/pullRequests/` | Dedicated branch conflict handling and expected-SHA file commits |
+| `src/modules/community/engine.js` | Versioned schemas, validation, and pure deterministic document generation |
+| `src/modules/community/templates/` | Official Contributor Covenant 3.0 source, including CC BY-SA attribution |
+| `src/services/` and existing shared browser modules | Preserved licensing and README operations |
+
+The licensing orchestrator uses the shared repository, branch, and file helpers. Multiple files may be committed sequentially to one feature branch; the service opens a PR only after requested writes succeed. These are internal services, not unrestricted write endpoints. Existing-file SHAs prevent accidental replacement; open-PR detection prevents duplicate license PRs. Partial failures can leave an isolated branch for review and do not change the default branch. There is no automatic rollback or autonomous retry loop.
+
+## Community API
+
+| Endpoint | Purpose |
+| --- | --- |
+| `GET /api/capabilities` | Six capabilities with status, operations, permissions, and routes |
+| `GET /api/capabilities/:id` | One capability; unknown IDs return 404 `UNKNOWN_CAPABILITY` |
+| `GET /api/community/templates` | Four template schemas, defaults, lengths, versions, output paths |
+| `POST /api/community/generate` | Validate inputs and return `{filename, content, templateId}`; no GitHub access |
+
+Example request:
+
+```json
+{"templateId":"contributing","options":{"projectName":"Example Project","repositoryUrl":"https://github.com/example/project"}}
+```
+
+Other template IDs: `code-of-conduct`, `security`, `support`. Invalid options return HTTP 400 `INVALID_INPUT`; unknown templates return `UNKNOWN_TEMPLATE`. Fields accept plain text, which is escaped for Markdown/HTML. URLs permit HTTP/HTTPS only and reject credentials. Optional empty sections are omitted. No setup commands, support promises, or contact addresses are invented. Conduct requires a private enforcement contact; security requires supported versions and a private reporting contact. Review the generated policy before adopting it.
+
+Contributor Covenant 3.0 is sourced from [the official template](https://www.contributor-covenant.org/version/3/0/code_of_conduct/code_of_conduct.md). Its attribution and [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) notice remain in generated documents; customized conduct documents use that same license. This third-party text is separate from this repository's Apache-2.0 code license.
+
+## Caller authorization and limitations
+
+`POST /api/trigger-pr` now requires `Authorization: Bearer <GitHub user token>`. This is an intentional security tightening: an installed GitHub App does not authorize an anonymous caller to modify a repository.
+
+The UI accepts a user token only for PR creation, clears the input after submission, and never stores it in browser storage. Prefer a fine-grained token scoped to the target repository with read-only Metadata permission. The server verifies identity through GitHub's authenticated-user API, then uses the installation client to check that verified user's **write/admin/maintain** access to the exact target repository. Missing/expired tokens, read/triage access, bot identities, and upstream authorization failures are rejected before writes. Tokens are not persisted or logged by the application; serve over HTTPS and ensure reverse proxies do not log Authorization headers.
+
+This is a manual token flow, not OAuth sign-in. GitHub App user OAuth and consolidated community PRs are future work. Existing licensing success response fields remain compatible; clients must now supply authorization. Community APIs do not accept repository write commands, tokens, or installation IDs. Existing analysis APIs are unchanged; this phase does not expand private repository reading.
+
+The installation still requires Metadata (read), Contents (write), and Pull Requests (write). Webhook HMAC verification, CSP, replacement opt-in, and README preservation remain in place.
+
+## Local preview and validation
+
+```bash
+npm ci
+npm run dev
+# Open http://localhost:3000 or http://127.0.0.1:3000
+npm test
+npm run lint:syntax
+```
+
+Serve through Express rather than opening HTML files directly. Community preview/download and licensing recommendations work without App credentials. Existing environment and deployment instructions below still apply; no Cloudflare migration or hosting changes are included.
+
+---
+
 <div align="center">
 
 <a href="https://github.com/marketplace/open-license-advisor">
@@ -105,12 +179,13 @@ curl -s -X POST https://license-advisor.onrender.com/api/analyze \
 
 1. Install **Open License Advisor** from **[github.com/apps/open-license-advisor](https://github.com/apps/open-license-advisor)** (or the **[GitHub Marketplace](https://github.com/marketplace/open-license-advisor)**) and grant access to one or more repositories.
 2. Open **[license-advisor.onrender.com/app-install.html](https://license-advisor.onrender.com/app-install.html)** (or invoke `POST /api/trigger-pr`).
-3. Provide the target `owner/repo`, choose your SPDX license identifier (e.g., `MIT` or `Apache-2.0`), copyright year, and copyright holder name.
+3. Enter a GitHub user token to verify repository write permission. Provide the target `owner/repo`, choose your SPDX license identifier (e.g., `MIT` or `Apache-2.0`), copyright year, and copyright holder name.
 4. Choose **Add new license** or **Replace existing license**, then submit to open a ready-to-review Pull Request. Replacement preserves the existing filename (such as `LICENSE.md` or `COPYING`) and updates it only on a feature branch. Review the diff before merging. API clients opt in with `replaceExisting: true`; omitting it keeps existing licenses protected.
 5. Choose where to mention the license in the target repository's README: **bottom** (default in the form), **top badge**, **both**, or **do not change README**. Both file changes are included in the same PR. A missing README is created as `README.md`; existing Markdown READMEs keep their filename and other content. Custom license sections and badges are preserved and flagged for review. Unsupported README formats can be left unchanged by choosing the last option. API clients pass `readmePlacement: "top"`, `"bottom"`, or `"both"`; omitted or `"none"` leaves the README untouched.
 
 ```bash
 curl -s -X POST https://license-advisor.onrender.com/api/trigger-pr \
+  -H "Authorization: Bearer $GITHUB_USER_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"repo":"owner/repo","licenseId":"MIT","year":"2026","holder":"Your Name"}'
 ```
