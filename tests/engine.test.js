@@ -315,12 +315,30 @@ describe('License Text & Source Header Generator', () => {
     assert.ok(text.includes('Copyright (c) 2024-2026 Ayush Maintainers'));
   });
 
-  it('preserves verbatim official SPDX texts for full-body licenses', () => {
-    const apacheText = generateLicenseText('Apache-2.0', { year: '2026', holder: 'ayushcmd' });
-    assert.equal(apacheText, getLicenseById('Apache-2.0').licenseText);
+  it('personalizes every copyright license while retaining existing attribution', () => {
+    for (const license of LICENSE_CATALOG.filter((entry) => entry.id !== 'Unlicense')) {
+      const pkg = generateLicensePackage(license.id, { year: '2024-2026', holder: 'XYZ', strict: true });
+      assert.match(pkg.content, /Copyright[^\n]*2024-2026\s+XYZ/, license.id);
+      assert.doesNotMatch(pkg.content, /<year>|\[yyyy\]|<owner>|<copyright holders>|name of author|name of copyright owner/, license.id);
+      assert.equal(pkg.copyrightAppliedInLicense, true);
+      for (const line of license.licenseText.split('\n').filter((line) => /Copyright.*Free Software Foundation/.test(line))) {
+        assert.ok(pkg.content.includes(line), `${license.id} preserves upstream attribution`);
+      }
+      if (['MPL-2.0', 'EPL-2.0'].includes(license.id)) {
+        assert.equal(pkg.content, `Copyright (c) 2024-2026 XYZ\n\n${license.licenseText}`);
+      }
+      assert.throws(() => generateLicenseText(license.id, { strict: true }), /Copyright holder name is required/);
+    }
+    const pkg = generateLicensePackage('Unlicense', { strict: true });
+    assert.equal(pkg.content, getLicenseById('Unlicense').licenseText);
+    assert.equal(pkg.copyrightAppliedInLicense, false);
+  });
 
-    const gpl3Text = generateLicenseText('GPL-3.0-only', { year: '2026', holder: 'ayushcmd' });
-    assert.equal(gpl3Text, getLicenseById('GPL-3.0-only').licenseText);
+  it('treats replacement characters in copyright holder names literally', () => {
+    for (const license of LICENSE_CATALOG.filter((entry) => entry.id !== 'Unlicense')) {
+      const text = generateLicenseText(license.id, { year: '2026', holder: 'XYZ $& <owner>' });
+      assert.ok(text.includes('XYZ $& <owner>'), license.id);
+    }
   });
 
   it('validates strict holder requirement and year format', () => {

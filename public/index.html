@@ -19,149 +19,50 @@
         <span>GitHub License Advisor</span>
       </a>
       <nav class="site-nav" aria-label="Primary">
-        <a href="index.html" class="nav-link" aria-current="page">Overview</a>
-        <a href="explorer.html" class="nav-link">Explorer</a>
-        <a href="questionnaire.html" class="nav-link">Advisor Wizard</a>
+        <a href="index.html" class="nav-link" aria-current="page">Home</a>
+        <a href="explorer.html" class="nav-link">Licenses</a>
+        <a href="questionnaire.html" class="nav-link">Find a license</a>
         <a href="compare.html" class="nav-link">Compare</a>
-        <a href="analyzer.html" class="nav-link">Repo Analyzer</a>
-        <a href="app-install.html" class="nav-link">GitHub App</a>
+        <a href="analyzer.html" class="nav-link">Check repository</a>
+        <a href="app-install.html" class="nav-link">Create PR</a>
       </nav>
     </div>
   </header>
 
   <main id="main-content" class="container stack-lg">
     <section class="page-header stack-sm">
-      <h1>Choose and automate open-source licenses with clear policy logic</h1>
-      <p>
-        GitHub License Advisor helps maintainers understand permissions, distribution obligations,
-        copyleft boundaries, patent grants, and network-use triggers before opening a pull request
-        to add a verified <code>LICENSE</code> file.
-      </p>
+      <h1>Choose a license for your project</h1>
+      <p>Find the right license, understand its terms, and add it to GitHub.</p>
       <div class="cluster" style="padding-top: 6px;">
-        <a href="questionnaire.html" class="btn btn-primary">Start Policy Wizard</a>
-        <a href="analyzer.html" class="btn btn-secondary">Analyze a GitHub Repository</a>
-        <a href="explorer.html" class="btn btn-secondary">Browse All 12 Licenses</a>
+        <a href="questionnaire.html" class="btn btn-primary">Find my license</a>
+        <a href="analyzer.html" class="btn btn-secondary">Check repository</a>
+        <a href="explorer.html" class="btn btn-secondary">Browse licenses</a>
       </div>
     </section>
 
-    <section aria-labelledby="principles-heading" class="stack-md">
-      <h2 id="principles-heading">How License Recommendations Work</h2>
-      <div class="flash flash-info">
-        <strong>Never language-driven:</strong> Licensing depends on legal goals and distribution boundaries,
-        not whether your codebase uses Python, Rust, TypeScript, or Go. The engine evaluates permissions,
-        copyleft scope, patent protection, non-endorsement rules, dependency compatibility, and SaaS network triggers.
-      </div>
-      <div class="stat-grid">
-        <div class="stat-card">
-          <div class="stat-value">12 SPDX</div>
-          <div class="stat-label">OSI-approved, FSF-libre licenses with verbatim official texts</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-value">0 Databases</div>
-          <div class="stat-label">Stateless evaluation using GitHub REST APIs and static SPDX definitions</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-value">Least Privilege</div>
-          <div class="stat-label">GitHub App requests Metadata (read), Contents &amp; Pull Requests (write)</div>
-        </div>
-      </div>
+    <section class="grid-3 task-grid" aria-label="Choose a task">
+      <article class="card"><span class="eyebrow">01 / Choose</span><h2>Find your fit</h2><p>Answer a few questions to get a license recommendation.</p><a href="questionnaire.html">Find a license &rarr;</a></article>
+      <article class="card"><span class="eyebrow">02 / Check</span><h2>Know your repository</h2><p>See which license is present and review its terms.</p><a href="analyzer.html">Check repository &rarr;</a></article>
+      <article class="card"><span class="eyebrow">03 / Apply</span><h2>Make it official</h2><p>Add or replace a license with a reviewable GitHub PR.</p><a href="app-install.html">Create a PR &rarr;</a></article>
     </section>
-
-    <section aria-labelledby="workflows-heading" class="stack-md">
-      <h2 id="workflows-heading">Core Workflows</h2>
-      <div class="grid-2">
-        <article class="box">
-          <div class="box-header">
-            <h3 class="box-title">1. Policy Recommendation Wizard</h3>
-            <span class="badge badge-neutral">Interactive</span>
-          </div>
-          <div class="box-body stack-sm">
-            <p class="text-muted">
-              Answer 9 structured licensing policy questions and optionally select existing dependency
-              licenses to filter out incompatible options automatically.
-            </p>
-            <a href="questionnaire.html" class="btn btn-secondary btn-sm">Launch Advisor Wizard</a>
-          </div>
-        </article>
-
-        <article class="box">
-          <div class="box-header">
-            <h3 class="box-title">2. Public Repository Analyzer</h3>
-            <span class="badge badge-neutral">Live GitHub API</span>
-          </div>
-          <div class="box-body stack-sm">
-            <p class="text-muted">
-              Audit any public repository for an existing <code>LICENSE</code> or <code>NOTICE</code> file,
-              inspect root manifests, and review plain-language license obligations.
-            </p>
-            <a href="analyzer.html" class="btn btn-secondary btn-sm">Inspect a Repository</a>
-          </div>
-        </article>
-
-        <article class="box">
-          <div class="box-header">
-            <h3 class="box-title">3. Side-by-Side Comparison &amp; Compatibility</h3>
-            <span class="badge badge-neutral">Matrix</span>
-          </div>
-          <div class="box-body stack-sm">
-            <p class="text-muted">
-              Compare up to 4 licenses across 12 policy dimensions and verify whether an inbound
-              dependency license is compatible, conditional, or conflicting.
-            </p>
-            <a href="compare.html" class="btn btn-secondary btn-sm">Open Comparison Matrix</a>
-          </div>
-        </article>
-
-        <article class="box">
-          <div class="box-header">
-            <h3 class="box-title">4. Automated GitHub App Pull Requests</h3>
-            <span class="badge badge-neutral">GitHub Marketplace Ready</span>
-          </div>
-          <div class="box-body stack-sm">
-            <p class="text-muted">
-              Connect via the least-privilege GitHub App to create an isolated branch, commit your
-              customized <code>LICENSE</code>, and open an explanatory pull request.
-            </p>
-            <a href="app-install.html" class="btn btn-secondary btn-sm">View GitHub App Setup</a>
-          </div>
-        </article>
-      </div>
-    </section>
+    <details class="disclosure"><summary>How recommendations work</summary><div class="disclosure-body">Recommendations use your sharing preferences, patent requirements, and dependency licenses. Your programming language does not determine the result. Repository checks run on demand without storing repository code.</div></details>
 
     <section aria-labelledby="spotlight-heading" class="stack-md">
       <div class="cluster-between">
-        <h2 id="spotlight-heading" style="margin:0;">Popular Verified Licenses</h2>
+        <h2 id="spotlight-heading" style="margin:0;">Common choices</h2>
         <a href="explorer.html">View all 12 licenses &rarr;</a>
       </div>
       <div id="home-catalog-preview" class="grid-3"></div>
     </section>
 
-    <section aria-labelledby="legal-note-heading" class="box">
-      <div class="box-header">
-        <h2 id="legal-note-heading" class="box-title">Documentation &amp; Legal Notice</h2>
-      </div>
-      <div class="box-body stack-sm text-small text-muted">
-        <p>
-          GitHub License Advisor provides structured educational summaries and deterministic policy matching
-          based on official SPDX license definitions. It does not constitute formal legal advice.
-          Always review the full license text or consult qualified legal counsel for commercial compliance questions.
-        </p>
-        <div class="cluster">
-          <a href="privacy.html">Privacy Policy</a>
-          <span>&middot;</span>
-          <a href="support.html">Support &amp; Troubleshooting</a>
-          <span>&middot;</span>
-          <a href="app-install.html">GitHub App Permissions &amp; Security</a>
-        </div>
-      </div>
-    </section>
+    <p class="text-small text-muted">Educational guidance, not legal advice. Review the full license before applying it.</p>
   </main>
 
   <footer class="site-footer">
     <div class="container cluster-between">
       <span>GitHub License Advisor &middot; MIT Licensed &middot; Informational only, not legal advice.</span>
       <nav class="footer-links" aria-label="Footer">
-        <a href="app-install.html">GitHub App</a>
+        <a href="app-install.html">Create PR</a>
         <a href="privacy.html">Privacy Policy</a>
         <a href="support.html">Support</a>
         <a href="https://github.com/ayushcmd/license-advisor" target="_blank" rel="noopener noreferrer">GitHub Repo</a>

@@ -1,8 +1,8 @@
 /**
  * Automated Pull Request Generation Engine
  *
- * Authenticates via `@octokit/app` installation tokens, ensures an existing
- * LICENSE file is never overwritten, creates an isolated feature branch, commits
+ * Authenticates via `@octokit/app` installation tokens, requires explicit opt-in
+ * to replace an existing license, creates an isolated feature branch, commits
  * the generated LICENSE file, and opens an explanatory pull request.
  */
 
@@ -15,12 +15,12 @@ import { ServiceError, validatePrRequest } from './licenseService.js';
  * @param {string} licenseId
  * @returns {string}
  */
-export function formatLicenseBranchName(licenseId) {
+export function formatLicenseBranchName(licenseId, replaceExisting = false) {
   const slug = String(licenseId)
     .toLowerCase()
     .replace(/[^a-z0-9.-]+/g, '-')
     .replace(/^-+|-+$/g, '');
-  return `chore/add-license-${slug}`;
+  return `chore/${replaceExisting ? 'replace' : 'add'}-license-${slug}`;
 }
 
 /**
@@ -29,7 +29,7 @@ export function formatLicenseBranchName(licenseId) {
  * @param {object} params
  * @returns {string}
  */
-export function buildPullRequestBody({ explanation, licensePackage, defaultBranch }) {
+export function buildPullRequestBody({ explanation, licensePackage, defaultBranch, existingLicensePath }) {
   const formatBullets = (items, emptyFallback) => {
     if (!items || items.length === 0) return `- ${emptyFallback}`;
     return items.map((item) => `- **${item.label}:** ${item.description}`).join('\n');
@@ -37,7 +37,9 @@ export function buildPullRequestBody({ explanation, licensePackage, defaultBranc
 
   const lines = [
     '## Summary',
-    `This automated pull request adds a \`${licensePackage.filename}\` file under **${explanation.name} (\`${explanation.id}\`)** targeting \`${defaultBranch}\`.`,
+    existingLicensePath
+      ? `This automated pull request replaces the existing license in \`${existingLicensePath}\` with **${explanation.name} (\`${explanation.id}\`)** targeting \`${defaultBranch}\`. Review the license diff before merging.`
+      : `This automated pull request adds a \`${licensePackage.filename}\` file under **${explanation.name} (\`${explanation.id}\`)** targeting \`${defaultBranch}\`.`,
     '',
     explanation.plainSummary,
     '',
@@ -72,7 +74,7 @@ async function detectExistingLicenseOnBranch(octokit, { owner, repo, defaultBran
       if (err?.status === 404) return { data: [] };
       throw err;
     }),
-    octokit.rest.licenses.getForRepo({ owner, repo }).catch((err) => {
+    octokit.rest.licenses.getForRepo({ owner, repo, ref: defaultBranch }).catch((err) => {
       if (err?.status === 404) return null;
       throw err;
     })
@@ -81,13 +83,10 @@ async function detectExistingLicenseOnBranch(octokit, { owner, repo, defaultBran
   const entries = Array.isArray(contentsResult?.data) ? contentsResult.data : [];
   const rootObservations = inspectRootEntries(entries);
 
-  if (rootObservations.licenseFiles.length > 0) {
-    return rootObservations.licenseFiles[0].path;
-  }
-  if (licenseResult?.data?.path) {
-    return licenseResult.data.path;
-  }
-  return null;
+  return [...new Set([
+    ...rootObservations.licenseFiles.map((file) => file.path),
+    ...(licenseResult?.data?.path ? [licenseResult.data.path] : [])
+  ])];
 }
 
 /**
@@ -101,7 +100,10 @@ async function detectExistingLicenseOnBranch(octokit, { owner, repo, defaultBran
  * @param {object} params.githubContext
  * @returns {Promise<object>}
  */
-export async function createLicensePullRequest({ repo: repoInput, licenseId, year, holder, githubContext }) {
+export async function createLicensePullRequest({ repo: repoInput, licenseId, year, holder, replaceExisting = false, githubContext }) {
+  if (typeof replaceExisting !== 'boolean') {
+    throw new ServiceError(400, 'replaceExisting must be a boolean.', 'INVALID_INPUT');
+  }
   const validated = validatePrRequest({ repo: repoInput, licenseId, year, holder });
   const { owner, repo, fullName, explanation, licensePackage } = validated;
 
@@ -165,26 +167,6 @@ export async function createLicensePullRequest({ repo: repoInput, licenseId, yea
 
   const defaultBranch = repoData.default_branch || 'main';
 
-  // Refuse to overwrite an existing LICENSE / LICENSE.md / COPYING file
-  let existingLicensePath;
-  try {
-    existingLicensePath = await detectExistingLicenseOnBranch(octokit, { owner, repo, defaultBranch });
-  } catch (err) {
-    if (err?.status === 403) {
-      throw new ServiceError(403, `GitHub App lacks permission to inspect repository contents for "${fullName}".`, 'INSUFFICIENT_PERMISSIONS');
-    }
-    throw new ServiceError(502, `Failed to inspect existing repository license files: ${err.message}`, 'GITHUB_API_ERROR');
-  }
-
-  if (existingLicensePath) {
-    throw new ServiceError(
-      409,
-      `Repository "${fullName}" already contains "${existingLicensePath}" on "${defaultBranch}". Refusing to overwrite an existing license file.`,
-      'LICENSE_EXISTS',
-      { existingPath: existingLicensePath, defaultBranch }
-    );
-  }
-
   // Resolve base commit SHA of default branch
   let baseSha;
   try {
@@ -204,8 +186,53 @@ export async function createLicensePullRequest({ repo: repoInput, licenseId, yea
     throw new ServiceError(502, `Failed to resolve default branch SHA: ${err.message}`, 'GITHUB_API_ERROR');
   }
 
+  // Replacements require explicit opt-in and an unambiguous existing license.
+  let existingLicensePath;
+  try {
+    const paths = await detectExistingLicenseOnBranch(octokit, { owner, repo, defaultBranch: baseSha });
+    if (replaceExisting && paths.length > 1) {
+      throw new ServiceError(409, 'Multiple license files found. Resolve which license to replace manually.', 'MULTIPLE_LICENSE_FILES');
+    }
+    existingLicensePath = paths[0] || null;
+  } catch (err) {
+    if (err instanceof ServiceError) throw err;
+    if (err?.status === 403) {
+      throw new ServiceError(403, `GitHub App lacks permission to inspect repository contents for "${fullName}".`, 'INSUFFICIENT_PERMISSIONS');
+    }
+    throw new ServiceError(502, `Failed to inspect existing repository license files: ${err.message}`, 'GITHUB_API_ERROR');
+  }
+
+  if (existingLicensePath && !replaceExisting) {
+    throw new ServiceError(
+      409,
+      `Repository "${fullName}" already contains "${existingLicensePath}" on "${defaultBranch}". Choose "Replace existing license" to propose a replacement PR.`,
+      'LICENSE_EXISTS',
+      { existingPath: existingLicensePath, defaultBranch }
+    );
+  }
+
+  if (replaceExisting && !existingLicensePath) {
+    throw new ServiceError(409, 'No existing license found. Choose "Add new license" instead.', 'LICENSE_NOT_FOUND');
+  }
+
+  let existingFileSha;
+  if (replaceExisting) {
+    try {
+      const { data } = await octokit.rest.repos.getContent({ owner, repo, path: existingLicensePath, ref: baseSha });
+      if (data?.type !== 'file' || !data.sha) {
+        throw new ServiceError(409, 'The existing license must be a regular file.', 'INVALID_LICENSE_FILE');
+      }
+      existingFileSha = data.sha;
+    } catch (err) {
+      if (err instanceof ServiceError) throw err;
+      throw new ServiceError(502, `Failed to read existing license: ${err.message}`, 'GITHUB_API_ERROR');
+    }
+  }
+  const action = replaceExisting ? 'replace' : 'add';
+  const title = `chore: ${action} ${validated.licenseId} LICENSE`;
+
   // Create isolated feature branch (never targeting defaultBranch)
-  const baseBranchName = formatLicenseBranchName(validated.licenseId);
+  const baseBranchName = formatLicenseBranchName(validated.licenseId, replaceExisting);
   let targetBranch = baseBranchName;
 
   if (targetBranch === defaultBranch) {
@@ -262,8 +289,9 @@ export async function createLicensePullRequest({ repo: repoInput, licenseId, yea
     const commitRes = await octokit.rest.repos.createOrUpdateFileContents({
       owner,
       repo,
-      path: licensePackage.filename,
-      message: `chore: add ${validated.licenseId} LICENSE`,
+      path: existingLicensePath || licensePackage.filename,
+      ...(existingFileSha ? { sha: existingFileSha } : {}),
+      message: title,
       content: Buffer.from(licensePackage.content, 'utf8').toString('base64'),
       branch: targetBranch
     });
@@ -280,8 +308,7 @@ export async function createLicensePullRequest({ repo: repoInput, licenseId, yea
   }
 
   // Open Pull Request from feature branch -> default branch
-  const title = `chore: add ${validated.licenseId} LICENSE`;
-  const body = buildPullRequestBody({ explanation, licensePackage, defaultBranch });
+  const body = buildPullRequestBody({ explanation, licensePackage, defaultBranch, existingLicensePath });
 
   try {
     const prRes = await octokit.rest.pulls.create({

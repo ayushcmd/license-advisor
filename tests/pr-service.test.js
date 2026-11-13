@@ -1,5 +1,6 @@
 import { describe, it, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
+import { LICENSE_CATALOG } from '../public/js/catalog-data.js';
 
 import { createApp } from '../src/server.js';
 import {
@@ -16,6 +17,7 @@ import {
 
 function createMockInstallationOctokit(overrides = {}) {
   const calls = {
+    getContent: [],
     createRef: [],
     createOrUpdateFileContents: [],
     pullsCreate: []
@@ -39,10 +41,17 @@ function createMockInstallationOctokit(overrides = {}) {
           },
           headers: { 'x-ratelimit-limit': '5000', 'x-ratelimit-remaining': '4990' }
         }),
-        getContent: async () => ({
-          data: overrides.rootEntries ?? [{ type: 'file', name: 'README.md', path: 'README.md' }],
-          headers: { 'x-ratelimit-limit': '5000', 'x-ratelimit-remaining': '4989' }
-        }),
+        getContent: async (params) => {
+          calls.getContent.push(params);
+          if (params.path) {
+            if (overrides.onReadFile) return overrides.onReadFile(params);
+            return { data: { type: 'file', sha: 'existing-license-sha', path: params.path } };
+          }
+          return {
+            data: overrides.rootEntries ?? [{ type: 'file', name: 'README.md', path: 'README.md' }],
+            headers: { 'x-ratelimit-limit': '5000', 'x-ratelimit-remaining': '4989' }
+          };
+        },
         createOrUpdateFileContents: async (params) => {
           calls.createOrUpdateFileContents.push(params);
           if (overrides.onCreateFile) return overrides.onCreateFile(params);
@@ -176,6 +185,68 @@ describe('Backend License Validation Service', () => {
 });
 
 describe('Automated Pull Request Service (prService.js)', () => {
+  it('replaces an existing MIT license with Apache in place on a separate branch', async () => {
+    for (const path of ['LICENSE', 'LICENSE.md', 'COPYING']) {
+      const { octokit, calls } = createMockInstallationOctokit({
+        rootEntries: [{ type: 'file', name: path, path }],
+        existingLicense: { path, license: { spdx_id: 'MIT' } }
+      });
+      const result = await createLicensePullRequest({
+        repo: 'ayushcmd/demo-app', licenseId: 'Apache-2.0', year: '2026', holder: 'XYZ',
+        replaceExisting: true, githubContext: createMockGitHubContext({ octokit })
+      });
+      assert.equal(result.branch, 'chore/replace-license-apache-2.0');
+      assert.equal(calls.createRef[0].sha, 'base-sha-main-999');
+      assert.ok(calls.getContent.every((call) => call.ref === 'base-sha-main-999'));
+      const commit = calls.createOrUpdateFileContents[0];
+      assert.equal(commit.path, path);
+      assert.equal(commit.sha, 'existing-license-sha');
+      assert.equal(commit.branch, result.branch);
+      assert.match(Buffer.from(commit.content, 'base64').toString('utf8'), /Copyright 2026 XYZ/);
+      assert.equal(calls.pullsCreate[0].base, 'main');
+      assert.match(calls.pullsCreate[0].body, /replaces the existing license/);
+      assert.ok(calls.pullsCreate[0].body.includes(path));
+    }
+  });
+
+  it('rejects ambiguous, missing, or unreadable replacement targets before creating a branch', async () => {
+    for (const [overrides, code] of [
+      [{}, 'LICENSE_NOT_FOUND'],
+      [{ rootEntries: ['LICENSE', 'COPYING'].map((name) => ({ type: 'file', name })) }, 'MULTIPLE_LICENSE_FILES'],
+      [{ existingLicense: { path: 'LICENSE' }, onReadFile: async () => ({ data: { type: 'symlink' } }) }, 'INVALID_LICENSE_FILE'],
+      [{ existingLicense: { path: 'LICENSE' }, onReadFile: async () => { throw new Error('Unavailable'); } }, 'GITHUB_API_ERROR']
+    ]) {
+      const { octokit, calls } = createMockInstallationOctokit(overrides);
+      await assert.rejects(createLicensePullRequest({
+        repo: 'ayushcmd/demo-app', licenseId: 'Apache-2.0', holder: 'XYZ', replaceExisting: true,
+        githubContext: createMockGitHubContext({ octokit })
+      }), (err) => err.code === code);
+      assert.equal(calls.createRef.length, 0);
+      assert.equal(calls.createOrUpdateFileContents.length, 0);
+    }
+    await assert.rejects(createLicensePullRequest({ replaceExisting: 'true' }), (err) => err.code === 'INVALID_INPUT');
+  });
+
+  it('commits personalized license content for every supported license', async () => {
+    for (const license of LICENSE_CATALOG) {
+      const { octokit, calls } = createMockInstallationOctokit();
+      await createLicensePullRequest({
+        repo: 'ayushcmd/demo-app',
+        licenseId: license.id,
+        year: '2026',
+        holder: 'XYZ',
+        githubContext: createMockGitHubContext({ octokit })
+      });
+      const content = Buffer.from(calls.createOrUpdateFileContents[0].content, 'base64').toString('utf8');
+      if (license.id === 'Unlicense') {
+        assert.equal(content, license.licenseText);
+      } else {
+        assert.match(content, /Copyright[^\n]*2026\s+XYZ/, license.id);
+        assert.doesNotMatch(content, /<year>|\[yyyy\]|name of author|name of copyright owner/, license.id);
+      }
+    }
+  });
+
   it('formats feature branch names and builds detailed explanatory PR descriptions', () => {
     assert.equal(formatLicenseBranchName('MIT'), 'chore/add-license-mit');
     assert.equal(formatLicenseBranchName('GPL-3.0-only'), 'chore/add-license-gpl-3.0-only');
@@ -358,6 +429,27 @@ describe('HTTP Integration: POST /api/analyze & POST /api/trigger-pr', () => {
       await new Promise((resolve) => activeServer.close(resolve));
       activeServer = null;
     }
+  });
+
+  it('requires explicit replacement opt-in over HTTP and forwards it to the service', async () => {
+    const { octokit, calls } = createMockInstallationOctokit({ existingLicense: { path: 'LICENSE.md', license: { spdx_id: 'MIT' } } });
+    const { app } = createApp({
+      silentConfig: true, githubContext: createMockGitHubContext({ octokit }),
+      logger: { info: () => {}, warn: () => {}, error: () => {} }
+    });
+    activeServer = await new Promise((resolve) => {
+      const srv = app.listen(0, '127.0.0.1', () => resolve(srv));
+    });
+    const url = `http://127.0.0.1:${activeServer.address().port}/api/trigger-pr`;
+    const payload = { repo: 'ayushcmd/demo-app', licenseId: 'Apache-2.0', year: '2026', holder: 'XYZ' };
+    const send = (body) => fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    assert.equal((await send(payload)).status, 409);
+    assert.equal(calls.createRef.length, 0);
+    assert.equal((await send({ ...payload, replaceExisting: 'true' })).status, 400);
+    const response = await send({ ...payload, replaceExisting: true });
+    assert.equal(response.status, 201);
+    assert.equal((await response.json()).branch, 'chore/replace-license-apache-2.0');
+    assert.equal(calls.createOrUpdateFileContents[0].path, 'LICENSE.md');
   });
 
   it('executes /api/analyze and /api/trigger-pr end-to-end over HTTP with accurate status codes', async () => {
