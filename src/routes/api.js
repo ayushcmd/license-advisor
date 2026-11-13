@@ -102,6 +102,7 @@ export function createApiRouter({ githubContext, env = process.env }) {
         licenseId: req.body?.licenseId,
         year: req.body?.year,
         holder: req.body?.holder,
+        replaceExisting: req.body?.replaceExisting,
         githubContext
       });
       res.status(201).json(result);

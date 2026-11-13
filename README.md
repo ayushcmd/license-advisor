@@ -38,7 +38,7 @@
       </a>
     </td>
     <td valign="middle">
-      <strong>Open License Advisor</strong> (<code>open-license-advisor[bot]</code>) is a deterministic open-source license recommendation tool, repository license inspector, and least-privilege GitHub App. It evaluates project requirements against <strong>12 OSI-approved and FSF-libre SPDX licenses</strong>, inspects existing repositories for license files, and opens clean, isolated Pull Requests on <code>chore/add-license-&lt;spdx&gt;</code> without overwriting existing licenses or storing repository code.
+      <strong>Open License Advisor</strong> (<code>open-license-advisor[bot]</code>) is a deterministic open-source license recommendation tool, repository license inspector, and least-privilege GitHub App. It evaluates project requirements against <strong>12 OSI-approved and FSF-libre SPDX licenses</strong>, inspects existing repositories for license files, and opens clean, isolated Pull Requests on <code>chore/add-license-&lt;spdx&gt;</code> with explicit opt-in for license replacement, without storing repository code.
     </td>
   </tr>
 </table>
@@ -46,7 +46,7 @@
 ### Key Engineering Principles
 
 - **Deterministic Policy Engine:** Recommendations, compatibility checks, and plain-language permission/condition/limitation summaries are driven by rule-based logic in shared ES modules (`public/js/catalog-data.js`, `public/js/engine.js`, `public/js/generator.js`), eliminating black-box variance.
-- **Non-Destructive GitHub App Automation:** Checks whether `LICENSE` or `LICENSE.md` already exists on the repository default branch and aborts with HTTP `409 Conflict` if present; otherwise commits to an isolated `chore/add-license-<spdx-lower>` branch and opens a documented Pull Request.
+- **GitHub App Automation:** Adds a license on an isolated `chore/add-license-<spdx-lower>` branch. Existing licenses are protected by default. Choose **Replace existing license** to update the existing file on `chore/replace-license-<spdx-lower>` and open a documented PR. Repositories with multiple license files require manual review.
 - **Stateless & Database-Free:** Runs with zero external database dependencies, using bounded in-memory webhook replay deduplication and strict Helmet Content Security Policy (CSP) headers.
 - **Single Source of Truth:** Frontend vanilla HTML/JS pages and Node.js Express services import the exact same SPDX catalog, engine, and template generator modules.
 
@@ -106,7 +106,7 @@ curl -s -X POST https://license-advisor.onrender.com/api/analyze \
 1. Install **Open License Advisor** from **[github.com/apps/open-license-advisor](https://github.com/apps/open-license-advisor)** (or the **[GitHub Marketplace](https://github.com/marketplace/open-license-advisor)**) and grant access to one or more repositories.
 2. Open **[license-advisor.onrender.com/app-install.html](https://license-advisor.onrender.com/app-install.html)** (or invoke `POST /api/trigger-pr`).
 3. Provide the target `owner/repo`, choose your SPDX license identifier (e.g., `MIT` or `Apache-2.0`), copyright year, and copyright holder name.
-4. Submit to create `chore/add-license-<spdx-lower>` and open a ready-to-review Pull Request—or receive a safe `409 Conflict` warning if the repository is already licensed.
+4. Choose **Add new license** or **Replace existing license**, then submit to open a ready-to-review Pull Request. Replacement preserves the existing filename (such as `LICENSE.md` or `COPYING`) and updates it only on a feature branch. Review the diff before merging. API clients opt in with `replaceExisting: true`; omitting it keeps existing licenses protected.
 
 ```bash
 curl -s -X POST https://license-advisor.onrender.com/api/trigger-pr \

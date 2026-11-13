@@ -77,6 +77,34 @@ function el(tag, attrs = {}, children = []) {
   return node;
 }
 
+function disclosure(label, content) {
+  return el('details', { className: 'disclosure' }, [
+    el('summary', {}, label), el('div', { className: 'disclosure-body stack-md' }, content)
+  ]);
+}
+
+const SHORT_SUMMARIES = {
+  MIT: 'Simple terms: allow reuse and keep the copyright notice.',
+  'Apache-2.0': 'Permissive reuse with explicit patent terms and change notices.',
+  'GPL-3.0-only': 'Shared versions and derivative works must keep their source open.'
+};
+
+const QUESTION_TITLES = {
+  copyleftPreference: 'Should people share their changes?',
+  allowProprietaryUse: 'Can your code be used in closed-source products?',
+  patentProtection: 'Do you want explicit patent protection?',
+  networkUseTrigger: 'Should hosted services share modified source code?',
+  requireNoticeAttribution: 'Should others keep your copyright notice?',
+  requireChangeDocumentation: 'Should others document their changes?',
+  restrictEndorsement: 'Do you want explicit name and trademark limits?',
+  isLibrary: 'Are you building a library or an application?',
+  simplicityPreference: 'How important is a short license?'
+};
+
+function brief(text) {
+  return text.match(/^.*?[.!?](?:\s|$)/)?.[0]?.trim() || text;
+}
+
 function clearNode(node) {
   while (node && node.firstChild) {
     node.removeChild(node.firstChild);
@@ -150,8 +178,8 @@ function createPlainBreakdownBox(explanation) {
 
   wrapper.appendChild(
     el('div', { className: 'rule-columns' }, [
-      createRuleColumn('Permissions', explanation.canDo, 'rule-dot-green', 'Standard copyright applies'),
-      createRuleColumn('Conditions', explanation.mustDo, 'rule-dot-blue', 'No additional conditions'),
+      createRuleColumn('Allowed', explanation.canDo, 'rule-dot-green', 'Standard copyright applies'),
+      createRuleColumn('Required', explanation.mustDo, 'rule-dot-blue', 'No additional conditions'),
       createRuleColumn('Limitations', explanation.cannotDo, 'rule-dot-red', 'No explicit limitations listed')
     ])
   );
@@ -166,7 +194,7 @@ function createPlainBreakdownBox(explanation) {
       ])
     ])
   ]);
-  wrapper.appendChild(policyTable);
+  wrapper.appendChild(disclosure('Detailed license terms', policyTable));
 
   return wrapper;
 }
@@ -218,7 +246,7 @@ function buildGeneratorWidget(licenseId, defaults = {}) {
 
       if (!pkg.copyrightAppliedInLicense && modeSelect.value === 'license') {
         statusBanner.className = 'flash flash-info';
-        statusBanner.textContent = `${pkg.spdxId} preserves the verbatim official license text in LICENSE. Switch to "Per-File Source Header (SPDX)" above to embed your copyright header in source files.`;
+        statusBanner.textContent = `${pkg.spdxId} is a public-domain dedication and does not include a copyright notice.`;
         statusBanner.hidden = false;
       }
     } catch (err) {
@@ -303,7 +331,7 @@ function initHomePage() {
   const quickGrid = document.getElementById('home-catalog-preview');
   if (!quickGrid) return;
 
-  const spotlightIds = ['MIT', 'Apache-2.0', 'MPL-2.0', 'LGPL-3.0-only', 'GPL-3.0-only', 'AGPL-3.0-only'];
+  const spotlightIds = ['MIT', 'Apache-2.0', 'GPL-3.0-only'];
   clearNode(quickGrid);
   for (const id of spotlightIds) {
     const lic = getLicenseById(id);
@@ -314,10 +342,10 @@ function initHomePage() {
           el('strong', { className: 'text-mono' }, lic.id),
           createCategoryBadge(lic.category)
         ]),
-        el('p', { className: 'text-small text-muted' }, lic.summary),
+        el('p', { className: 'text-small text-muted' }, (SHORT_SUMMARIES[lic.id] || brief(lic.summary))),
         el('div', { className: 'cluster' }, [
           el('a', { className: 'btn btn-secondary btn-sm', href: `explorer.html?license=${encodeURIComponent(lic.id)}` }, 'Inspect & Generate'),
-          el('a', { className: 'text-small', href: `compare.html?licenses=MIT,${encodeURIComponent(lic.id)}` }, 'Compare with MIT')
+          el('a', { className: 'text-small', href: `compare.html?licenses=${lic.id === 'MIT' ? 'Apache-2.0' : 'MIT'},${encodeURIComponent(lic.id)}` }, lic.id === 'MIT' ? 'Compare with Apache' : 'Compare with MIT')
         ])
       ])
     );
@@ -347,8 +375,8 @@ function initExplorerPage() {
     clearNode(detailEl);
 
     const headerActions = el('div', { className: 'cluster' }, [
-      el('a', { className: 'btn btn-secondary btn-sm', href: `compare.html?licenses=${encodeURIComponent(lic.id)},MIT` }, 'Compare'),
-      el('a', { className: 'btn btn-primary btn-sm', href: `app-install.html?license=${encodeURIComponent(lic.id)}` }, 'Use in GitHub App PR')
+      el('a', { className: 'btn btn-secondary btn-sm', href: `compare.html?licenses=${encodeURIComponent(lic.id)},${lic.id === 'MIT' ? 'Apache-2.0' : 'MIT'}` }, 'Compare'),
+      el('a', { className: 'btn btn-primary btn-sm', href: `app-install.html?license=${encodeURIComponent(lic.id)}` }, 'Create PR')
     ]);
 
     const summaryBox = el('div', { className: 'box' }, [
@@ -362,10 +390,7 @@ function initExplorerPage() {
       ]),
       el('div', { className: 'box-body stack-md' }, [
         el('p', {}, explanation.plainSummary),
-        el('div', {}, [
-          el('h3', {}, 'When to Choose This License'),
-          el('ul', {}, lic.whenToUse.map((tip) => el('li', {}, tip)))
-        ]),
+        disclosure('When to choose this license', el('ul', {}, lic.whenToUse.map((tip) => el('li', {}, tip)))),
         createPlainBreakdownBox(explanation),
         el('div', { className: 'cluster text-small' }, [
           el('span', { className: 'text-muted' }, 'Official References:'),
@@ -380,7 +405,7 @@ function initExplorerPage() {
     ]);
 
     detailEl.appendChild(summaryBox);
-    detailEl.appendChild(buildGeneratorWidget(lic.id));
+    detailEl.appendChild(disclosure('Generate license file or source header', buildGeneratorWidget(lic.id)));
   }
 
   function renderList() {
@@ -405,7 +430,8 @@ function initExplorerPage() {
     clearNode(listEl);
 
     if (filtered.length === 0) {
-      listEl.appendChild(el('div', { className: 'flash flash-warning' }, 'No licenses match the active filters. Reset your search or category filter.'));
+      clearNode(detailEl);
+      listEl.appendChild(el('div', { className: 'flash flash-warning' }, 'No matching licenses. Try another search or clear a filter.'));
       return;
     }
 
@@ -421,7 +447,6 @@ function initExplorerPage() {
           createCategoryBadge(lic.category)
         ]),
         el('h3', { style: 'margin:0;' }, lic.name),
-        el('p', { className: 'text-small text-muted' }, lic.summary),
         el('div', { className: 'cluster' }, [
           lic.flags.patentGrant === 'explicit' ? el('span', { className: 'badge badge-info' }, 'Explicit Patent Grant') : null,
           lic.flags.networkUseTrigger ? el('span', { className: 'badge badge-danger' }, 'Network Trigger') : null,
@@ -429,7 +454,7 @@ function initExplorerPage() {
             'button',
             {
               type: 'button',
-              className: `btn btn-sm ${isSelected ? 'btn-primary' : 'btn-secondary'}`,
+              className: 'btn btn-sm btn-secondary',
               'aria-pressed': isSelected ? 'true' : 'false',
               onClick: () => {
                 selectedId = lic.id;
@@ -440,7 +465,7 @@ function initExplorerPage() {
                 renderDetail(lic.id);
               }
             },
-            isSelected ? 'Viewing Details' : 'Select License'
+            isSelected ? 'Selected' : 'View license'
           )
         ])
       ]);
@@ -469,13 +494,38 @@ function initQuestionnairePage() {
 
   const state = Object.fromEntries(RECOMMENDATION_CRITERIA_SCHEMA.map((q) => [q.key, q.defaultValue]));
   const selectedDeps = new Set();
+  let step = 0;
+  const dependencyStep = depsMount?.closest('fieldset');
+  const progress = el('p', { className: 'eyebrow', 'aria-live': 'polite' });
+  const back = el('button', { type: 'button', className: 'btn btn-secondary', onClick: () => { step--; showStep(true); } }, 'Back');
+  const next = el('button', { type: 'button', className: 'btn btn-primary', onClick: () => {
+    if (step < RECOMMENDATION_CRITERIA_SCHEMA.length) { step++; showStep(true); }
+    else { resultsMount.hidden = false; resultsMount.setAttribute('tabindex', '-1'); resultsMount.focus(); }
+  } }, 'Next');
+  formEl.prepend(progress);
+  formEl.appendChild(el('div', { className: 'cluster-between wizard-navigation' }, [back, next]));
+  formEl.addEventListener('submit', (event) => event.preventDefault());
+  function showStep(focus = false) {
+    const count = RECOMMENDATION_CRITERIA_SCHEMA.length;
+    [...questionsMount.children].forEach((field, index) => { field.hidden = index !== step; });
+    if (dependencyStep) dependencyStep.hidden = step !== count;
+    progress.textContent = `Step ${step + 1} of ${count + 1} · ${step === count ? 'Dependencies (optional)' : 'Your preferences'}`;
+    back.disabled = step === 0;
+    next.textContent = step === count ? 'See recommendation' : 'Next';
+    if (focus) {
+      const target = step === count ? dependencyStep : questionsMount.children[step];
+      target?.setAttribute('tabindex', '-1');
+      target?.focus();
+    }
+  }
+
 
   function renderQuestions() {
     clearNode(questionsMount);
     for (const q of RECOMMENDATION_CRITERIA_SCHEMA) {
       const fieldset = el('fieldset', { className: 'question-fieldset' }, [
-        el('legend', {}, q.label),
-        el('p', { className: 'form-help' }, q.description)
+        el('legend', {}, QUESTION_TITLES[q.key] || q.label),
+        disclosure('What does this mean?', el('p', { className: 'text-muted' }, q.description))
       ]);
       const list = el('div', { className: 'radio-list' });
       for (const opt of q.options) {
@@ -489,7 +539,7 @@ function initQuestionnairePage() {
             evaluateAndRender();
           }
         });
-        list.appendChild(el('label', { className: 'option-row' }, [input, el('span', {}, opt.label)]));
+        list.appendChild(el('label', { className: 'option-row' }, [input, el('span', {}, q.key === 'copyleftPreference' && opt.value === 'any' ? 'Help me decide' : opt.label)]));
       }
       fieldset.appendChild(list);
       questionsMount.appendChild(fieldset);
@@ -526,12 +576,7 @@ function initQuestionnairePage() {
 
     clearNode(resultsMount);
 
-    resultsMount.appendChild(
-      el('div', { className: 'flash flash-info' }, [
-        el('strong', {}, 'Policy-Only Evaluation: '),
-        result.summary
-      ])
-    );
+    resultsMount.appendChild(el('p', { className: 'eyebrow' }, 'Current match · updates as you answer'));
 
     if (result.conflicts.length > 0) {
       resultsMount.appendChild(
@@ -556,22 +601,22 @@ function initQuestionnairePage() {
           el('div', { className: 'score-meter', role: 'progressbar', 'aria-valuenow': top.score, 'aria-valuemin': 0, 'aria-valuemax': 100 }, [
             el('div', { className: 'score-fill', style: `width: ${top.score}%;` })
           ]),
-          el('p', {}, top.license.summary),
+          el('p', {}, (SHORT_SUMMARIES[top.id] || brief(top.license.summary))),
           top.reasons.length > 0
             ? el('div', {}, [
-                el('h4', {}, 'Why It Fits Your Policy'),
+                el('h4', {}, 'Why it fits'),
                 el('ul', {}, top.reasons.map((r) => el('li', {}, r)))
               ])
             : null,
           top.tradeoffs.length > 0
             ? el('div', { className: 'flash flash-warning' }, [
-                el('strong', {}, 'Obligations & Trade-offs: '),
+                el('strong', {}, 'Keep in mind: '),
                 el('ul', { style: 'margin-top:6px;margin-bottom:0;' }, top.tradeoffs.map((t) => el('li', {}, t)))
               ])
             : null,
           el('div', { className: 'cluster' }, [
-            el('a', { className: 'btn btn-primary btn-sm', href: `app-install.html?license=${encodeURIComponent(top.id)}` }, 'Open Automated PR Guide'),
-            el('a', { className: 'btn btn-secondary btn-sm', href: `explorer.html?license=${encodeURIComponent(top.id)}` }, 'Full Details & Text'),
+            el('a', { className: 'btn btn-primary btn-sm', href: `app-install.html?license=${encodeURIComponent(top.id)}` }, 'Create PR'),
+            el('a', { className: 'btn btn-secondary btn-sm', href: `explorer.html?license=${encodeURIComponent(top.id)}` }, 'License details'),
             result.recommendations.length > 1
               ? el(
                   'a',
@@ -579,14 +624,14 @@ function initQuestionnairePage() {
                     className: 'btn btn-secondary btn-sm',
                     href: `compare.html?licenses=${result.recommendations.slice(0, 3).map((r) => encodeURIComponent(r.id)).join(',')}`
                   },
-                  'Compare Top Matches'
+                  'Compare matches'
                 )
               : null
           ])
         ])
       ]);
       resultsMount.appendChild(topBox);
-      resultsMount.appendChild(buildGeneratorWidget(top.id));
+      resultsMount.appendChild(disclosure('Generate license file', buildGeneratorWidget(top.id)));
     }
 
     if (result.recommendations.length > 1) {
@@ -603,7 +648,7 @@ function initQuestionnairePage() {
           ])
         ))
       ]);
-      resultsMount.appendChild(runnersUp);
+      resultsMount.appendChild(disclosure('Other matches', runnersUp));
     }
 
     if (result.disqualified.length > 0) {
@@ -625,11 +670,14 @@ function initQuestionnairePage() {
       state[q.key] = q.defaultValue;
     }
     selectedDeps.clear();
+    step = 0;
     renderQuestions();
+    showStep();
     evaluateAndRender();
   });
 
   renderQuestions();
+  showStep();
   evaluateAndRender();
 }
 
@@ -648,15 +696,15 @@ function initComparePage() {
   const params = new URLSearchParams(window.location.search);
   const initialParam = params.get('licenses');
   const initialIds = initialParam
-    ? initialParam.split(',').map((s) => resolveLicense(s)?.id).filter(Boolean).slice(0, 4)
-    : ['MIT', 'Apache-2.0', 'GPL-3.0-only'];
+    ? [...new Set(initialParam.split(',').map((s) => resolveLicense(s)?.id).filter(Boolean))].slice(0, 4)
+    : ['MIT', 'Apache-2.0'];
 
-  while (initialIds.length < 3) {
+  while (initialIds.length < 2) {
     const next = LICENSE_CATALOG.find((l) => !initialIds.includes(l.id))?.id || 'MIT';
     initialIds.push(next);
   }
 
-  let selectedSlots = [...initialIds, '']; // Up to 4 slots (4th optional)
+  let selectedSlots = [...initialIds]; // Up to 4 slots (4th optional)
   if (selectedSlots.length > 4) selectedSlots = selectedSlots.slice(0, 4);
 
   function renderSlots() {
@@ -683,11 +731,16 @@ function initComparePage() {
 
       slotsMount.appendChild(
         el('div', { className: 'form-group' }, [
-          el('label', { className: 'form-label', for: selectId }, `License Column ${index + 1}`),
+          el('label', { className: 'form-label', for: selectId }, `License ${index + 1}`),
           select
         ])
       );
     });
+    if (selectedSlots.length < 4) slotsMount.appendChild(el('button', {
+      type: 'button', className: 'btn btn-secondary add-column', onClick: () => {
+        selectedSlots.push(''); renderSlots();
+      }
+    }, 'Add another license'));
   }
 
   function renderMatrix() {
@@ -712,8 +765,10 @@ function initComparePage() {
       )
     ]);
 
-    const tbody = el('tbody', {}, matrix.rows.map((row) =>
-      el('tr', {}, [
+    const differencesOnly = document.getElementById('compare-differences')?.checked;
+    const rows = matrix.rows.filter((row) => !differencesOnly || new Set(row.values).size > 1);
+    const tbody = el('tbody', {}, rows.map((row) =>
+      el('tr', { className: new Set(row.values).size > 1 ? 'comparison-difference' : '' }, [
         el('th', { scope: 'row' }, row.label),
         ...row.values.map((val) => el('td', {}, val))
       ])
@@ -790,6 +845,7 @@ function initComparePage() {
     renderCompat();
   }
 
+  document.getElementById('compare-differences')?.addEventListener('change', renderMatrix);
   renderSlots();
   renderMatrix();
 }
@@ -860,7 +916,7 @@ function initAnalyzerPage() {
             ? el('a', { className: 'btn btn-secondary btn-sm', href: repo.htmlUrl, target: '_blank', rel: 'noopener noreferrer' }, 'View on GitHub')
             : null
         ]),
-        el('div', { className: 'box-body stack-md' }, [
+        disclosure('Repository details', [
           repo.description ? el('p', {}, repo.description) : el('p', { className: 'text-muted' }, 'No repository description provided.'),
           el('div', { className: 'cluster text-small text-muted' }, [
             el('span', {}, `Default branch: ${repo.defaultBranch}`),
@@ -891,7 +947,7 @@ function initAnalyzerPage() {
           ])
         );
       }
-      resultMount.appendChild(findingsStack);
+      resultMount.appendChild(disclosure('Findings and checks', findingsStack));
 
       // Root Files & Manifests Observed
       const rootObs = report.rootObservations;
@@ -939,14 +995,14 @@ function initAnalyzerPage() {
       const actionBar = el('div', { className: 'box' }, [
         el('div', { className: 'box-header' }, [el('h3', { className: 'box-title' }, 'Recommended Next Steps')]),
         el('div', { className: 'box-body cluster' }, [
-          el('a', { className: 'btn btn-primary btn-sm', href: `questionnaire.html` }, 'Choose License via Policy Wizard'),
-          el('a', { className: 'btn btn-secondary btn-sm', href: `app-install.html?repo=${encodeURIComponent(repo.fullName)}` }, 'Add License via GitHub App PR'),
+          el('a', { className: 'btn btn-primary btn-sm', href: `questionnaire.html` }, 'Find a license'),
+          el('a', { className: 'btn btn-secondary btn-sm', href: `app-install.html?repo=${encodeURIComponent(repo.fullName)}` }, 'Add or replace license'),
           report.detectedLicense.catalogId
             ? el('a', { className: 'btn btn-secondary btn-sm', href: `explorer.html?license=${encodeURIComponent(report.detectedLicense.catalogId)}` }, 'Customize LICENSE Text')
             : null
         ])
       ]);
-      resultMount.appendChild(actionBar);
+      repoBox.after(actionBar);
 
       if (report.rateLimit && report.rateLimit.remaining === 0) {
         const resetHint = report.rateLimit.resetAt
@@ -1008,6 +1064,7 @@ function initAppInstallPage() {
   const licenseSelect = document.getElementById('pr-license');
   const holderInput = document.getElementById('pr-holder');
   const yearInput = document.getElementById('pr-year');
+  const actionSelect = document.getElementById('pr-action');
   const previewBranch = document.getElementById('pr-branch-preview');
   const previewTitle = document.getElementById('pr-title-preview');
   const previewBody = document.getElementById('pr-body-preview');
@@ -1031,11 +1088,16 @@ function initAppInstallPage() {
   if (yearInput && !yearInput.value) yearInput.value = String(new Date().getFullYear());
 
   function updatePrPreview() {
+    const copyrightPreview = document.getElementById('pr-copyright-preview');
+    if (copyrightPreview) copyrightPreview.textContent = licenseSelect.value === 'Unlicense'
+      ? 'Public-domain dedication · no copyright notice'
+      : `Copyright (c) ${yearInput?.value || new Date().getFullYear()} ${holderInput?.value.trim() || 'Enter your name or organization'}`;
+    const action = actionSelect?.value === 'replace' ? 'replace' : 'add';
     const licenseId = licenseSelect.value;
     const explanation = explainLicense(licenseId);
     const branchSlug = licenseId.toLowerCase().replace(/[^a-z0-9.-]+/g, '-').replace(/^-+|-+$/g, '');
-    if (previewBranch) previewBranch.textContent = `chore/add-license-${branchSlug}`;
-    if (previewTitle) previewTitle.textContent = `chore: add ${licenseId} LICENSE`;
+    if (previewBranch) previewBranch.textContent = `chore/${action}-license-${branchSlug}`;
+    if (previewTitle) previewTitle.textContent = `chore: ${action} ${licenseId} LICENSE`;
     if (previewBody && explanation) {
       const canLines = explanation.canDo.map((i) => `- ${i.label}: ${i.description}`).join('\n');
       const mustLines = explanation.mustDo.length
@@ -1044,7 +1106,9 @@ function initAppInstallPage() {
       const limitLines = explanation.cannotDo.map((i) => `- ${i.label}: ${i.description}`).join('\n');
       previewBody.textContent = [
         `## Summary`,
-        `This automated pull request adds a \`LICENSE\` file under **${explanation.name} (\`${explanation.id}\`)**.`,
+        action === 'replace'
+          ? `This automated pull request replaces the existing license with **${explanation.name} (\`${explanation.id}\`)**. Review the license diff before merging.`
+          : `This automated pull request adds a \`LICENSE\` file under **${explanation.name} (\`${explanation.id}\`)**.`,
         ``,
         explanation.plainSummary,
         ``,
@@ -1070,6 +1134,9 @@ function initAppInstallPage() {
   }
 
   licenseSelect.addEventListener('change', updatePrPreview);
+  actionSelect?.addEventListener('change', updatePrPreview);
+  holderInput?.addEventListener('input', updatePrPreview);
+  yearInput?.addEventListener('input', updatePrPreview);
   updatePrPreview();
 
   // Check backend availability quietly; surface errors only on actual failure or user action
@@ -1147,7 +1214,8 @@ function initAppInstallPage() {
             repo: repoInput?.value || '',
             licenseId: licenseSelect.value,
             year: yearInput?.value || '',
-            holder: holderInput?.value || ''
+            holder: holderInput?.value || '',
+            replaceExisting: actionSelect?.value === 'replace'
           })
         });
         const payload = await res.json().catch(() => ({}));

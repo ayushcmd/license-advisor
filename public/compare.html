@@ -19,38 +19,36 @@
         <span>GitHub License Advisor</span>
       </a>
       <nav class="site-nav" aria-label="Primary">
-        <a href="index.html" class="nav-link">Overview</a>
-        <a href="explorer.html" class="nav-link">Explorer</a>
-        <a href="questionnaire.html" class="nav-link">Advisor Wizard</a>
+        <a href="index.html" class="nav-link">Home</a>
+        <a href="explorer.html" class="nav-link">Licenses</a>
+        <a href="questionnaire.html" class="nav-link">Find a license</a>
         <a href="compare.html" class="nav-link" aria-current="page">Compare</a>
-        <a href="analyzer.html" class="nav-link">Repo Analyzer</a>
-        <a href="app-install.html" class="nav-link">GitHub App</a>
+        <a href="analyzer.html" class="nav-link">Check repository</a>
+        <a href="app-install.html" class="nav-link">Create PR</a>
       </nav>
     </div>
   </header>
 
   <main id="main-content" class="container stack-lg">
     <section class="page-header stack-sm">
-      <h1>Side-by-Side License Comparison &amp; Compatibility</h1>
-      <p>
-        Compare two to four verified SPDX licenses across commercial rights, copyleft boundaries,
-        patent clauses, network triggers, and distribution conditions.
-      </p>
+      <h1>Compare licenses</h1>
+      <p>See what changes between licenses, side by side.</p>
     </section>
 
     <section aria-labelledby="matrix-heading" class="stack-md">
       <div class="cluster-between">
-        <h2 id="matrix-heading" style="margin:0;">License Feature Matrix</h2>
+        <h2 id="matrix-heading" style="margin:0;">Choose licenses</h2>
         <div id="compare-presets" class="cluster" aria-label="Comparison presets"></div>
       </div>
 
       <div id="compare-slots" class="grid-2"></div>
+      <label class="option-row"><input type="checkbox" id="compare-differences"> Show differences only</label>
       <div id="compare-matrix" aria-live="polite"></div>
     </section>
 
-    <section aria-labelledby="compat-heading" class="box">
+    <details class="disclosure"><summary>Check dependency compatibility</summary>    <section aria-labelledby="compat-heading" class="box">
       <div class="box-header">
-        <h2 id="compat-heading" class="box-title">Inbound Dependency Compatibility Checker</h2>
+        <h2 id="compat-heading" class="box-title">Check dependency compatibility</h2>
       </div>
       <div class="box-body stack-md">
         <p class="text-small text-muted">
@@ -59,24 +57,24 @@
         </p>
         <div class="grid-2">
           <div class="form-group">
-            <label for="compat-project" class="form-label">Your Project Outbound License</label>
+            <label for="compat-project" class="form-label">Your project license</label>
             <select id="compat-project" class="select"></select>
           </div>
           <div class="form-group">
-            <label for="compat-dependency" class="form-label">Inbound Dependency License</label>
+            <label for="compat-dependency" class="form-label">Dependency license</label>
             <select id="compat-dependency" class="select"></select>
           </div>
         </div>
         <div id="compat-result" aria-live="polite"></div>
       </div>
-    </section>
+    </section></details>
   </main>
 
   <footer class="site-footer">
     <div class="container cluster-between">
       <span>GitHub License Advisor &middot; MIT Licensed &middot; Informational only, not legal advice.</span>
       <nav class="footer-links" aria-label="Footer">
-        <a href="app-install.html">GitHub App</a>
+        <a href="app-install.html">Create PR</a>
         <a href="privacy.html">Privacy Policy</a>
         <a href="support.html">Support</a>
         <a href="https://github.com/ayushcmd/license-advisor" target="_blank" rel="noopener noreferrer">GitHub Repo</a>

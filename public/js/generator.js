@@ -57,10 +57,9 @@ export function normalizeGeneratorOptions(options = {}) {
 /**
  * Generate the full LICENSE file text for a verified SPDX license identifier.
  *
- * For licenses whose official SPDX text embeds a copyright line (MIT, ISC,
- * BSD-2-Clause, BSD-3-Clause), placeholders are populated with `year` and `holder`.
- * For full-body licenses (Apache-2.0, MPL-2.0, EPL-2.0, GPL*, LGPL*, AGPL*, Unlicense),
- * the verbatim SPDX license text is preserved so automated license detectors recognize it.
+ * Populates project copyright placeholders without changing existing attribution.
+ * MPL and EPL receive a project notice before their unchanged license text.
+ * Unlicense retains its public-domain dedication without a copyright notice.
  *
  * @param {string} licenseId
  * @param {object} [options]
@@ -74,18 +73,24 @@ export function generateLicenseText(licenseId, options = {}) {
 
   const normalized = normalizeGeneratorOptions({
     ...options,
-    // Strict holder enforcement only applies when the LICENSE body uses a copyright holder
-    strict: Boolean(options?.strict && license.templateInfo.copyrightInLicenseText)
+    strict: Boolean(options?.strict && license.id !== 'Unlicense')
   });
 
-  if (!license.templateInfo.copyrightInLicenseText) {
+  if (license.id === 'Unlicense') {
     return license.licenseText;
   }
 
-  let output = license.licenseText;
-  output = output.replaceAll('<year>', normalized.year);
-  output = output.replaceAll('<copyright holders>', normalized.holder);
-  output = output.replaceAll('<owner>', normalized.holder);
+  // Replace in one pass so holder names containing $ or template-like text stay literal.
+  const placeholders = /<year>|\[yyyy\]|\[year\]|<copyright holders>|<owner>|\[name of copyright owner\]|<name of author>|\[name of author\]|\byyyy\b|\byear(?= name of author\b)|\bname of author\b/g;
+  const output = license.licenseText.replace(placeholders, (placeholder) =>
+    /^(?:<year>|\[yyyy\]|\[year\]|yyyy|year)$/.test(placeholder)
+      ? normalized.year
+      : normalized.holder
+  );
+
+  if (license.id === 'MPL-2.0' || license.id === 'EPL-2.0') {
+    return `Copyright (c) ${normalized.year} ${normalized.holder}\n\n${output}`;
+  }
 
   return output;
 }
@@ -154,11 +159,11 @@ export function generateLicensePackage(licenseId, options = {}) {
 
   const normalized = normalizeGeneratorOptions({
     ...options,
-    strict: Boolean(options?.strict && license.templateInfo.copyrightInLicenseText)
+    strict: Boolean(options?.strict && license.id !== 'Unlicense')
   });
 
   const content = generateLicenseText(license.id, options);
-  const sourceHeader = generateFileHeader(license.id, options);
+  const sourceHeader = generateFileHeader(license.id, { ...options, strict: normalized.strict });
 
   return {
     spdxId: license.id,
@@ -166,7 +171,7 @@ export function generateLicensePackage(licenseId, options = {}) {
     filename: license.templateInfo.recommendedFilename,
     content,
     sourceHeader,
-    copyrightAppliedInLicense: license.templateInfo.copyrightInLicenseText,
+    copyrightAppliedInLicense: license.id !== 'Unlicense',
     noticeRecommended: license.templateInfo.noticeFileRecommended,
     metadata: {
       year: normalized.year,
