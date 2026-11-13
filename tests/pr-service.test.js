@@ -26,6 +26,7 @@ function createMockInstallationOctokit(overrides = {}) {
   const octokit = {
     rest: {
       repos: {
+        getCollaboratorPermissionLevel: async () => ({ data: { permission: 'write' } }),
         getReadme: async (params) => {
           if (overrides.onReadReadme) return overrides.onReadReadme(params);
           return { data: { type: 'file', path: 'README.md', sha: 'readme-sha', encoding: 'base64', content: Buffer.from('# Demo\n\nOriginal content.\n').toString('base64') } };
@@ -484,7 +485,8 @@ describe('HTTP Integration: POST /api/analyze & POST /api/trigger-pr', () => {
   it('requires explicit replacement opt-in over HTTP and forwards it to the service', async () => {
     const { octokit, calls } = createMockInstallationOctokit({ existingLicense: { path: 'LICENSE.md', license: { spdx_id: 'MIT' } } });
     const { app } = createApp({
-      silentConfig: true, githubContext: createMockGitHubContext({ octokit }),
+      silentConfig: true,
+      createUserClient: () => ({ rest: { users: { getAuthenticated: async () => ({ data: { login: 'maintainer', type: 'User' } }) } } }), githubContext: createMockGitHubContext({ octokit }),
       logger: { info: () => {}, warn: () => {}, error: () => {} }
     });
     activeServer = await new Promise((resolve) => {
@@ -492,7 +494,7 @@ describe('HTTP Integration: POST /api/analyze & POST /api/trigger-pr', () => {
     });
     const url = `http://127.0.0.1:${activeServer.address().port}/api/trigger-pr`;
     const payload = { repo: 'ayushcmd/demo-app', licenseId: 'Apache-2.0', year: '2026', holder: 'XYZ' };
-    const send = (body) => fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const send = (body) => fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer test_token' }, body: JSON.stringify(body) });
     assert.equal((await send(payload)).status, 409);
     assert.equal(calls.createRef.length, 0);
     assert.equal((await send({ ...payload, replaceExisting: 'true' })).status, 400);
@@ -510,6 +512,7 @@ describe('HTTP Integration: POST /api/analyze & POST /api/trigger-pr', () => {
     const githubContext = createMockGitHubContext({ installed: true, octokit });
     const { app } = createApp({
       silentConfig: true,
+      createUserClient: () => ({ rest: { users: { getAuthenticated: async () => ({ data: { login: 'maintainer', type: 'User' } }) } } }),
       githubContext,
       logger: { info: () => {}, warn: () => {}, error: () => {} }
     });
@@ -522,7 +525,7 @@ describe('HTTP Integration: POST /api/analyze & POST /api/trigger-pr', () => {
     // 1. Analyze repo
     const analyzeRes = await fetch(`${baseUrl}/api/analyze`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer test_token' },
       body: JSON.stringify({ repo: 'ayushcmd/demo-app' })
     });
     assert.equal(analyzeRes.status, 200);
@@ -533,7 +536,7 @@ describe('HTTP Integration: POST /api/analyze & POST /api/trigger-pr', () => {
     // 2. Trigger automated PR
     const prRes = await fetch(`${baseUrl}/api/trigger-pr`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer test_token' },
       body: JSON.stringify({
         repo: 'https://github.com/ayushcmd/demo-app',
         licenseId: 'MIT',
@@ -550,7 +553,7 @@ describe('HTTP Integration: POST /api/analyze & POST /api/trigger-pr', () => {
     // 3. Invalid request body returns HTTP 400
     const badRes = await fetch(`${baseUrl}/api/trigger-pr`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer test_token' },
       body: JSON.stringify({ repo: 'ayushcmd/demo-app', licenseId: 'MIT', year: '2026', holder: '' })
     });
     assert.equal(badRes.status, 400);

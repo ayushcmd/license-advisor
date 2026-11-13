@@ -94,7 +94,7 @@ export function createApp(options = {}) {
   );
 
   app.use(express.json({ limit: '256kb' }));
-  app.use('/api', createApiRouter({ githubContext, env }));
+  app.use('/api', createApiRouter({ githubContext, env, createUserClient: options.createUserClient }));
 
   app.use(express.static(PUBLIC_DIR, { extensions: ['html'] }));
 
@@ -104,7 +104,7 @@ export function createApp(options = {}) {
 
   app.use((err, req, res, _next) => {
     if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
-      return res.status(400).json({ error: 'Malformed JSON request body.' });
+      return res.status(400).json({ error: 'Malformed JSON request body.', code: 'INVALID_JSON' });
     }
     const status = typeof err.status === 'number' ? err.status : 500;
     if (status >= 500) {

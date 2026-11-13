@@ -111,7 +111,7 @@ describe('Express Server, Security Headers, Static Assets & Public API', () => {
     assert.ok(csp.includes('https://api.github.com'));
     assert.equal(indexRes.headers.get('x-powered-by'), null);
     const html = await indexRes.text();
-    assert.ok(html.includes('GitHub License Advisor'));
+    assert.ok(html.includes('Open Workers'));
 
     const healthRes = await fetch(`${started.baseUrl}/api/health`);
     assert.equal(healthRes.status, 200);

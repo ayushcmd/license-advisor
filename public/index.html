@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>GitHub License Advisor — Open-Source Licensing Policy Guide &amp; GitHub App</title>
-  <meta name="description" content="Choose, compare, generate, and automate open-source licenses for GitHub repositories based on permissions, copyleft scope, patent clauses, and network-use triggers.">
+  <title>Open Workers - GitHub Repository Tools</title>
+  <meta name="description" content="Tools for licensing, community standards, security policies, documentation, and repository maintenance.">
   <link rel="icon" type="image/svg+xml" href="assets/logo.svg">
   <link rel="stylesheet" href="css/base.css">
   <link rel="stylesheet" href="css/components.css">
@@ -16,10 +16,11 @@
     <div class="container site-header-inner">
       <a href="index.html" class="brand-link">
         <img src="assets/logo.svg" alt="" class="brand-logo" width="26" height="26">
-        <span>GitHub License Advisor</span>
+        <span>Open Workers</span>
       </a>
       <nav class="site-nav" aria-label="Primary">
         <a href="index.html" class="nav-link" aria-current="page">Home</a>
+        <a href="community.html" class="nav-link">Community</a>
         <a href="explorer.html" class="nav-link">Licenses</a>
         <a href="questionnaire.html" class="nav-link">Find a license</a>
         <a href="compare.html" class="nav-link">Compare</a>
@@ -31,25 +32,20 @@
 
   <main id="main-content" class="container stack-lg">
     <section class="page-header stack-sm">
-      <h1>Choose a license for your project</h1>
-      <p>Find the right license, understand its terms, and add it to GitHub.</p>
+      <h1>One GitHub App. Multiple Capabilities.</h1>
+      <p>Simplify repository management with tools for licensing, community guidelines, security, documentation, and automation.</p>
       <div class="cluster" style="padding-top: 6px;">
-        <a href="questionnaire.html" class="btn btn-primary">Find my license</a>
-        <a href="analyzer.html" class="btn btn-secondary">Check repository</a>
-        <a href="explorer.html" class="btn btn-secondary">Browse licenses</a>
+        <a href="community.html" class="btn btn-primary">Create community documents</a>
+        <a href="questionnaire.html" class="btn btn-secondary">Find a license</a>
       </div>
     </section>
 
-    <section class="grid-3 task-grid" aria-label="Choose a task">
-      <article class="card"><span class="eyebrow">01 / Choose</span><h2>Find your fit</h2><p>Answer a few questions to get a license recommendation.</p><a href="questionnaire.html">Find a license &rarr;</a></article>
-      <article class="card"><span class="eyebrow">02 / Check</span><h2>Know your repository</h2><p>See which license is present and review its terms.</p><a href="analyzer.html">Check repository &rarr;</a></article>
-      <article class="card"><span class="eyebrow">03 / Apply</span><h2>Make it official</h2><p>Add or replace a license with a reviewable GitHub PR.</p><a href="app-install.html">Create a PR &rarr;</a></article>
-    </section>
+    <section id="capability-grid" class="grid-3 task-grid" aria-label="Capabilities"></section>
     <details class="disclosure"><summary>How recommendations work</summary><div class="disclosure-body">Recommendations use your sharing preferences, patent requirements, and dependency licenses. Your programming language does not determine the result. Repository checks run on demand without storing repository code.</div></details>
 
     <section aria-labelledby="spotlight-heading" class="stack-md">
       <div class="cluster-between">
-        <h2 id="spotlight-heading" style="margin:0;">Common choices</h2>
+        <h2 id="spotlight-heading" style="margin:0;">Common license choices</h2>
         <a href="explorer.html">View all 12 licenses &rarr;</a>
       </div>
       <div id="home-catalog-preview" class="grid-3"></div>
@@ -60,7 +56,7 @@
 
   <footer class="site-footer">
     <div class="container cluster-between">
-      <span>GitHub License Advisor &middot; MIT Licensed &middot; Informational only, not legal advice.</span>
+      <span>Open Workers &middot; Apache-2.0 Licensed &middot; Informational only, not legal advice.</span>
       <nav class="footer-links" aria-label="Footer">
         <a href="app-install.html">Create PR</a>
         <a href="privacy.html">Privacy Policy</a>
@@ -71,6 +67,7 @@
   </footer>
 
   <script type="module" src="js/app.js"></script>
+  <script type="module" src="js/home-capabilities.js"></script>
 </body>
 </html>
 

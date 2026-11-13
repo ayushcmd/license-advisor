@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Community Documents - Open Workers</title>
+  <meta name="description" content="Generate contribution guidelines, a code of conduct, a security policy, and support documents. Preview, copy, and download Markdown.">
+  <link rel="icon" type="image/svg+xml" href="assets/logo.svg">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css">
+</head>
+<body data-page="community">
+  <a href="#main-content" class="skip-link">Skip to main content</a>
+
+  <header class="site-header">
+    <div class="container site-header-inner">
+      <a href="index.html" class="brand-link">
+        <img src="assets/logo.svg" alt="" class="brand-logo" width="26" height="26">
+        <span>Open Workers</span>
+      </a>
+      <nav class="site-nav" aria-label="Primary">
+        <a href="index.html" class="nav-link">Home</a>
+        <a href="community.html" class="nav-link" aria-current="page">Community</a>
+        <a href="explorer.html" class="nav-link">Licenses</a>
+        <a href="questionnaire.html" class="nav-link">Find a license</a>
+        <a href="compare.html" class="nav-link">Compare</a>
+        <a href="analyzer.html" class="nav-link">Check repository</a>
+        <a href="app-install.html" class="nav-link">Create PR</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main-content" class="container stack-lg">
+    <section class="page-header stack-sm"><h1>Community documents</h1><p>Set clear expectations for contributors and users.</p><p class="text-small text-muted">Preview, copy, and download. No GitHub installation needed. Repository PR integration is planned.</p></section>
+    <div class="form-group"><label for="community-template" class="form-label">Choose a document</label><select id="community-template" class="select" disabled></select></div>
+    <p id="community-warning" class="flash flash-info" hidden>Contributor Covenant 3.0 requires a real, private enforcement contact. Generation is blocked until you provide one.</p>
+    <div class="community-layout">
+      <form id="community-form" class="box box-body stack-md"><p class="text-small text-muted">* Required. Instructions are treated as plain text. Empty optional sections are omitted.</p><div id="community-fields" class="stack-md"></div><button id="community-generate" class="btn btn-primary" type="submit" disabled>Generate Markdown</button></form>
+      <section class="box box-body stack-md" aria-labelledby="community-filename"><h2 id="community-filename">Markdown preview</h2><p class="text-small text-muted">Review the source below before adding it to your project.</p><div class="cluster"><button id="community-copy" class="btn btn-secondary" disabled>Copy</button><button id="community-download" class="btn btn-secondary" disabled>Download .md</button></div><p id="community-status" role="status" aria-live="polite"></p><pre id="community-preview" class="license-preview" tabindex="0">Loading templates…</pre></section>
+    </div>
+    <section class="grid-2" aria-label="Upcoming tools"><article class="card"><span class="eyebrow">Upcoming</span><h2>Issue Templates</h2><code>.github/ISSUE_TEMPLATE/</code><p>Structured bug reports and feature requests.</p></article><article class="card"><span class="eyebrow">Upcoming</span><h2>Pull Request Template</h2><code>.github/PULL_REQUEST_TEMPLATE.md</code><p>Consistent information for reviewers.</p></article></section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container cluster-between">
+      <span>Open Workers &middot; Apache-2.0 Licensed &middot; Informational only, not legal advice.</span>
+      <nav class="footer-links" aria-label="Footer">
+        <a href="app-install.html">Create PR</a>
+        <a href="privacy.html">Privacy Policy</a>
+        <a href="support.html">Support</a>
+        <a href="https://github.com/ayushcmd/license-advisor" target="_blank" rel="noopener noreferrer">GitHub Repo</a>
+      </nav>
+    </div>
+  </footer>
+
+  <script type="module" src="js/app.js"></script>
+  <script type="module" src="js/community.js"></script>
+</body>
+</html>
