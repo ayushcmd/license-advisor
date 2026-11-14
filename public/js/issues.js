@@ -2,6 +2,8 @@
  * Open Workers — PR & Issue Management Frontend Controller
  */
 
+import { escapeHtml, sanitizeUrl } from './ui-utils.js';
+
 function formatError(err, fallback = 'Operation failed.') {
   if (!err) return fallback;
   if (typeof err === 'string') return err;
@@ -154,18 +156,19 @@ document.addEventListener('DOMContentLoaded', () => {
             row.style.padding = 'var(--space-2)';
             row.style.background = 'var(--color-canvas-default)';
 
+            const safeUrl = sanitizeUrl(s.url, '#');
             row.innerHTML = `
               <div>
-                <a href="${s.url}" target="_blank" rel="noopener noreferrer" style="font-weight: 600;">#${s.number} ${s.title}</a>
-                <p class="text-small text-muted" style="margin: var(--space-1) 0 0;">${s.explanation}</p>
+                <a href="${escapeHtml(safeUrl)}" target="_blank" rel="noopener noreferrer" style="font-weight: 600;">#${escapeHtml(s.number)} ${escapeHtml(s.title)}</a>
+                <p class="text-small text-muted" style="margin: var(--space-1) 0 0;">${escapeHtml(s.explanation)}</p>
               </div>
-              <span class="badge ${s.similarityScore >= 50 ? 'badge-warning' : 'badge-secondary'}">${s.similarityScore}% match</span>
+              <span class="badge ${s.similarityScore >= 50 ? 'badge-warning' : 'badge-secondary'}">${escapeHtml(s.similarityScore)}% match</span>
             `;
             triageDuplicatesList.appendChild(row);
           }
         }
       } catch (err) {
-        triageDuplicatesList.innerHTML = `<p class="text-small text-danger">${formatError(err, 'Failed to scan candidate duplicates.')}</p>`;
+        triageDuplicatesList.innerHTML = `<p class="text-small text-danger">${escapeHtml(formatError(err, 'Failed to scan candidate duplicates.'))}</p>`;
       } finally {
         triageDuplicatesLoading.hidden = true;
         triageFindDuplicatesBtn.disabled = false;
@@ -244,11 +247,11 @@ document.addEventListener('DOMContentLoaded', () => {
           const statusClass = check.status === 'passed' ? 'badge-success' : check.status === 'missing' ? 'badge-danger' : check.status === 'warning' ? 'badge-warning' : 'badge-secondary';
 
           tr.innerHTML = `
-            <td><strong>${check.name}</strong></td>
-            <td><span class="badge ${statusClass}">${check.status.toUpperCase()}</span></td>
+            <td><strong>${escapeHtml(check.name)}</strong></td>
+            <td><span class="badge ${statusClass}">${escapeHtml(check.status.toUpperCase())}</span></td>
             <td>
-              <div>${check.message}</div>
-              ${check.recommendation ? `<div class="text-small text-muted" style="margin-top: 4px;"><strong>Fix:</strong> ${check.recommendation}</div>` : ''}
+              <div>${escapeHtml(check.message)}</div>
+              ${check.recommendation ? `<div class="text-small text-muted" style="margin-top: 4px;"><strong>Fix:</strong> ${escapeHtml(check.recommendation)}</div>` : ''}
             </td>
           `;
           prChecksTbody.appendChild(tr);
@@ -531,8 +534,8 @@ document.addEventListener('DOMContentLoaded', () => {
             div.style.padding = 'var(--space-2)';
             div.style.background = 'var(--color-canvas-subtle)';
             div.innerHTML = `
-              <strong>#${s.issueNumber} ${s.title}</strong>
-              <div class="text-small text-muted" style="margin-top: 2px;">Inactive for ${s.daysInactive} days • ${s.reason}</div>
+              <strong>#${escapeHtml(s.issueNumber)} ${escapeHtml(s.title)}</strong>
+              <div class="text-small text-muted" style="margin-top: 2px;">Inactive for ${escapeHtml(s.daysInactive)} days • ${escapeHtml(s.reason)}</div>
             `;
             staleIssuesList.appendChild(div);
           }

@@ -5,6 +5,8 @@
  * Code Quality Configs, and Consolidated Pull Requests.
  */
 
+import { sanitizeUrl } from './ui-utils.js';
+
 // Staged files cache for PR creation: Map<filename, { filename, content, templateId }>
 const stagedFiles = new Map();
 
@@ -680,7 +682,7 @@ if (authForm) {
       prResultBanner.innerHTML = `
         <div class="banner banner-success">
           <strong>Pull Request Created Successfully!</strong><br>
-          <a href="${escapeHtml(data.pullUrl)}" target="_blank" rel="noopener" class="btn btn-primary btn-sm" style="margin-top: var(--space-2); display: inline-block;">
+          <a href="${escapeHtml(sanitizeUrl(data.pullUrl, '#'))}" target="_blank" rel="noopener" class="btn btn-primary btn-sm" style="margin-top: var(--space-2); display: inline-block;">
             View PR #${escapeHtml(String(data.pullNumber))} on GitHub &rarr;
           </a>
           <div class="text-xs text-muted" style="margin-top: var(--space-1);">

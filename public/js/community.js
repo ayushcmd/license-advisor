@@ -8,6 +8,8 @@
  * 4. Consolidated community Pull Request workflow (POST /api/community/trigger-pr)
  */
 
+import { sanitizeUrl } from './ui-utils.js';
+
 let allTemplates = [];
 const docDrafts = new Map();
 const tplDrafts = new Map();
@@ -554,7 +556,7 @@ prForm?.addEventListener('submit', async (e) => {
     prOutputTitle.textContent = 'Pull Request Created Successfully!';
     prOutputContent.innerHTML = `
       <div class="flash flash-success stack-sm">
-        <p><strong>Pull Request opened:</strong> <a href="${escapeHtml(data.pullUrl)}" target="_blank" rel="noopener noreferrer">PR #${data.pullNumber} (${escapeHtml(data.pullTitle)})</a></p>
+        <p><strong>Pull Request opened:</strong> <a href="${escapeHtml(sanitizeUrl(data.pullUrl, '#'))}" target="_blank" rel="noopener noreferrer">PR #${data.pullNumber} (${escapeHtml(data.pullTitle)})</a></p>
         <p class="text-small">Dedicated branch: <code>${escapeHtml(data.branch)}</code></p>
         <p class="text-small">Committed files (${data.files.length}): <code>${escapeHtml(data.files.join(', '))}</code></p>
       </div>
