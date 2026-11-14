@@ -531,6 +531,357 @@ ${jobSteps.join('\n\n')}
 /**
  * Generate EditorConfig (.editorconfig)
  */
+export function generateEditorConfig(options = {}) {
+  const indentStyle = options.indentStyle === 'tab' ? 'tab' : 'space';
+  const indentSize = Number(options.indentSize) === 4 ? 4 : 2;
+  const endOfLine = options.endOfLine === 'crlf' ? 'crlf' : 'lf';
+  const charset = options.charset === 'latin1' ? 'latin1' : 'utf-8';
+  const trimTrailingWhitespace = options.trimTrailingWhitespace !== false;
+  const insertFinalNewline = options.insertFinalNewline !== false;
+
+  return `# http://editorconfig.org
+root = true
+
+[*]
+indent_style = ${indentStyle}
+indent_size = ${indentSize}
+end_of_line = ${endOfLine}
+charset = ${charset}
+trim_trailing_whitespace = ${trimTrailingWhitespace}
+insert_final_newline = ${insertFinalNewline}
+
+[*.md]
+trim_trailing_whitespace = false
+
+[Makefile]
+indent_style = tab
+`;
+}
+
+/**
+ * Generate Prettier Config (.prettierrc.json)
+ */
+export function generatePrettierConfig(options = {}) {
+  const tabWidth = Number(options.tabWidth) === 4 ? 4 : 2;
+  const semi = options.semi !== false;
+  const singleQuote = options.singleQuote !== false;
+  const trailingComma = ['es5', 'none', 'all'].includes(options.trailingComma) ? options.trailingComma : 'all';
+  const printWidth = Number(options.printWidth) || 100;
+  const endOfLine = options.endOfLine === 'crlf' ? 'crlf' : 'lf';
+
+  const config = {
+    tabWidth,
+    useTabs: false,
+    semi,
+    singleQuote,
+    trailingComma,
+    printWidth,
+    endOfLine
+  };
+
+  return JSON.stringify(config, null, 2) + '\n';
+}
+
+/**
+ * Generate ESLint Flat Configuration (eslint.config.js)
+ */
+export function generateEslintConfig(options = {}) {
+  const isTypeScript = Boolean(options.typescript);
+
+  if (isTypeScript) {
+    return `// Open Workers — ESLint Flat Configuration (TypeScript)
+// Documentation: https://eslint.org/docs/latest/use/configure/configuration-files
+import js from '@eslint/js';
+import tseslint from 'typescript-eslint';
+
+export default [
+  js.configs.recommended,
+  ...tseslint.configs.recommended,
+  {
+    rules: {
+      'no-console': ['warn', { allow: ['warn', 'error', 'info'] }],
+      '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }]
+    }
+  },
+  {
+    ignores: ['node_modules/', 'dist/', 'build/', 'coverage/']
+  }
+];
+`;
+  }
+
+  return `// Open Workers — ESLint Flat Configuration (ES6 Modules)
+// Documentation: https://eslint.org/docs/latest/use/configure/configuration-files
+import js from '@eslint/js';
+
+export default [
+  js.configs.recommended,
+  {
+    languageOptions: {
+      ecmaVersion: 2024,
+      sourceType: 'module'
+    },
+    rules: {
+      'no-console': ['warn', { allow: ['warn', 'error', 'info'] }],
+      'no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
+      'no-undef': 'error'
+    }
+  },
+  {
+    ignores: ['node_modules/', 'dist/', 'build/', 'coverage/']
+  }
+];
+`;
+}
+
+/**
+ * Generate Git Attributes (.gitattributes)
+ */
+export function generateGitAttributes(options = {}) {
+  const eolMode = options.eolMode === 'crlf' ? 'crlf' : 'lf';
+  const includeBinaryRules = options.includeBinaryRules !== false;
+
+  let content = `# Auto detect text files and perform line normalization on checkout
+* text=auto eol=${eolMode}
+
+# Explicit text files
+*.js text eol=${eolMode}
+*.jsx text eol=${eolMode}
+*.ts text eol=${eolMode}
+*.tsx text eol=${eolMode}
+*.json text eol=${eolMode}
+*.html text eol=${eolMode}
+*.css text eol=${eolMode}
+*.md text eol=${eolMode}
+*.yml text eol=${eolMode}
+*.yaml text eol=${eolMode}
+*.sh text eol=lf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+`;
+
+  if (includeBinaryRules) {
+    content += `
+# Binary files
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+*.pdf binary
+*.zip binary
+*.tar.gz binary
+`;
+  }
+
+  return content;
+}
+
+/**
+ * Generate Git Ignore (.gitignore)
+ */
+export function generateGitIgnore(options = {}) {
+  const ecosystem = options.ecosystem || 'node';
+  const existingContent = typeof options.existingContent === 'string' ? options.existingContent : '';
+
+  const nodeSection = `# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Environment and secrets
+.env
+.env.local
+.env.*.local
+
+# Build output
+dist/
+build/
+out/
+.next/
+.nuxt/
+
+# Logs and coverage
+logs/
+*.log
+coverage/
+.nyc_output/
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+`;
+
+  const pythonSection = `# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Testing and coverage
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Environment and secrets
+.env
+.env.local
+`;
+
+  const generalSection = `# Environment and secrets
+.env
+*.local
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor directories
+.idea/
+.vscode/
+*.swp
+*.swo
+`;
+
+  let template = nodeSection;
+  if (ecosystem === 'python') template = pythonSection;
+  if (ecosystem === 'general') template = generalSection;
+  if (ecosystem === 'all') template = `${nodeSection}\n${pythonSection}`;
+
+  if (!existingContent.trim()) {
+    return template;
+  }
+
+  // Merge cleanly: only append rules not already present in existingContent
+  const existingLines = new Set(
+    existingContent.split('\n').map((l) => l.trim()).filter((l) => l && !l.startsWith('#'))
+  );
+
+  const missingLines = [];
+  for (const line of template.split('\n')) {
+    const trimmed = line.trim();
+    if (trimmed && !trimmed.startsWith('#') && !existingLines.has(trimmed)) {
+      missingLines.push(trimmed);
+    }
+  }
+
+  if (missingLines.length === 0) {
+    return existingContent;
+  }
+
+  return `${existingContent.trimEnd()}\n\n# Open Workers — Added Missing Ignores\n${missingLines.join('\n')}\n`;
+}
+
+/**
+ * Unified Generator Dispatcher
+ */
+export function generateAutomationFile({ templateId, options = {}, existingContent = '' }) {
+  switch (templateId) {
+    case 'node-ci':
+      return {
+        templateId,
+        filename: '.github/workflows/node-ci.yml',
+        content: generateNodeCiWorkflow(options),
+        requiresWorkflowPermission: true
+      };
+    case 'python-ci':
+      return {
+        templateId,
+        filename: '.github/workflows/python-ci.yml',
+        content: generatePythonCiWorkflow(options),
+        requiresWorkflowPermission: true
+      };
+    case 'matrix-ci':
+      return {
+        templateId,
+        filename: '.github/workflows/matrix-ci.yml',
+        content: generateMatrixCiWorkflow(options),
+        requiresWorkflowPermission: true
+      };
+    case 'pr-validation':
+      return {
+        templateId,
+        filename: '.github/workflows/pr-validation.yml',
+        content: generatePrValidationWorkflow(options),
+        requiresWorkflowPermission: true
+      };
+    case 'maintenance':
+      return {
+        templateId,
+        filename: '.github/workflows/maintenance.yml',
+        content: generateMaintenanceWorkflow(options),
+        requiresWorkflowPermission: true
+      };
+    case 'editorconfig':
+      return {
+        templateId,
+        filename: '.editorconfig',
+        content: generateEditorConfig(options),
+        requiresWorkflowPermission: false
+      };
+    case 'prettier':
+      return {
+        templateId,
+        filename: '.prettierrc.json',
+        content: generatePrettierConfig(options),
+        requiresWorkflowPermission: false
+      };
+    case 'eslint':
+      return {
+        templateId,
+        filename: 'eslint.config.js',
+        content: generateEslintConfig(options),
+        requiresWorkflowPermission: false
+      };
+    case 'gitattributes':
+      return {
+        templateId,
+        filename: '.gitattributes',
+        content: generateGitAttributes(options),
+        requiresWorkflowPermission: false
+      };
+    case 'gitignore':
+      return {
+        templateId,
+        filename: '.gitignore',
+        content: generateGitIgnore({ ...options, existingContent }),
+        requiresWorkflowPermission: false
+      };
+    default:
+      throw new Error(`Unsupported automation template "${templateId}".`);
+  }
+}
+
+/**
+ * Workflow Health Inspector
+ * Evaluates GitHub Actions workflow content for security, permissions, timeouts, and pinning.
+ */
 export function inspectWorkflowContent({ path = '.github/workflows/unknown.yml', content = '' } = {}) {
   const findings = [];
   const lines = content.split('\n');
