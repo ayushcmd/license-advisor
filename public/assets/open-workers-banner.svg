@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 320" width="1200" height="320" role="img" aria-labelledby="bannerTitle bannerDesc">
+  <title id="bannerTitle">Open Workers — One GitHub App. Multiple Capabilities.</title>
+  <desc id="bannerDesc">Official developer banner for Open Workers showing six-module automation platform.</desc>
+
+  <defs>
+    <pattern id="dotGrid" width="20" height="20" patternUnits="userSpaceOnUse">
+      <circle cx="2" cy="2" r="1.4" fill="#D0D7DE" />
+    </pattern>
+    <clipPath id="bannerClip">
+      <rect x="2" y="2" width="1196" height="316" rx="16" />
+    </clipPath>
+  </defs>
+
+  <!-- Card background -->
+  <rect x="2" y="2" width="1196" height="316" rx="16" fill="#FFFFFF" stroke="#D0D7DE" stroke-width="2" />
+
+  <!-- Subtle dot-grid accent on right -->
+  <rect x="740" y="2" width="458" height="316" fill="url(#dotGrid)" opacity="0.65" clip-path="url(#bannerClip)" />
+
+  <!-- Left Emblem: Official Open Workers Icon (Central Squircle & Green PR Symbol) -->
+  <g transform="translate(60, 48)">
+    <rect x="0" y="0" width="224" height="224" rx="48" fill="#0D1117" />
+    <!-- Connecting vertical stem -->
+    <line x1="78" y1="78" x2="78" y2="152" stroke="#34D058" stroke-width="15" stroke-linecap="round" />
+    <!-- Branch curving right and down -->
+    <path d="M 78 78 H 124 A 26 26 0 0 1 150 104 V 134" fill="none" stroke="#34D058" stroke-width="15" stroke-linecap="round" stroke-linejoin="round" />
+    <!-- Downward arrow head -->
+    <path d="M 134 122 L 150 138 L 166 122" fill="none" stroke="#34D058" stroke-width="15" stroke-linecap="round" stroke-linejoin="round" />
+    <!-- Three node rings -->
+    <circle cx="78" cy="78" r="20" fill="#0D1117" stroke="#34D058" stroke-width="13" />
+    <circle cx="78" cy="152" r="20" fill="#0D1117" stroke="#34D058" stroke-width="13" />
+    <circle cx="150" cy="152" r="20" fill="#0D1117" stroke="#34D058" stroke-width="13" />
+  </g>
+
+  <!-- Typography and Content -->
+  <g transform="translate(320, 0)">
+    <!-- Title -->
+    <text x="0" y="94" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="44" font-weight="800" fill="#24292F" letter-spacing="-0.5">Open Workers</text>
+
+    <!-- Tagline -->
+    <text x="0" y="132" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="20" font-weight="600" fill="#2DA44E">One GitHub App. Multiple Capabilities.</text>
+
+    <!-- Value proposition & Operational principle -->
+    <text x="0" y="168" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" fill="#57606A">
+      Multi-purpose GitHub automation suite built on the operational principle:
+    </text>
+    <text x="0" y="192" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="600" fill="#24292F">
+      Inspect <tspan fill="#2DA44E">→</tspan> Recommend <tspan fill="#2DA44E">→</tspan> Act
+      <tspan font-weight="400" fill="#57606A"> via least-privilege, reviewable pull requests.</tspan>
+    </text>
+
+    <!-- 6 Capability Badges -->
+    <g transform="translate(0, 222)">
+      <!-- 1. Licensing -->
+      <rect x="0" y="0" width="112" height="28" rx="14" fill="#DCFCE7" stroke="#4ADE80" stroke-width="1" />
+      <text x="56" y="18" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="12" font-weight="600" fill="#166534">Licensing &#x2713;</text>
+
+      <!-- 2. Community -->
+      <rect x="122" y="0" width="124" height="28" rx="14" fill="#DCFCE7" stroke="#4ADE80" stroke-width="1" />
+      <text x="184" y="18" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="12" font-weight="600" fill="#166534">Community &#x2713;</text>
+
+      <!-- 3. Security -->
+      <rect x="256" y="0" width="92" height="28" rx="14" fill="#F6F8FA" stroke="#D0D7DE" stroke-width="1" />
+      <text x="302" y="18" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="12" font-weight="500" fill="#57606A">Security</text>
+
+      <!-- 4. Documentation -->
+      <rect x="358" y="0" width="136" height="28" rx="14" fill="#F6F8FA" stroke="#D0D7DE" stroke-width="1" />
+      <text x="426" y="18" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="12" font-weight="500" fill="#57606A">Documentation</text>
+
+      <!-- 5. PR & Issues -->
+      <rect x="504" y="0" width="126" height="28" rx="14" fill="#F6F8FA" stroke="#D0D7DE" stroke-width="1" />
+      <text x="567" y="18" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="12" font-weight="500" fill="#57606A">PR &amp; Issues</text>
+
+      <!-- 6. Automation -->
+      <rect x="640" y="0" width="150" height="28" rx="14" fill="#F6F8FA" stroke="#D0D7DE" stroke-width="1" />
+      <text x="715" y="18" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="12" font-weight="500" fill="#57606A">Repo Automation</text>
+    </g>
+  </g>
+</svg>

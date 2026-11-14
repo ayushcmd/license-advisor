@@ -105,7 +105,7 @@ export function createApiRouter({ githubContext, env = process.env, createUserCl
   router.get('/health', (_req, res) => {
     res.json({
       status: 'ok',
-      service: 'github-license-advisor',
+      service: 'open-workers',
       mode: 'database-free',
       timestamp: new Date().toISOString(),
       githubAppConfigured: Boolean(githubContext?.isAppConfigured),
@@ -117,11 +117,11 @@ export function createApiRouter({ githubContext, env = process.env, createUserCl
   router.get('/config', (_req, res) => {
     res.json({
       appName: 'Open Workers',
-      appSlug: githubContext?.appSlug || 'github-license-advisor',
+      appSlug: githubContext?.appSlug || 'open-license-advisor',
       appUrl,
       installUrl: githubContext?.getInstallationUrl
         ? githubContext.getInstallationUrl()
-        : 'https://github.com/apps/github-license-advisor/installations/new',
+        : 'https://github.com/apps/open-license-advisor/installations/new',
       githubAppConfigured: Boolean(githubContext?.isAppConfigured),
       webhookConfigured: Boolean(githubContext?.isWebhookConfigured),
       planTier: 'free',

@@ -1,328 +1,382 @@
-# Open Workers
-
-One GitHub App. Multiple Capabilities.
-
-Open Workers is a multi-purpose GitHub automation assistant for licensing, community standards, security policies, documentation, and repository maintenance through recommendations and reviewable pull requests.
-
-**Development expansion:** Phase 1 and Phase 2 add a modular capability registry and community document generators. The production GitHub App and Marketplace listing remain **Open License Advisor**. Repository name, App slug, webhook configuration, Render service, and production URLs are unchanged. Production rebranding is a separate future release.
-
-## Available now
-
-- **Licensing:** explorer, questionnaire, recommendations, comparison, compatibility checks, repository analysis, personalized license text, add/replace license PRs, and README preview/mentions.
-- **Community:** `/community.html` generates `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`, and `SUPPORT.md`. Customize fields, preview Markdown source, copy, or download. No installation is required.
-- **Upcoming:** issue templates, PR templates, repository security checks, documentation tools, issue management, and automation. Community repository writes are not enabled.
-
-## Phase 1–2 architecture
-
-The stack remains Node.js 20+, Express 5, and vanilla ES modules, without a database.
-
-| Location | Responsibility |
-| --- | --- |
-| `public/js/capabilities.js` | Shared immutable capability metadata for frontend and backend |
-| `src/core/capabilities/registry.js` | Backend registry entry point |
-| `src/core/github/authorize.js` | GitHub user identity and repository write-permission verification |
-| `src/core/repository/service.js` | Repository metadata, file reads, existence checks, root listing, and base SHA |
-| `src/core/pullRequests/` | Dedicated branch conflict handling and expected-SHA file commits |
-| `src/modules/community/engine.js` | Versioned schemas, validation, and pure deterministic document generation |
-| `src/modules/community/templates/` | Official Contributor Covenant 3.0 source, including CC BY-SA attribution |
-| `src/services/` and existing shared browser modules | Preserved licensing and README operations |
-
-The licensing orchestrator uses the shared repository, branch, and file helpers. Multiple files may be committed sequentially to one feature branch; the service opens a PR only after requested writes succeed. These are internal services, not unrestricted write endpoints. Existing-file SHAs prevent accidental replacement; open-PR detection prevents duplicate license PRs. Partial failures can leave an isolated branch for review and do not change the default branch. There is no automatic rollback or autonomous retry loop.
-
-## Community API
-
-| Endpoint | Purpose |
-| --- | --- |
-| `GET /api/capabilities` | Six capabilities with status, operations, permissions, and routes |
-| `GET /api/capabilities/:id` | One capability; unknown IDs return 404 `UNKNOWN_CAPABILITY` |
-| `GET /api/community/templates` | Four template schemas, defaults, lengths, versions, output paths |
-| `POST /api/community/generate` | Validate inputs and return `{filename, content, templateId}`; no GitHub access |
-
-Example request:
-
-```json
-{"templateId":"contributing","options":{"projectName":"Example Project","repositoryUrl":"https://github.com/example/project"}}
-```
-
-Other template IDs: `code-of-conduct`, `security`, `support`. Invalid options return HTTP 400 `INVALID_INPUT`; unknown templates return `UNKNOWN_TEMPLATE`. Fields accept plain text, which is escaped for Markdown/HTML. URLs permit HTTP/HTTPS only and reject credentials. Optional empty sections are omitted. No setup commands, support promises, or contact addresses are invented. Conduct requires a private enforcement contact; security requires supported versions and a private reporting contact. Review the generated policy before adopting it.
-
-Contributor Covenant 3.0 is sourced from [the official template](https://www.contributor-covenant.org/version/3/0/code_of_conduct/code_of_conduct.md). Its attribution and [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) notice remain in generated documents; customized conduct documents use that same license. This third-party text is separate from this repository's Apache-2.0 code license.
-
-## Caller authorization and limitations
-
-`POST /api/trigger-pr` now requires `Authorization: Bearer <GitHub user token>`. This is an intentional security tightening: an installed GitHub App does not authorize an anonymous caller to modify a repository.
-
-The UI accepts a user token only for PR creation, clears the input after submission, and never stores it in browser storage. Prefer a fine-grained token scoped to the target repository with read-only Metadata permission. The server verifies identity through GitHub's authenticated-user API, then uses the installation client to check that verified user's **write/admin/maintain** access to the exact target repository. Missing/expired tokens, read/triage access, bot identities, and upstream authorization failures are rejected before writes. Tokens are not persisted or logged by the application; serve over HTTPS and ensure reverse proxies do not log Authorization headers.
-
-This is a manual token flow, not OAuth sign-in. GitHub App user OAuth and consolidated community PRs are future work. Existing licensing success response fields remain compatible; clients must now supply authorization. Community APIs do not accept repository write commands, tokens, or installation IDs. Existing analysis APIs are unchanged; this phase does not expand private repository reading.
-
-The installation still requires Metadata (read), Contents (write), and Pull Requests (write). Webhook HMAC verification, CSP, replacement opt-in, and README preservation remain in place.
-
-## Local preview and validation
-
-```bash
-npm ci
-npm run dev
-# Open http://localhost:3000 or http://127.0.0.1:3000
-npm test
-npm run lint:syntax
-```
-
-Serve through Express rather than opening HTML files directly. Community preview/download and licensing recommendations work without App credentials. Existing environment and deployment instructions below still apply; no Cloudflare migration or hosting changes are included.
-
----
-
 <div align="center">
+  <img src="./public/assets/open-workers-logo.png" alt="Open Workers Logo" width="160">
 
-<a href="https://github.com/marketplace/open-license-advisor">
-  <img src="./public/assets/banner.svg" alt="Open License Advisor Banner" width="100%">
-</a>
+  # Open Workers
 
-<br>
+  **One GitHub App. Multiple Capabilities.**
 
-[![GitHub Marketplace](https://img.shields.io/badge/GitHub%20Marketplace-Open%20License%20Advisor-2DA44E?style=flat-square&logo=github&logoColor=white)](https://github.com/marketplace/open-license-advisor)
-[![GitHub App](https://img.shields.io/badge/GitHub%20App-open--license--advisor-0969DA?style=flat-square&logo=github&logoColor=white)](https://github.com/apps/open-license-advisor)
-[![Live Web App](https://img.shields.io/badge/Live%20App-license--advisor.onrender.com-24292F?style=flat-square&logo=render&logoColor=white)](https://license-advisor.onrender.com)
-[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg?style=flat-square)](./LICENSE)
-[![Node.js](https://img.shields.io/badge/Node.js-%3E%3D20.0.0-2DA44E?style=flat-square&logo=nodedotjs&logoColor=white)](https://nodejs.org/)
+  [![GitHub Marketplace](https://img.shields.io/badge/GitHub%20Marketplace-Open%20Workers-2DA44E?style=flat-square&logo=github&logoColor=white)](https://github.com/marketplace/open-workers)
+  [![Live Web App](https://img.shields.io/badge/Live%20App-open--workers.onrender.com-24292F?style=flat-square&logo=render&logoColor=white)](https://open-workers.onrender.com)
+  [![GitHub App](https://img.shields.io/badge/GitHub%20App-open--license--advisor-0969DA?style=flat-square&logo=github&logoColor=white)](https://github.com/apps/open-license-advisor)
+  [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg?style=flat-square)](./LICENSE)
+  [![Node.js](https://img.shields.io/badge/Node.js-%3E%3D20.0.0-339933.svg?style=flat-square&logo=nodedotjs&logoColor=white)](https://nodejs.org)
+  [![Tests](https://img.shields.io/badge/Tests-77%20Passing-2DA44E.svg?style=flat-square&logo=githubactions&logoColor=white)](./tests)
 
-<p>
-  <a href="https://license-advisor.onrender.com"><strong>Launch Web App</strong></a>
-  &nbsp;&middot;&nbsp;
-  <a href="https://github.com/apps/open-license-advisor"><strong>Install GitHub App</strong></a>
-  &nbsp;&middot;&nbsp;
-  <a href="https://github.com/marketplace/open-license-advisor"><strong>Marketplace Listing</strong></a>
-  &nbsp;&middot;&nbsp;
-  <a href="https://license-advisor.onrender.com/app-install.html"><strong>Automated PR Flow</strong></a>
-  &nbsp;&middot;&nbsp;
-  <a href="#local-development--self-hosting"><strong>Self-Host</strong></a>
-</p>
-
+  <p align="center">
+    <a href="https://open-workers.onrender.com"><strong>Launch Web App</strong></a> &bull;
+    <a href="https://github.com/marketplace/open-workers"><strong>Marketplace Listing</strong></a> &bull;
+    <a href="https://github.com/apps/open-license-advisor"><strong>Install GitHub App</strong></a> &bull;
+    <a href="#quick-start"><strong>Quick Start</strong></a> &bull;
+    <a href="#api-overview"><strong>API Overview</strong></a> &bull;
+    <a href="./docs/ARCHITECTURE_REVIEW.md"><strong>Architecture</strong></a>
+  </p>
 </div>
 
 ---
 
-## Purpose & Why Open License Advisor
+## About Open Workers
 
-<table>
-  <tr>
-    <td width="128" align="center" valign="middle">
-      <a href="https://github.com/marketplace/open-license-advisor">
-        <img src="./public/assets/logo.svg" alt="Open License Advisor Logo" width="96">
-      </a>
-    </td>
-    <td valign="middle">
-      <strong>Open License Advisor</strong> (<code>open-license-advisor[bot]</code>) is a deterministic open-source license recommendation tool, repository license inspector, and least-privilege GitHub App. It evaluates project requirements against <strong>12 OSI-approved and FSF-libre SPDX licenses</strong>, inspects existing repositories for license files, and opens clean, isolated Pull Requests on <code>chore/add-license-&lt;spdx&gt;</code> with explicit opt-in for license replacement, without storing repository code.
-    </td>
-  </tr>
-</table>
+> **Open Workers** is a multi-purpose GitHub automation platform designed to help developers maintain, improve, and organize their repositories through one GitHub App.
 
-### Key Engineering Principles
+Instead of installing dozens of disconnected single-purpose bots, Open Workers provides a unified, least-privilege automation suite built around six core repository disciplines: **Licensing**, **Community Standards**, **Security**, **Documentation**, **PR & Issue Management**, and **Repository Automation**.
 
-- **Deterministic Policy Engine:** Recommendations, compatibility checks, and plain-language permission/condition/limitation summaries are driven by rule-based logic in shared ES modules (`public/js/catalog-data.js`, `public/js/engine.js`, `public/js/generator.js`), eliminating black-box variance.
-- **GitHub App Automation:** Adds a license on an isolated `chore/add-license-<spdx-lower>` branch. Existing licenses are protected by default. Choose **Replace existing license** to update the existing file on `chore/replace-license-<spdx-lower>` and open a documented PR. Repositories with multiple license files require manual review.
-- **Stateless & Database-Free:** Runs with zero external database dependencies, using bounded in-memory webhook replay deduplication and strict Helmet Content Security Policy (CSP) headers.
-- **Single Source of Truth:** Frontend vanilla HTML/JS pages and Node.js Express services import the exact same SPDX catalog, engine, and template generator modules.
+### Operational Principles: Inspect &rarr; Recommend &rarr; Act
+
+Open Workers strictly adheres to a three-stage operational model:
+
+```
++------------------+         +----------------------+         +-----------------------+
+|  1. INSPECT      |  ====>  |  2. RECOMMEND        |  ====>  |  3. ACT               |
+|  Scan repository |         |  Evaluate health &   |         |  Create reviewable    |
+|  files & headers |         |  deterministic rules |         |  pull requests (PRs)  |
++------------------+         +----------------------+         +-----------------------+
+```
+
+1. **Inspect:** Examine public repository metadata, default branches, root files, and `.github/` trees on demand via the GitHub REST API without retaining repository code or secrets.
+2. **Recommend:** Evaluate findings against transparent, deterministic policy engines and industry standards, providing clear health scores and plain-language recommendations.
+3. **Act:** Propose authorized, verified changes through reviewable Pull Requests on isolated feature branches (`chore/*`). The repository default branch is never modified directly.
 
 ---
 
-## Public URLs & Live Endpoints Directory
+## Six Core Capabilities
 
-| Resource | Public URL | Description |
-| :--- | :--- | :--- |
-| **GitHub Marketplace Listing** | [github.com/marketplace/open-license-advisor](https://github.com/marketplace/open-license-advisor) | Official GitHub Marketplace Free plan listing |
-| **GitHub App Installation** | [github.com/apps/open-license-advisor](https://github.com/apps/open-license-advisor) | Install `open-license-advisor[bot]` on personal or org repositories |
-| **Live Web Application** | [license-advisor.onrender.com](https://license-advisor.onrender.com) | Main web advisor, explorer, questionnaire, and comparison UI |
-| **Automated PR UI** | [license-advisor.onrender.com/app-install.html](https://license-advisor.onrender.com/app-install.html) | Web interface to trigger and preview automated `LICENSE` Pull Requests |
-| **API Health Check** | [license-advisor.onrender.com/api/health](https://license-advisor.onrender.com/api/health) | Live JSON status, configuration flags, and catalog count |
-| **Privacy Policy** | [license-advisor.onrender.com/privacy.html](https://license-advisor.onrender.com/privacy.html) | Zero-persistence data handling and privacy commitments |
-| **Support & Help** | [license-advisor.onrender.com/support.html](https://license-advisor.onrender.com/support.html) | User support channels and troubleshooting references |
-| **Source Repository** | [github.com/ayushcmd/open-workers](https://github.com/ayushcmd/open-workers) | Full Apache-2.0-licensed source code, tests, and documentation |
+Open Workers is architected around six modular capability areas. Currently, **Licensing** and **Community** are fully implemented and available in production; remaining modules represent our verified roadmap.
+
+```
+                  +-----------------------------------------+
+                  |               OPEN WORKERS              |
+                  |   One GitHub App. Multiple Capabilities |
+                  +-----------------------------------------+
+                                       |
+       +-------------------------------+-------------------------------+
+       |                                                               |
+  [AVAILABLE]                                                     [UPCOMING]
+  1. Licensing                                                    3. Security
+  2. Community Standards                                          4. Documentation
+                                                                  5. PR & Issue Management
+                                                                  6. Repository Automation
+```
+
+### 1. Licensing &mdash; Available
+
+A complete open-source licensing toolkit designed to remove legal ambiguity and enforce repository attribution:
+
+- **SPDX License Explorer:** Curated catalog of 12 OSI-approved and FSF-libre licenses (`MIT`, `Apache-2.0`, `GPL-3.0-only`, `AGPL-3.0-only`, `BSD-2-Clause`, `BSD-3-Clause`, `ISC`, `LGPL-3.0-only`, `MPL-2.0`, `EPL-2.0`, `The Unlicense`, `CC0-1.0`) with permissions, conditions, and limitations breakdown.
+- **Deterministic Policy Questionnaire:** 4-question policy evaluation (commercial use, patent grants, copyleft boundaries, network triggers) providing ranked recommendations independent of programming language.
+- **Side-by-Side Comparison:** Compare up to 4 licenses simultaneously with customizable copyright year and holder parameters.
+- **License Compatibility Matrix:** Dependency license audit identifying copyleft conflicts (e.g., Apache-2.0 dependency compatibility with GPL-2.0 vs GPL-3.0).
+- **Repository License Analyzer:** Live on-demand scanning for existing `LICENSE`, `NOTICE`, README badges, and dependency manifests across public repositories.
+- **Automated Pull Requests:** Submits verified `LICENSE` files and README badge insertions on dedicated `chore/add-license-<spdx>` branches with replacement conflict guards.
+
+*Explore:* [`/explorer.html`](https://open-workers.onrender.com/explorer.html) &bull; [`/questionnaire.html`](https://open-workers.onrender.com/questionnaire.html) &bull; [`/compare.html`](https://open-workers.onrender.com/compare.html) &bull; [`/analyzer.html`](https://open-workers.onrender.com/analyzer.html)
+
+### 2. Community Standards &mdash; Available
+
+Automate community governance, contributor expectations, and issue reporting standards:
+
+- **Standard Document Generator:** Deterministic, schema-validated generation for:
+  - `CONTRIBUTING.md` &mdash; Contribution guidelines, branch workflows, setup, and testing steps.
+  - `CODE_OF_CONDUCT.md` &mdash; Contributor Covenant 3.0 with strict private enforcement contact validation.
+  - `SECURITY.md` &mdash; Coordinated vulnerability disclosure and private reporting policies.
+  - `SUPPORT.md` &mdash; Support channels, discussion forums, and documentation links.
+- **Issue Templates Generator:** Structured GitHub issue forms under `.github/ISSUE_TEMPLATE/`:
+  - `bug_report.md` &mdash; Steps to reproduce, expected behavior, and environment details.
+  - `feature_request.md` &mdash; Problem statement, proposed solutions, and alternatives considered.
+  - `documentation.md` &mdash; Affected documentation links and suggested corrections.
+- **Pull Request Template Generator:** `.github/PULL_REQUEST_TEMPLATE.md` with summary sections, issue linking, testing verification, and contributor checklists.
+- **Community Health Audit:** Deep inspection across repository `root`, `.github/`, and `docs/` directories for 6 standard community standards with an overall health score (0–100%) and actionable advice.
+- **Consolidated Community PRs:** Pre-commit conflict preview (`POST /api/community/preview-pr`) and authorized multi-file deployment (`POST /api/community/trigger-pr`) with in-memory caller write authorization.
+
+*Explore:* [`/community.html`](https://open-workers.onrender.com/community.html)
+
+### 3. Security &mdash; Upcoming
+
+Proactive repository security auditing and automated security configurations:
+
+- **Dependabot Configuration:** Automated generation of `.github/dependabot.yml` covering package managers (`npm`, `pip`, `GitHub Actions`, `cargo`) and update schedules.
+- **CodeQL Starter Workflows:** GitHub Actions static analysis workflows for automated code vulnerability scanning.
+- **Branch Protection Guidance:** Audit branch rulesets and suggest enforcement for required reviews, status checks, and signed commits.
+- **Security Health Reporting:** Repository security posture scoring based on open advisories and missing protection rules.
+
+*(Note: SECURITY.md policy document generation is available today in the Community module).*
+
+### 4. Documentation &mdash; Upcoming
+
+Tools to keep project documentation clear, comprehensive, and up-to-date:
+
+- **README Completeness Audit:** Analyzes repository READMEs for essential developer sections (Installation, Quick Start, Contributing, License, Architecture).
+- **Automated Changelog Generation:** Compiles Conventional Commits into structured, chronological `CHANGELOG.md` updates.
+- **Shields.io Badge Generator:** Live badge configurations for build status, license identifiers, versioning, and test coverage.
+- **Markdown Broken-Link Checker:** Scans project documentation for broken internal and external hyperlinks.
+
+*(Note: Automated license badge integration into READMEs is available today in the Licensing module).*
+
+### 5. PR & Issue Management &mdash; Upcoming
+
+Intelligent triage and collaboration automation for maintainers:
+
+- **Rule-Based Issue Labeling:** Automatically tags issues based on title prefixes, templates used, and affected file paths.
+- **PR Classification & Size Labeling:** Classifies PRs by size (`size/S`, `size/M`, `size/L`) and component impact.
+- **Contributor Welcome Bot:** Welcomes first-time contributors with project guidelines and links to contribution docs.
+- **Checklist Enforcement:** Alerts reviewers when required pull request checklist items remain incomplete.
+- **Stale Triage:** Gentle reminders for inactive PRs and abandoned issues.
+- **Release Notes Drafter:** Aggregates merged PR descriptions and labels into GitHub Release drafts.
+
+### 6. Repository Automation &mdash; Upcoming
+
+Continuous maintenance and developer workflow automation:
+
+- **GitHub Actions CI Templates:** Ready-to-use workflows for Node.js, Python, multi-platform matrix testing, and syntax linting.
+- **Action Health Inspector:** Scans `.github/workflows/` for unpinned 3rd-party actions, deprecated runners, and missing timeouts.
+- **Code Style Configs:** Standardized configurations for `.editorconfig`, `.prettierrc`, and ESLint.
+- **Scheduled Maintenance Tasks:** Opt-in automated maintenance workflows keeping repository standards fresh.
+
+---
+
+## Capability Status Summary
+
+| Capability Module | Status | Category | Scope & Endpoints |
+| :--- | :---: | :--- | :--- |
+| **Licensing** | **Available** | Governance | Full catalog, questionnaire, comparator, analyzer, PR generator (`/api/*`) |
+| **Community** | **Available** | Community | Guidelines, conduct, security, support, issue & PR templates, audit, consolidated PRs (`/api/community/*`) |
+| **Security** | *Upcoming* | Security | Dependabot configs, CodeQL workflows, branch protection audit |
+| **Documentation** | *Upcoming* | Documentation | README analysis, changelog generation, badge tools, broken-link checks |
+| **PR & Issue Management** | *Upcoming* | Workflow | Auto-labeling, contributor welcome, PR checklists, stale triage |
+| **Repository Automation** | *Upcoming* | Workflow | GitHub Actions CI templates, Action health inspector, code quality configs |
 
 ---
 
 ## How It Works
 
 <div align="center">
-  <img src="./public/assets/workflow.svg" alt="Open License Advisor 4-Stage Architecture Workflow" width="100%">
+  <img src="./public/assets/workflow.svg" alt="Open Workers Platform Architecture & Workflow" width="100%">
 </div>
 
-1. **Stage 1 â€” Policy Evaluation:** Developers answer clear licensing questions (commercial use, patent grant expectations, copyleft boundary, and network SaaS obligations). The deterministic engine scores and ranks matching SPDX licenses with transparent rules.
-2. **Stage 2 â€” Repository Audit:** Before generating changes, the analyzer inspects `owner/repo` via the GitHub API (public API or installed `@octokit/app` installation token) to check the default branch for an existing `LICENSE` or `LICENSE.md` file.
-3. **Stage 3 â€” Isolated Branch:** If no license exists, `prService` exchanges the App private key for a short-lived installation token and creates a dedicated feature branch (`chore/add-license-<spdx-lower>`), leaving the repository default branch untouched.
-4. **Stage 4 â€” Pull Request Review:** `generator.js` formats the verified SPDX license text with the specified copyright year and holder, commits `LICENSE` via the GitHub Contents API, and opens a Pull Request summarizing permissions, conditions, limitations, and the official SPDX identifier.
+1. **Connect or Browse:** Open [open-workers.onrender.com](https://open-workers.onrender.com) or call the public REST API.
+2. **Select Capability:** Choose a task across Licensing or Community standards.
+3. **Inspect Repository:** Enter a public or installed repository (`owner/repo`) to inspect default-branch files and health scores.
+4. **Customize & Preview:** Review generated Markdown and issue forms directly in the browser; check conflict status for files that already exist on the default branch.
+5. **Caller Authorization:** When requesting repository modification, provide a GitHub Personal Access Token (`Authorization: Bearer <token>`). Open Workers verifies in-memory that the authenticated user holds write permissions on the target repository.
+6. **Isolated Mutation:** The GitHub App client (`@octokit/app`) creates an isolated feature branch (`chore/*`), commits verified files, and opens a transparent Pull Request.
+7. **Merge on GitHub:** Maintainers review the Pull Request on GitHub and merge at their own discretion.
 
 ---
 
-## Detailed How-To-Use Guide
+## Technology Stack
 
-### Workflow 1: Interactive License Exploration, Questionnaire & Comparison
+Open Workers is intentionally built with a clean, standard, database-free architecture:
 
-1. Open **[license-advisor.onrender.com](https://license-advisor.onrender.com)** (or your local instance at `http://localhost:3000`).
-2. Browse all 12 curated licenses in **`explorer.html`** to inspect permissions, conditions, limitations, patent grants, and network-use triggers.
-3. Complete the guided policy assessment in **`questionnaire.html`** to receive ranked recommendations tailored to your project goals.
-4. Open **`compare.html`** to evaluate multiple candidate licenses side by side, customize copyright year and holder fields, and preview or download the generated `LICENSE` file.
+- **Runtime:** Node.js `>=20.0.0` (developed and tested on Node.js v24 LTS)
+- **HTTP Server:** Express.js 5 with Helmet security headers and strict CSP
+- **JavaScript Standard:** Modern ES6 Modules (`import`/`export`)
+- **Frontend:** Vanilla HTML5, CSS3, and ES6 JavaScript (Primer-inspired, responsive, zero frontend framework overhead)
+- **GitHub API Integration:** `@octokit/rest`, `@octokit/app`, and `@octokit/webhooks`
+- **Authentication:** In-memory user token verification + GitHub App installation tokens
+- **Testing:** Native Node.js `node:test` runner and strict assertions (`node:assert/strict`)
+- **Hosting:** Render Cloud Platform
+- **Storage:** **Stateless (Zero Database)** &mdash; Tokens and customer source code are never stored.
 
-### Workflow 2: On-Demand Repository Inspection
+---
 
-1. Open **`analyzer.html`** (or invoke `POST /api/analyze` directly).
-2. Enter any target repository as `owner/repo` (or full GitHub URL).
-3. Inspect the repository's default branch status to verify whether a `LICENSE` or `LICENSE.md` file is already present before requesting a Pull Request.
+## Repository Structure
+
+```
+open-workers/
+├── public/                     # Static frontend web application
+│   ├── assets/                 # SVGs, icons, and official branding assets
+│   ├── css/                    # Modular Primer-inspired CSS (base.css, components.css)
+│   ├── js/                     # Client ES6 modules (community.js, analyzer.js, etc.)
+│   ├── index.html              # Open Workers home page & capability showcase
+│   ├── community.html          # Community standards generator, audit, and PR UI
+│   ├── analyzer.html           # Repository license analyzer
+│   ├── explorer.html           # SPDX license catalog explorer
+│   ├── questionnaire.html      # Deterministic licensing recommendation wizard
+│   ├── compare.html            # Side-by-side license comparison tool
+│   ├── app-install.html        # GitHub App installation and license PR guide
+│   ├── privacy.html            # Zero-persistence privacy policy
+│   └── support.html            # Support guidelines and troubleshooting
+├── src/
+│   ├── config/                 # Environment loader and GitHub App configuration
+│   ├── core/                   # Shared infrastructure across all modules
+│   │   ├── capabilities/       # Capability registry (registry.js)
+│   │   ├── github/             # In-memory caller authorization (authorize.js)
+│   │   ├── pullRequests/       # Isolated branch creation & multi-file commits (branches.js, files.js)
+│   │   └── repository/         # Repository specifier parsing and tree inspection
+│   ├── data/                   # 12 OSI-approved SPDX license database (licenses.json)
+│   ├── modules/                # Feature modules
+│   │   └── community/          # Community module engine, templates, and PR service
+│   ├── routes/                 # Express route handlers (api.js, webhooks.js)
+│   ├── services/               # Licensing services (licenseService.js, prService.js, readmeService.js)
+│   └── server.js               # Application bootstrap and server entry point
+├── tests/                      # Built-in node:test test suite (77 tests)
+└── docs/                       # Project status, feature matrix, roadmap, and architecture docs
+```
+
+---
+
+## Quick Start
+
+### Prerequisites
+
+- **Node.js `>=20.0.0`** (Node.js v24 LTS recommended)
+- **npm** (included with Node.js)
+- **Git**
+
+### Local Setup
 
 ```bash
-curl -s -X POST https://license-advisor.onrender.com/api/analyze \
+# 1. Clone repository
+git clone https://github.com/ayushcmd/open-workers.git
+cd open-workers
+
+# 2. Install dependencies cleanly
+npm ci
+
+# 3. Configure environment
+cp .env.example .env
+
+# 4. Run tests and syntax verification
+npm test
+npm run lint:syntax
+
+# 5. Start development server with file watching
+npm run dev
+```
+
+Visit **[http://localhost:3000](http://localhost:3000)** in your browser.
+
+> **Note:** Open Workers degrades gracefully when GitHub App keys are omitted in `.env`. All web pages, license exploration, recommendation questionnaires, comparison tools, community document generation, issue/PR template builders, and public repository analysis work immediately without credentials. Automated Pull Request creation activates once GitHub App credentials are provided.
+
+### Available Scripts
+
+- `npm start` &mdash; Run the production server (`node src/server.js`)
+- `npm run dev` &mdash; Run with Node's native file-watch mode (`node --watch src/server.js`)
+- `npm test` &mdash; Execute the native `node:test` suite (`77 tests`, zero dependencies)
+- `npm run lint:syntax` &mdash; Verify syntax across all JavaScript files with `node --check`
+
+---
+
+## GitHub App Integration
+
+Open Workers operates as a least-privilege GitHub App (`open-license-advisor[bot]`).
+
+### Scoped Permissions
+
+Open Workers requires only the minimum repository permissions necessary to inspect files and open reviewable pull requests:
+
+| Permission | Scope | Rationale |
+| :--- | :---: | :--- |
+| **Repository Contents** | `write` | Required to commit license and community files to dedicated feature branches. |
+| **Pull Requests** | `write` | Required to open and manage Pull Requests against the repository default branch. |
+| **Repository Metadata** | `read` | Automatically granted by GitHub to read public repository configuration. |
+
+### Two-Layer Security Model
+
+1. **User Identity Verification:** When invoking PR endpoints (`POST /api/trigger-pr` or `POST /api/community/trigger-pr`), callers supply a GitHub Personal Access Token in the `Authorization: Bearer <token>` header.
+2. **Permission Check:** The server verifies that the caller possesses `admin`, `maintain`, or `write` collaborator permissions on the target repository.
+3. **App Execution:** The GitHub App installation client acquires a short-lived token to perform mutations on dedicated `chore/*` branches.
+4. **Safety Conflict Guards:** Operations fail closed with `HTTP 409 Conflict` if target files already exist, requiring explicit `replaceExisting: true` opt-in.
+
+---
+
+## API Overview
+
+All endpoints return JSON and adhere to standard HTTP status codes:
+
+### Core & Capabilities
+
+| Endpoint | Method | Description |
+| :--- | :---: | :--- |
+| `/api/health` | `GET` | Health status, mode (`database-free`), and catalog readiness |
+| `/api/config` | `GET` | Public App configuration, permissions, and installation URL |
+| `/api/capabilities` | `GET` | List all 6 Open Workers product capabilities and statuses |
+| `/api/capabilities/:id` | `GET` | Retrieve details for a specific capability module |
+
+### Licensing Endpoints
+
+| Endpoint | Method | Description |
+| :--- | :---: | :--- |
+| `/api/licenses` | `GET` | List all 12 curated OSI-approved SPDX licenses |
+| `/api/licenses/:id` | `GET` | Retrieve full license metadata and official legal text |
+| `/api/recommend` | `POST` | Deterministic policy recommendation based on 4 criteria |
+| `/api/compare` | `POST` | Side-by-side comparison matrix for up to 4 licenses |
+| `/api/analyze` | `POST` | Inspect default branch of `owner/repo` for license files |
+| `/api/trigger-pr` | `POST` | Open automated `LICENSE` PR (requires write authorization) |
+
+### Community Endpoints
+
+| Endpoint | Method | Description |
+| :--- | :---: | :--- |
+| `/api/community/templates` | `GET` | List community document and issue/PR templates |
+| `/api/community/generate` | `POST` | Deterministically generate Markdown or issue template YAML |
+| `/api/community/analyze` | `POST` | Audit repository community health across 6 standard files |
+| `/api/community/preview-pr`| `POST` | Preview proposed PR files and check existing-file conflicts |
+| `/api/community/trigger-pr`| `POST` | Open consolidated Community PR (requires write authorization) |
+
+### Webhook Handling
+
+| Endpoint | Method | Description |
+| :--- | :---: | :--- |
+| `/api/webhooks` | `POST` | HMAC SHA-256 verified GitHub App webhook handler with delivery deduplication |
+
+### Example API Request
+
+```bash
+# Analyze repository community health
+curl -s -X POST https://open-workers.onrender.com/api/community/analyze \
   -H "Content-Type: application/json" \
   -d '{"repo":"ayushcmd/open-workers"}'
 ```
 
-### Workflow 3: Automated Pull Request Creation via GitHub App
+---
 
-1. Install **Open License Advisor** from **[github.com/apps/open-license-advisor](https://github.com/apps/open-license-advisor)** (or the **[GitHub Marketplace](https://github.com/marketplace/open-license-advisor)**) and grant access to one or more repositories.
-2. Open **[license-advisor.onrender.com/app-install.html](https://license-advisor.onrender.com/app-install.html)** (or invoke `POST /api/trigger-pr`).
-3. Enter a GitHub user token to verify repository write permission. Provide the target `owner/repo`, choose your SPDX license identifier (e.g., `MIT` or `Apache-2.0`), copyright year, and copyright holder name.
-4. Choose **Add new license** or **Replace existing license**, then submit to open a ready-to-review Pull Request. Replacement preserves the existing filename (such as `LICENSE.md` or `COPYING`) and updates it only on a feature branch. Review the diff before merging. API clients opt in with `replaceExisting: true`; omitting it keeps existing licenses protected.
-5. Choose where to mention the license in the target repository's README: **bottom** (default in the form), **top badge**, **both**, or **do not change README**. Both file changes are included in the same PR. A missing README is created as `README.md`; existing Markdown READMEs keep their filename and other content. Custom license sections and badges are preserved and flagged for review. Unsupported README formats can be left unchanged by choosing the last option. API clients pass `readmePlacement: "top"`, `"bottom"`, or `"both"`; omitted or `"none"` leaves the README untouched.
+## Security & Privacy
 
-```bash
-curl -s -X POST https://license-advisor.onrender.com/api/trigger-pr \
-  -H "Authorization: Bearer $GITHUB_USER_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"repo":"owner/repo","licenseId":"MIT","year":"2026","holder":"Your Name"}'
-```
+Open Workers is designed from the ground up with a privacy-preserving, zero-retention posture:
 
-### REST API & Shared Module Reference
-
-| Endpoint | Method | Purpose | Request / Notes |
-| :--- | :--- | :--- | :--- |
-| `/api/health` | `GET` | Health & readiness check | Returns `{ status, service, mode, timestamp, githubAppConfigured, webhookConfigured, catalogCount }` |
-| `/api/config` | `GET` | Public App configuration | Returns App slug, install URL, `planTier`, `supportedPermissions`, `spdxCatalogVersion`, and `licenseCount` |
-| `/api/recommend` | `POST` | Deterministic recommendation | Validates questionnaire policy payload and returns ranked SPDX recommendations |
-| `/api/analyze` | `POST` | Repository license inspection | Body: `{ "repo": "owner/repo" }` â€” works on public repos and App-installed private repos |
-| `/api/trigger-pr` | `POST` | Automated `LICENSE` Pull Request | Body: `{ "repo", "licenseId", "year", "holder" }` â€” returns HTTP `201` with PR URL/number or `409` if licensed |
-| `/api/webhooks` | `POST` | Signed GitHub App webhook intake | Verifies `X-Hub-Signature-256` on raw body; handles `ping`, `installation`, `installation_repositories`, `repository` |
-
-> **Note on Catalog & Comparison:** Full SPDX catalog inspection (`public/js/catalog-data.js`) and side-by-side comparison logic (`compareLicenses` in `public/js/engine.js`) execute directly via shared ES6 modules with zero server round-trips required.
+- **Zero Code Persistence:** Open Workers does not operate a database and never caches, stores, or analyzes customer source code beyond requested configuration files (`LICENSE`, community standards).
+- **Stateless Authentication:** User tokens provided for PR authorization are held only in volatile process memory for the duration of the request and are never written to disk or logs.
+- **HMAC SHA-256 Webhooks:** All incoming GitHub webhooks are cryptographically validated against `GITHUB_WEBHOOK_SECRET` before processing.
+- **Reviewable Mutations:** Open Workers never modifies default branches directly. Every action is delivered as an atomic commit on an isolated feature branch (`chore/*`) for maintainer review.
+- **Vulnerability Disclosure:** Please report security issues privately to [ayush_24a12res897@iitp.ac.in](mailto:ayush_24a12res897@iitp.ac.in). Review our full [Security Policy](./docs/SECURITY.md) for details.
 
 ---
 
-## Core Features & Verified SPDX Catalog
+## Official Links
 
-- **12 Verified SPDX Licenses:** Curated set covering permissive, weak-copyleft, strong-copyleft, network-copyleft, and public-domain dedication models.
-- **Template Placeholder Injection:** Accurately populates copyright `[year]` and `[fullname]` / holder lines across official SPDX license bodies (`generator.js`).
-- **GitHub-Native Accessible UI:** High-contrast light theme (`#FFFFFF` / `#24292F` / `#0969DA` / `#1F883D`), keyboard navigable controls, and zero third-party analytics trackers.
-- **Compatibility Guidance:** Highlights patent-grant differences, file- vs. library- vs. work-level copyleft boundaries, and AGPL network triggers.
-
-### Verified SPDX License Matrix
-
-| SPDX Identifier | Official Name | Category | Copyleft Strength / Scope | Patent Grant | Network Use Trigger |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| `MIT` | MIT License | `permissive` | `none` / `none` | `none` | `false` |
-| `ISC` | ISC License | `permissive` | `none` / `none` | `none` | `false` |
-| `BSD-2-Clause` | BSD 2-Clause "Simplified" License | `permissive` | `none` / `none` | `none` | `false` |
-| `BSD-3-Clause` | BSD 3-Clause "New" or "Revised" License | `permissive` | `none` / `none` | `none` | `false` |
-| `Apache-2.0` | Apache License 2.0 | `permissive` | `none` / `none` | `explicit` | `false` |
-| `MPL-2.0` | Mozilla Public License 2.0 | `weak-copyleft` | `weak` / `file` | `explicit` | `false` |
-| `EPL-2.0` | Eclipse Public License 2.0 | `weak-copyleft` | `weak` / `module` | `explicit` | `false` |
-| `LGPL-3.0-only` | GNU Lesser General Public License v3.0 only | `weak-copyleft` | `weak` / `library` | `explicit` | `false` |
-| `GPL-2.0-only` | GNU General Public License v2.0 only | `strong-copyleft` | `strong` / `work` | `none` | `false` |
-| `GPL-3.0-only` | GNU General Public License v3.0 only | `strong-copyleft` | `strong` / `work` | `explicit` | `false` |
-| `AGPL-3.0-only` | GNU Affero General Public License v3.0 only | `network-copyleft` | `network` / `network` | `explicit` | `true` |
-| `Unlicense` | The Unlicense | `public-domain` | `none` / `none` | `none` | `false` |
-
----
-
-## Security, Privacy & Least-Privilege Model
-
-### GitHub App Permissions
-
-Open License Advisor requests only the minimum permissions required to inspect repository licensing state and open Pull Requests:
-
-| Permission Scope | Access Level | Justification |
-| :--- | :--- | :--- |
-| **Metadata** | Read-only | Resolve repository default branch and basic repository metadata |
-| **Contents** | Read & write | Check for existing `LICENSE` / `LICENSE.md`, create `chore/add-license-*` branch, and commit `LICENSE` |
-| **Pull requests** | Read & write | Open documented Pull Requests referencing the generated branch |
-
-### Defense-in-Depth Safeguards
-
-- **Raw-Body HMAC-SHA256 Webhook Verification:** `src/server.js` preserves the raw request buffer for `/api/webhooks` so `@octokit/webhooks` strictly validates `X-Hub-Signature-256` before any payload is processed.
-- **Replay & Duplicate Delivery Protection:** Tracks `X-GitHub-Delivery` UUIDs to prevent duplicate handling of replayed webhook deliveries.
-- **Default-Branch Overwrite Prevention:** Never commits directly to `main` or the configured default branch; detects `LICENSE` or `LICENSE.md` beforehand and aborts safely with HTTP `409 Conflict`.
-- **Zero-Secret & Zero-Code Persistence:** No database stores source files, access tokens, or repository snapshots. Private keys remain strictly in environment variables or untracked `.pem` files excluded by `.gitignore`.
-- **Strict Content Security Policy:** Configured via `helmet` allowing only self-hosted styles and scripts.
-
-For full threat modeling and architecture notes, read [docs/SECURITY.md](./docs/SECURITY.md) and [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md).
-
----
-
-## Local Development & Self-Hosting
-
-### Prerequisites
-
-- **Node.js `>=20.0.0`** (verified with Node.js v24 LTS; see `package.json`)
-- **npm**
-
-### Quick Start
-
-```bash
-git clone https://github.com/ayushcmd/open-workers.git
-cd open-workers
-npm install
-cp .env.example .env
-npm test
-npm start
-```
-
-Available npm scripts:
-
-- `npm start` â€” Start the Express server (`src/server.js`)
-- `npm run dev` â€” Run with Node file-watch mode (`node --watch src/server.js`)
-- `npm test` â€” Execute the native `node:test` unit and integration suite (`tests/*.test.js`)
-- `npm run lint:syntax` â€” Validate JavaScript module syntax across `src/` and `public/js/`
-
-### Environment Variables (`.env.example`)
-
-| Variable | Required | Default / Example | Description |
-| :--- | :--- | :--- | :--- |
-| `PORT` | No | `3000` | HTTP port bound by Express |
-| `NODE_ENV` | No | `development` | Runtime mode (`development` or `production`) |
-| `APP_URL` | No | `http://localhost:3000` | Public base URL used in config metadata and CORS defaults |
-| `ALLOWED_ORIGINS` | No | *(empty)* | Comma-separated additional allowed CORS origins |
-| `GITHUB_APP_ID` | For App PRs | *(empty)* | Numeric GitHub App ID for `@octokit/app` authentication |
-| `GITHUB_APP_SLUG` | No | `license-advisor` | Public GitHub App URL slug |
-| `GITHUB_WEBHOOK_SECRET` | For Webhooks | *(empty)* | Shared HMAC-SHA256 webhook secret (`X-Hub-Signature-256`) |
-| `GITHUB_PRIVATE_KEY_PATH` | Optional | *(empty)* | Filesystem path to GitHub App `.pem` private key |
-| `GITHUB_PRIVATE_KEY` | Optional | *(empty)* | Inline PEM private key (use `\n` escapes in single-line env vars) |
-| `GITHUB_PUBLIC_TOKEN` | No | *(empty)* | Optional token to raise rate limits on public repo inspection |
-| `WEBHOOK_PROXY_URL` | No | *(empty)* | Optional `smee.io` proxy URL for local webhook forwarding |
-
-### Project Documentation Guides
-
-- [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) â€” Database-free modular architecture and shared ES module design
-- [docs/DEVELOPMENT.md](./docs/DEVELOPMENT.md) â€” Local environment setup, test execution, and `smee.io` webhook forwarding
-- [docs/GITHUB_APP_SETUP.md](./docs/GITHUB_APP_SETUP.md) â€” Registering the GitHub App, least-privilege permissions, and `.pem` setup
-- [docs/MARKETPLACE_GUIDELINES.md](./docs/MARKETPLACE_GUIDELINES.md) â€” GitHub Marketplace submission checklist and Free plan compliance
-- [docs/SECURITY.md](./docs/SECURITY.md) â€” Security architecture, HMAC verification, CSP policy, and secret hygiene
-
----
-
-## Developer & Maintainer
-
-Built and maintained by **Ayush Raj** (`@ayushcmd`).
-
-[![GitHub](https://img.shields.io/badge/GitHub-%40ayushcmd-24292F?style=flat-square&logo=github&logoColor=white)](https://github.com/ayushcmd)
-[![LinkedIn](https://img.shields.io/badge/LinkedIn-Ayush%20Raj-0A66C2?style=flat-square&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/ayushcmd)
-[![Email](https://img.shields.io/badge/Email-ayush__24a12res897%40iitp.ac.in-0969DA?style=flat-square&logo=gmail&logoColor=white)](mailto:ayush_24a12res897@iitp.ac.in)
+- **Production Web Application:** [https://open-workers.onrender.com](https://open-workers.onrender.com)
+- **GitHub Marketplace Listing:** [https://github.com/marketplace/open-workers](https://github.com/marketplace/open-workers)
+- **GitHub Repository:** [https://github.com/ayushcmd/open-workers](https://github.com/ayushcmd/open-workers)
+- **GitHub App Installation:** [https://github.com/apps/open-license-advisor](https://github.com/apps/open-license-advisor)
+- **Documentation Index:** [docs/](file:///c:/Projects/AYUSHCMD-GITHUB/open-workers/docs/)
+  - [Project Status](./docs/PROJECT_STATUS.md)
+  - [Feature Matrix](./docs/FEATURE_MATRIX.md)
+  - [Development Roadmap](./docs/ROADMAP.md)
+  - [Architecture Review](./docs/ARCHITECTURE_REVIEW.md)
+  - [Local Development Guide](./docs/DEVELOPMENT.md)
 
 ---
 
 ## License & Attribution
 
-- **Project License:** Released under the **[Apache License 2.0](./LICENSE)** (`SPDX-License-Identifier: Apache-2.0`), `Copyright 2026 Ayush Raj (@ayushcmd)`.
-- **Attribution & `NOTICE` Preservation:** Under Section 4 of the Apache License 2.0, downstream distributions and derivative works must:
-  1. Include a copy of the root **[LICENSE](./LICENSE)** file.
-  2. Retain all copyright, patent, trademark, and attribution notices from the source work.
-  3. Preserve the attribution credit to **Ayush Raj (`@ayushcmd`)** in the root **[NOTICE](./NOTICE)** file (`Open License Advisor`, `Copyright 2026 Ayush Raj`).
-  4. Carry prominent notices stating any modifications in changed files.
-- **SPDX Attribution:** Standard SPDX identifiers and canonical license texts follow the [SPDX License List](https://spdx.org/licenses/) (SPDX License List Data is licensed under `CC0-1.0`).
-- **Disclaimer:** Open License Advisor provides structured technical summaries based on SPDX metadata and deterministic policy rules. It does not constitute formal legal advice; consult qualified legal counsel for jurisdiction-specific or commercial compliance reviews.
+Open Workers is open source software licensed under the **[Apache License 2.0](./LICENSE)**.
+
+```
+Open Workers
+Copyright 2026 Ayush Raj (https://github.com/ayushcmd)
+Developed by Ayush Raj (ayush_24a12res897@iitp.ac.in).
+Downstream distributions and derivative works must retain this attribution notice.
+```
+
+- **Attribution Requirement:** In accordance with Section 4 of the Apache License 2.0, derivative distributions and forks must retain copyright notices and attribution to Ayush Raj (`@ayushcmd`) as specified in the root **[NOTICE](./NOTICE)** file.
+- **Disclaimer:** Open Workers provides technical summaries and automated repository guidance. It does not constitute formal legal counsel; consult qualified legal counsel for complex compliance inquiries.

@@ -1,36 +1,36 @@
 # Open Workers — Feature Matrix
 
-This matrix documents the capability status, API endpoints, user interfaces, required permissions, and test coverage across all Open Workers modules.
+This matrix documents the capability status, API endpoints, user interfaces, required permissions, and test coverage across the **six core Open Workers product modules**.
 
 ---
 
-## 1. Module Overview
+## 1. Six Core Product Modules Overview
 
 | Module ID | Display Name | Category | Status | API Base | UI Page |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| `licensing` | Open Source Licensing | Governance | **Available** | `/api/*` | `/explorer.html`, `/questionnaire.html`, `/compare.html`, `/app-install.html`, `/analyzer.html` |
-| `community` | Community Standards | Community | **Available** | `/api/community/*` | `/community.html` |
-| `workflows` | Workflow Automation | CI/CD | *Upcoming* | `/api/workflows/*` | *(Planned)* |
-| `releases` | Release Management | Delivery | *Upcoming* | `/api/releases/*` | *(Planned)* |
-| `quality` | Code Quality & Standards | Quality | *Upcoming* | `/api/quality/*` | *(Planned)* |
-| `security` | Security & Dependencies | Security | *Upcoming* | `/api/security/*` | *(Planned)* |
+| :--- | :--- | :--- | :---: | :--- | :--- |
+| `licensing` | **Licensing** | Governance | **Available** | `/api/*` | `/explorer.html`, `/questionnaire.html`, `/compare.html`, `/analyzer.html`, `/app-install.html` |
+| `community` | **Community** | Community | **Available** | `/api/community/*` | `/community.html` |
+| `security` | **Security** | Security | *Upcoming* | `/api/security/*` | *(Planned)* |
+| `documentation` | **Documentation** | Documentation | *Upcoming* | `/api/documentation/*` | *(Planned)* |
+| `issues` | **PR & Issue Management** | Workflow | *Upcoming* | `/api/issues/*` | *(Planned)* |
+| `automation` | **Repository Automation** | Workflow | *Upcoming* | `/api/automation/*` | *(Planned)* |
 
 ---
 
 ## 2. Detailed Feature Breakdown
 
-### A. Licensing Module (`licensing`)
+### A. Licensing Module (`licensing`) — Status: Available
 
 | Feature | Description | Endpoints | Permissions | Status | Test Coverage |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **SPDX Catalog** | 12 OSI-approved licenses with metadata and full texts | `GET /api/licenses`, `GET /api/licenses/:id` | None (Public) | Production | `tests/catalog.test.js` |
 | **Policy Questionnaire** | 4-question policy recommendation engine | `POST /api/recommend` | None (Public) | Production | `tests/recommendation.test.js` |
-| **License Comparison** | Side-by-side comparison of up to 4 licenses | `POST /api/compare` | None (Public) | Production | `tests/comparison.test.js` |
+| **License Comparison** | Side-by-side comparison of candidate licenses | `POST /api/compare` | None (Public) | Production | `tests/comparison.test.js` |
 | **Repository Analyzer** | On-demand scan for LICENSE, NOTICE, manifests, badges | `POST /api/analyze` | None (Public API / App) | Production | `tests/analyzer.test.js` |
 | **Automated License PR** | Dedicated branch creation, license file commit, isolated PR | `POST /api/trigger-pr` | `contents: write`, `pull_requests: write` | Production | `tests/pr-service.test.js`, `tests/http-integration.test.js` |
 | **README License Badges** | Automated insertion/replacement of license badges in README | Internal service | `contents: write` | Production | `tests/readme.test.js` |
 
-### B. Community Standards Module (`community`)
+### B. Community Module (`community`) — Status: Available
 
 | Feature | Description | Endpoints | Permissions | Status | Test Coverage |
 | :--- | :--- | :--- | :--- | :--- | :--- |
@@ -44,18 +44,26 @@ This matrix documents the capability status, API endpoints, user interfaces, req
 
 ### C. Upcoming Modules (Roadmap)
 
-| Module | Planned Features | Target Phase |
+| Module | Planned Capabilities & Subfeatures | Target Scope |
 | :--- | :--- | :--- |
-| **`workflows`** | GitHub Actions CI templates, Action health audit, automated workflow linting | Phase 4 |
-| **`releases`** | Semantic versioning calculator, changelog generator, release notes PR automation | Phase 5 |
-| **`quality`** | EditorConfig, Prettier, ESLint configuration templates, branch protection guidance | Phase 6 |
-| **`security`** | Dependabot configuration generator, security advisories scanner, secret scanning guide | Phase 6 |
+| **`security`** | &bull; Dependabot configuration generator (`.github/dependabot.yml`)<br>&bull; CodeQL analysis workflow setup<br>&bull; Branch protection rule recommendations<br>&bull; Repository security configuration health scoring<br>&bull; Dependency vulnerability advisory guidance | Upcoming |
+| **`documentation`** | &bull; README completeness audit & structure recommendations<br>&bull; Automated `CHANGELOG.md` generation from commit history<br>&bull; Status and coverage badge generator<br>&bull; Markdown broken-link checking<br>&bull; Documentation health scoring | Upcoming |
+| **`issues`** | &bull; Rule-based issue and pull request automated labeling<br>&bull; PR classification and contributor welcome automation<br>&bull; PR checklist completeness enforcement<br>&bull; Inactive issue and pull request triage<br>&bull; Release notes compilation from merged pull requests | Upcoming |
+| **`automation`** | &bull; GitHub Actions CI/CD starter workflow generation (build, test, lint, matrix)<br>&bull; Workflow Health Inspector (unpinned actions, deprecated runners, missing timeouts)<br>&bull; Code style config generation (`.editorconfig`, `.prettierrc`, ESLint configs)<br>&bull; Scheduled repository maintenance tasks | Upcoming |
 
 ---
 
-## 3. Security & Permission Model
+## 3. Two-Layer Permission & Security Architecture
 
-All mutation operations enforce a strict two-layer security barrier:
-1. **User Authorization Layer:** Callers must pass a valid personal access token in the `Authorization: Bearer <token>` header. Open Workers resolves the authenticated user in-memory via `@octokit/rest` and verifies that the user holds `admin`, `maintain`, or `write` permission on the target repository.
-2. **Execution Layer:** If caller authorization passes, the GitHub App installation token is used to create feature branches, commit verified files, and open pull requests.
-3. **Conflict Protection:** Default branches are never mutated directly. Changes occur on isolated feature branches (`chore/*`). If target files already exist, operations fail with `HTTP 409 Conflict` unless explicit `replaceExisting: true` opt-in is supplied.
+1. **User Identity & Write Permission Layer:**
+   - Callers initiating mutation requests pass a GitHub token in the `Authorization: Bearer <token>` header.
+   - The token is verified in-memory against the GitHub REST API (`@octokit/rest`).
+   - The caller must hold `admin`, `maintain`, or `write` collaborator permissions on the target repository.
+   - Tokens are never stored on disk, cached in memory, or logged.
+2. **Execution Layer:**
+   - Once authorized, mutations are executed using the GitHub App's scoped installation credentials.
+   - Permissions are strictly least-privilege: `contents: write` and `pull_requests: write`.
+3. **Branch Isolation & Conflict Guards:**
+   - Changes are committed exclusively to isolated feature branches (`chore/*`).
+   - The repository's default branch is never modified directly.
+   - Pre-commit conflict checks prevent overwriting existing files unless explicit `replaceExisting: true` opt-in is provided.

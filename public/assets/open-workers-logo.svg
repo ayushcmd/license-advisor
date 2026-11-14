@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 942 942" width="942" height="942" role="img" aria-label="Open Workers Logo">
+  <title>Open Workers Logo</title>
+  <desc>Official Open Workers platform logo: central Git pull-request plate surrounded by six capability nodes.</desc>
+
+  <!-- Connecting Outer Ring -->
+  <circle cx="471" cy="471" r="328" fill="none" stroke="#24292F" stroke-width="3.5" />
+
+  <!-- Spokes connecting central plate to 6 outer nodes -->
+  <!-- Top Spoke -->
+  <line x1="459" y1="220" x2="459" y2="325" stroke="#24292F" stroke-width="3" />
+  <line x1="483" y1="220" x2="483" y2="325" stroke="#24292F" stroke-width="3" />
+
+  <!-- Bottom Spoke -->
+  <line x1="459" y1="641" x2="459" y2="720" stroke="#24292F" stroke-width="3" />
+  <line x1="483" y1="641" x2="483" y2="720" stroke="#24292F" stroke-width="3" />
+
+  <!-- Top-Right Spoke (angle -30 deg) -->
+  <line x1="590" y1="375" x2="680" y2="335" stroke="#24292F" stroke-width="3" />
+  <line x1="605" y1="395" x2="695" y2="355" stroke="#24292F" stroke-width="3" />
+
+  <!-- Bottom-Right Spoke (angle +30 deg) -->
+  <line x1="605" y1="547" x2="695" y2="587" stroke="#24292F" stroke-width="3" />
+  <line x1="590" y1="567" x2="680" y2="607" stroke="#24292F" stroke-width="3" />
+
+  <!-- Bottom-Left Spoke (angle +150 deg) -->
+  <line x1="337" y1="547" x2="247" y2="587" stroke="#24292F" stroke-width="3" />
+  <line x1="352" y1="567" x2="262" y2="607" stroke="#24292F" stroke-width="3" />
+
+  <!-- Top-Left Spoke (angle +210 deg) -->
+  <line x1="352" y1="375" x2="262" y2="335" stroke="#24292F" stroke-width="3" />
+  <line x1="337" y1="395" x2="247" y2="355" stroke="#24292F" stroke-width="3" />
+
+  <!-- Central Black Squircle Plate -->
+  <rect x="313" y="325" width="316" height="316" rx="68" fill="#0D1117" />
+
+  <!-- Green Git Pull Request Symbol inside central plate -->
+  <!-- Left stem connecting top and bottom-left rings -->
+  <line x1="416" y1="422" x2="416" y2="542" stroke="#34D058" stroke-width="22" stroke-linecap="round" />
+  <!-- Right curved branch -->
+  <path d="M 416 422 H 486 A 38 38 0 0 1 524 460 V 512" fill="none" stroke="#34D058" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" />
+  <!-- Downward arrow head -->
+  <path d="M 500 494 L 524 518 L 548 494" fill="none" stroke="#34D058" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" />
+  <!-- Three Node Rings -->
+  <circle cx="416" cy="422" r="31" fill="#0D1117" stroke="#34D058" stroke-width="18" />
+  <circle cx="416" cy="542" r="31" fill="#0D1117" stroke="#34D058" stroke-width="18" />
+  <circle cx="524" cy="542" r="31" fill="#0D1117" stroke="#34D058" stroke-width="18" />
+
+  <!-- Node 1: Top Node (471, 143) — Code </ > -->
+  <circle cx="471" cy="143" r="95" fill="#FFFFFF" stroke="#24292F" stroke-width="3.5" />
+  <path d="M 432 123 L 396 143 L 432 163" fill="none" stroke="#24292F" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" />
+  <line x1="485" y1="115" x2="457" y2="171" stroke="#24292F" stroke-width="16" stroke-linecap="round" />
+  <path d="M 510 123 L 546 143 L 510 163" fill="none" stroke="#24292F" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" />
+
+  <!-- Node 2: Top-Right Node (755, 307) — Play ▶ -->
+  <circle cx="755" cy="307" r="95" fill="#FFFFFF" stroke="#24292F" stroke-width="3.5" />
+  <path d="M 732 268 C 732 263 738 260 742 263 L 794 299 C 798 302 798 308 794 311 L 742 347 C 738 350 732 347 732 342 Z" fill="#24292F" />
+
+  <!-- Node 3: Bottom-Right Node (755, 635) — Layers (Isometric Plates) -->
+  <circle cx="755" cy="635" r="95" fill="#FFFFFF" stroke="#24292F" stroke-width="3.5" />
+  <path d="M 755 596 L 804 620 L 755 644 L 706 620 Z" fill="none" stroke="#24292F" stroke-width="14" stroke-linejoin="round" />
+  <path d="M 706 642 L 755 666 L 804 642" fill="none" stroke="#24292F" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" />
+  <path d="M 706 664 L 755 688 L 804 664" fill="none" stroke="#24292F" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" />
+
+  <!-- Node 4: Bottom Node (471, 799) — Gear ⚙ -->
+  <circle cx="471" cy="799" r="95" fill="#FFFFFF" stroke="#24292F" stroke-width="3.5" />
+  <!-- 8-tooth gear -->
+  <g transform="translate(471, 799)">
+    <circle cx="0" cy="0" r="42" fill="#24292F" />
+    <circle cx="0" cy="0" r="20" fill="#FFFFFF" />
+    <rect x="-10" y="-54" width="20" height="16" rx="4" fill="#24292F" />
+    <rect x="-10" y="38" width="20" height="16" rx="4" fill="#24292F" />
+    <rect x="-54" y="-10" width="16" height="20" rx="4" fill="#24292F" />
+    <rect x="38" y="-10" width="16" height="20" rx="4" fill="#24292F" />
+    <rect x="-10" y="-54" width="20" height="16" rx="4" fill="#24292F" transform="rotate(45)" />
+    <rect x="-10" y="38" width="20" height="16" rx="4" fill="#24292F" transform="rotate(45)" />
+    <rect x="-54" y="-10" width="16" height="20" rx="4" fill="#24292F" transform="rotate(45)" />
+    <rect x="38" y="-10" width="16" height="20" rx="4" fill="#24292F" transform="rotate(45)" />
+  </g>
+
+  <!-- Node 5: Bottom-Left Node (187, 635) — Bug 🪲 -->
+  <circle cx="187" cy="635" r="95" fill="#FFFFFF" stroke="#24292F" stroke-width="3.5" />
+  <g transform="translate(187, 635)">
+    <!-- Antennae -->
+    <line x1="-14" y1="-24" x2="-28" y2="-40" stroke="#24292F" stroke-width="12" stroke-linecap="round" />
+    <line x1="14" y1="-24" x2="28" y2="-40" stroke="#24292F" stroke-width="12" stroke-linecap="round" />
+    <!-- 6 Legs -->
+    <line x1="-20" y1="-10" x2="-42" y2="-20" stroke="#24292F" stroke-width="12" stroke-linecap="round" />
+    <line x1="20" y1="-10" x2="42" y2="-20" stroke="#24292F" stroke-width="12" stroke-linecap="round" />
+    <line x1="-22" y1="14" x2="-44" y2="14" stroke="#24292F" stroke-width="12" stroke-linecap="round" />
+    <line x1="22" y1="14" x2="44" y2="14" stroke="#24292F" stroke-width="12" stroke-linecap="round" />
+    <path d="M -20 36 C -32 40, -36 50, -34 60" fill="none" stroke="#24292F" stroke-width="12" stroke-linecap="round" />
+    <path d="M 20 36 C 32 40, 36 50, 34 60" fill="none" stroke="#24292F" stroke-width="12" stroke-linecap="round" />
+    <!-- Head -->
+    <path d="M -24 -6 A 24 24 0 0 1 24 -6 Z" fill="none" stroke="#24292F" stroke-width="12" stroke-linejoin="round" />
+    <!-- Body -->
+    <path d="M -24 0 H 24 V 24 A 24 24 0 0 1 -24 24 Z" fill="none" stroke="#24292F" stroke-width="12" stroke-linejoin="round" />
+  </g>
+
+  <!-- Node 6: Top-Left Node (187, 307) — Terminal >_ -->
+  <circle cx="187" cy="307" r="95" fill="#FFFFFF" stroke="#24292F" stroke-width="3.5" />
+  <path d="M 160 282 L 195 307 L 160 332" fill="none" stroke="#24292F" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" />
+  <line x1="206" y1="332" x2="244" y2="332" stroke="#24292F" stroke-width="16" stroke-linecap="round" />
+</svg>

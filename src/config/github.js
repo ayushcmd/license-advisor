@@ -80,7 +80,7 @@ export function loadPrivateKey({ privateKey, privateKeyPath, cwd = process.cwd()
 export function createGitHubContext(env = process.env, options = {}) {
   const logger = options.logger || console;
   const appId = env.GITHUB_APP_ID ? String(env.GITHUB_APP_ID).trim() : '';
-  const appSlug = env.GITHUB_APP_SLUG ? String(env.GITHUB_APP_SLUG).trim() : 'github-license-advisor';
+  const appSlug = env.GITHUB_APP_SLUG ? String(env.GITHUB_APP_SLUG).trim() : 'open-license-advisor';
   const webhookSecret = env.GITHUB_WEBHOOK_SECRET ? String(env.GITHUB_WEBHOOK_SECRET).trim() : '';
   const publicToken = env.GITHUB_PUBLIC_TOKEN ? String(env.GITHUB_PUBLIC_TOKEN).trim() : '';
 
