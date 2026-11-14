@@ -13,7 +13,7 @@ This matrix documents the capability status, API endpoints, user interfaces, req
 | `security` | **Security** | Security | **Available** | `/api/security/*` | `/security.html` |
 | `documentation` | **Documentation** | Documentation | **Available** | `/api/documentation/*` | `/documentation.html` |
 | `issues` | **PR & Issue Management** | Workflow | **Available** | `/api/issues/*`, `/api/pulls/*` | `/issues.html` |
-| `automation` | **Repository Automation** | Workflow | *Upcoming* | `/api/automation/*` | *(Planned)* |
+| `automation` | **Repository Automation** | Workflow | **Available** | `/api/automation/*` | `/automation.html` |
 
 ---
 
@@ -83,11 +83,17 @@ This matrix documents the capability status, API endpoints, user interfaces, req
 | **Authorized PR Action** | Apply managed size label or post welcome comment with marker | `POST /api/pulls/execute-action` | User PAT (write) + App (`issues: write`, `pull_requests: write`) | Production | `tests/issues.test.js` |
 | **Opt-In Webhook Automation** | Event dispatcher routing `issues` and `pull_request` events via `.github/open-workers.yml` | Webhook Receiver | App Webhook Secret + App Scopes | Production | `tests/issues.test.js` |
 
-### F. Upcoming Modules (Roadmap)
+### F. Repository Automation Module (`automation`) — Status: Available
 
-| Module | Planned Capabilities & Subfeatures | Target Scope |
-| :--- | :--- | :--- |
-| **`automation`** | &bull; GitHub Actions CI/CD starter workflow generation (build, test, lint, matrix)<br>&bull; Workflow Health Inspector (unpinned actions, deprecated runners, missing timeouts)<br>&bull; Code style config generation (`.editorconfig`, `.prettierrc`, ESLint configs)<br>&bull; Scheduled repository maintenance tasks | Upcoming |
+| Feature | Description | Endpoints | Permissions | Status | Test Coverage |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **Setup & Check Discovery** | List supported repository checks and automation templates | `GET /api/automation/checks`, `GET /api/automation/templates` | None (Public) | Production | `tests/automation.test.js` |
+| **Repository Setup Audit** | Non-destructive inspection of CI workflows, linters, formatters, and repo discovery metadata | `POST /api/automation/analyze` | None (Public / App) | Production | `tests/automation.test.js` |
+| **Workflow Health Inspector** | Audits workflows for unpinned actions, deprecated runners, missing timeouts, and trigger safety | `POST /api/automation/inspect-workflows` | None (Public / App) | Production | `tests/automation.test.js` |
+| **CI Workflow Generators** | Generates tailored Node.js, Python, Multi-Platform Matrix, PR Validation, and Maintenance CI workflows | `POST /api/automation/generate` | None (Public) | Production | `tests/automation.test.js` |
+| **Code Quality Generators** | Generates standard `.editorconfig`, `.prettierrc.json`, flat `eslint.config.js`, `.gitattributes`, and `.gitignore` | `POST /api/automation/generate` | None (Public) | Production | `tests/automation.test.js` |
+| **PR Preview & Conflict Guard** | Previews generated workflows/configs, detects conflicts, and checks `workflows: write` permissions | `POST /api/automation/preview-pr` | None (Public / App) | Production | `tests/automation.test.js` |
+| **Consolidated Automation PR** | Multi-file deployment on dedicated feature branch with caller PAT authorization and SHA tracking | `POST /api/automation/trigger-pr` | User PAT (write) + App (`contents: write`, `pull_requests: write`, plus `workflows: write` for workflows) | Production | `tests/automation.test.js` |
 
 ---
 

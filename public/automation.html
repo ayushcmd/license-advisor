@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Repository Automation — Open Workers</title>
+  <meta name="description" content="Inspect repository configuration, generate GitHub Actions workflows, enforce code quality standards, detect workflow problems, and submit maintenance pull requests.">
+  <meta property="og:image" content="https://open-workers.onrender.com/assets/open-workers-social.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://open-workers.onrender.com/assets/open-workers-social.png">
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16.png">
+  <link rel="apple-touch-icon" href="assets/open-workers-icon-128.png">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css">
+</head>
+<body data-page="automation">
+  <a href="#main-content" class="skip-link">Skip to main content</a>
+
+  <header class="site-header">
+    <div class="container site-header-inner">
+      <a href="index.html" class="brand-link">
+        <img src="assets/open-workers-icon.svg" alt="Open Workers logo" class="brand-logo" width="26" height="26">
+        <span>Open Workers</span>
+      </a>
+      <nav class="site-nav" aria-label="Primary">
+        <a href="/index.html" class="nav-link">Home</a>
+        <a href="/community.html" class="nav-link">Community</a>
+        <a href="/security.html" class="nav-link">Security</a>
+        <a href="/documentation.html" class="nav-link">Documentation</a>
+        <a href="/issues.html" class="nav-link">PRs &amp; Issues</a>
+        <a href="/automation.html" class="nav-link" aria-current="page">Automation</a>
+        <details class="nav-dropdown">
+          <summary class="nav-link licensing-toggle" aria-controls="licensing-links" aria-expanded="false">Licensing <span class="nav-caret" aria-hidden="true">&#9662;</span></summary>
+          <div id="licensing-links" class="nav-dropdown-panel">
+            <a href="/explorer.html" class="nav-dropdown-link">Explore Licenses</a>
+            <a href="/questionnaire.html" class="nav-dropdown-link">Find a License</a>
+            <a href="/compare.html" class="nav-dropdown-link">Compare Licenses</a>
+            <a href="/app-install.html" class="nav-dropdown-link">Create License PR</a>
+          </div>
+        </details>
+        <a href="/analyzer.html" class="nav-link">Check Repository</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main-content" class="container stack-lg">
+    <section class="page-header stack-sm">
+      <h1>Repository Automation &amp; CI Management</h1>
+      <p>Inspect repository configuration, generate GitHub Actions workflows, enforce code quality standards, detect workflow problems, and propose maintenance improvements through reviewable pull requests.</p>
+      <nav class="cluster" aria-label="Automation quick navigation" style="margin-top: var(--space-2);">
+        <a href="#section-audit" class="btn btn-secondary btn-sm">1. Setup Audit</a>
+        <a href="#section-workflows" class="btn btn-secondary btn-sm">2. Workflow Generator</a>
+        <a href="#section-inspector" class="btn btn-secondary btn-sm">3. Workflow Health Inspector</a>
+        <a href="#section-quality" class="btn btn-secondary btn-sm">4. Code Quality Configs</a>
+        <a href="#section-pr" class="btn btn-secondary btn-sm">5. Automation Pull Request</a>
+      </nav>
+    </section>
+
+    <!-- Section 1: Repository Setup Audit -->
+    <section id="section-audit" class="card stack-md" aria-labelledby="heading-audit">
+      <div class="stack-xs">
+        <h2 id="heading-audit">1. Repository Setup Audit</h2>
+        <p class="text-muted">Inspect repository configuration for CI workflows, formatting tools, linters, gitattributes, and essential repository metadata without persisting data.</p>
+      </div>
+
+      <form id="audit-form" class="stack-sm">
+        <div class="form-group">
+          <label for="audit-repo">GitHub Repository (owner/repo or URL)</label>
+          <div class="cluster">
+            <input type="text" id="audit-repo" name="repo" placeholder="octocat/Hello-World" required class="form-input" style="flex: 1; min-width: 260px;">
+            <button type="submit" class="btn btn-primary" id="btn-audit">Audit Repository</button>
+          </div>
+          <span class="form-hint">Public repositories can be inspected immediately. Private repositories require authorized access.</span>
+        </div>
+      </form>
+
+      <div id="audit-feedback" aria-live="polite"></div>
+
+      <div id="audit-results" class="stack-md" style="display: none;">
+        <div class="cluster" style="justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: var(--space-2);">
+          <div>
+            <h3 id="audit-repo-name" style="margin: 0;"></h3>
+            <span id="audit-repo-meta" class="text-muted text-sm"></span>
+          </div>
+          <div class="cluster" style="align-items: center; gap: var(--space-3);">
+            <div style="text-align: right;">
+              <span class="text-xs text-muted" style="display: block;">Setup Health</span>
+              <strong id="audit-score-num" style="font-size: 1.5rem;">0%</strong>
+            </div>
+            <span id="audit-archived-badge" class="badge badge-warning" style="display: none;">Archived</span>
+          </div>
+        </div>
+
+        <div>
+          <h4>Configuration Checks</h4>
+          <div id="audit-checks-list" class="stack-sm" style="margin-top: var(--space-2);"></div>
+        </div>
+
+        <div id="audit-recommendations-wrapper" style="display: none;">
+          <h4>Cross-Module Recommendations</h4>
+          <div id="audit-recommendations-list" class="stack-sm" style="margin-top: var(--space-2);"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 2: GitHub Actions Workflow Generator -->
+    <section id="section-workflows" class="card stack-md" aria-labelledby="heading-workflows">
+      <div class="stack-xs">
+        <h2 id="heading-workflows">2. GitHub Actions Workflow Generator</h2>
+        <p class="text-muted">Generate practical CI workflows with official actions (v4/v5), minimal token permissions, and bounded matrix sizes.</p>
+      </div>
+
+      <div class="stack-sm">
+        <div class="form-group">
+          <label for="workflow-template-select">Select Workflow Template</label>
+          <select id="workflow-template-select" class="form-select">
+            <option value="node-ci" selected>Node.js CI (.github/workflows/node-ci.yml)</option>
+            <option value="python-ci">Python CI (.github/workflows/python-ci.yml)</option>
+            <option value="matrix-ci">Multi-Platform Matrix CI (.github/workflows/matrix-ci.yml)</option>
+            <option value="pr-validation">Pull Request Validation (.github/workflows/pr-validation.yml)</option>
+            <option value="maintenance">Scheduled Maintenance (.github/workflows/maintenance.yml)</option>
+          </select>
+        </div>
+
+        <!-- Node.js CI Options -->
+        <div id="options-node-ci" class="workflow-options stack-sm">
+          <div class="form-group">
+            <label>Node.js Versions</label>
+            <div class="cluster" style="gap: var(--space-2);">
+              <label><input type="checkbox" name="node-version" value="20" checked> Node 20 (LTS)</label>
+              <label><input type="checkbox" name="node-version" value="22" checked> Node 22 (Current)</label>
+              <label><input type="checkbox" name="node-version" value="18"> Node 18</label>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="node-pkg-manager">Package Manager</label>
+            <select id="node-pkg-manager" class="form-select">
+              <option value="npm" selected>npm (npm ci)</option>
+              <option value="pnpm">pnpm (pnpm install --frozen-lockfile)</option>
+              <option value="yarn">yarn (yarn install --frozen-lockfile)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="node-test-cmd">Test Command</label>
+            <input type="text" id="node-test-cmd" class="form-input" value="npm test">
+          </div>
+          <div class="cluster">
+            <label><input type="checkbox" id="node-include-lint" checked> Include Linter step (npm run lint)</label>
+            <label><input type="checkbox" id="node-include-build"> Include Build step (npm run build)</label>
+          </div>
+        </div>
+
+        <!-- Python CI Options -->
+        <div id="options-python-ci" class="workflow-options stack-sm" style="display: none;">
+          <div class="form-group">
+            <label>Python Versions</label>
+            <div class="cluster" style="gap: var(--space-2);">
+              <label><input type="checkbox" name="py-version" value="3.11" checked> Python 3.11</label>
+              <label><input type="checkbox" name="py-version" value="3.12" checked> Python 3.12</label>
+              <label><input type="checkbox" name="py-version" value="3.13"> Python 3.13</label>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="py-test-cmd">Test Command</label>
+            <input type="text" id="py-test-cmd" class="form-input" value="pytest">
+          </div>
+          <div class="cluster">
+            <label><input type="checkbox" id="py-include-lint" checked> Include Ruff/Flake8 linting</label>
+            <label><input type="checkbox" id="py-include-typecheck"> Include mypy type check</label>
+          </div>
+        </div>
+
+        <!-- Matrix CI Options -->
+        <div id="options-matrix-ci" class="workflow-options stack-sm" style="display: none;">
+          <div class="form-group">
+            <label>Operating Systems (max 9 total jobs)</label>
+            <div class="cluster" style="gap: var(--space-2);">
+              <label><input type="checkbox" name="matrix-os" value="ubuntu-latest" checked> Ubuntu</label>
+              <label><input type="checkbox" name="matrix-os" value="windows-latest" checked> Windows</label>
+              <label><input type="checkbox" name="matrix-os" value="macos-latest" checked> macOS</label>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="matrix-runtime">Runtime</label>
+            <select id="matrix-runtime" class="form-select">
+              <option value="node" selected>Node.js (20, 22)</option>
+              <option value="python">Python (3.11, 3.12)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- PR Validation Options -->
+        <div id="options-pr-validation" class="workflow-options stack-sm" style="display: none;">
+          <p class="text-sm text-muted">Triggers exclusively on <code>pull_request</code> with read-only permissions (safe for fork contributions).</p>
+          <div class="form-group">
+            <label for="pr-val-test-cmd">Test Command</label>
+            <input type="text" id="pr-val-test-cmd" class="form-input" value="npm test">
+          </div>
+        </div>
+
+        <!-- Maintenance Options -->
+        <div id="options-maintenance" class="workflow-options stack-sm" style="display: none;">
+          <div class="form-group">
+            <label for="maint-task">Approved Maintenance Task</label>
+            <select id="maint-task" class="form-select">
+              <option value="npm-audit" selected>npm audit (Security vulnerability scan)</option>
+              <option value="pip-check">pip outdated (Dependency check)</option>
+              <option value="docs-links">Markdown link check</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="maint-cron">Schedule (Cron expression)</label>
+            <input type="text" id="maint-cron" class="form-input" value="0 0 * * 1">
+            <span class="form-hint">Default: Every Monday at 00:00 UTC (0 0 * * 1).</span>
+          </div>
+        </div>
+
+        <div class="cluster">
+          <button type="button" id="btn-generate-workflow" class="btn btn-primary">Generate Workflow</button>
+          <button type="button" id="btn-copy-workflow" class="btn btn-secondary">Copy YAML</button>
+          <button type="button" id="btn-download-workflow" class="btn btn-secondary">Download</button>
+          <button type="button" id="btn-stage-workflow" class="btn btn-secondary">Stage for PR</button>
+        </div>
+
+        <div id="workflow-preview-wrapper" class="stack-xs" style="margin-top: var(--space-2);">
+          <div class="cluster" style="justify-content: space-between;">
+            <strong id="workflow-filename" class="text-sm text-muted">.github/workflows/node-ci.yml</strong>
+            <span id="workflow-copied-indicator" class="text-xs text-muted" aria-live="polite"></span>
+          </div>
+          <pre id="workflow-preview" class="code-block" tabindex="0" style="max-height: 380px; overflow-y: auto;"></pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 3: Workflow Health Inspector -->
+    <section id="section-inspector" class="card stack-md" aria-labelledby="heading-inspector">
+      <div class="stack-xs">
+        <h2 id="heading-inspector">3. Workflow Health Inspector</h2>
+        <p class="text-muted">Analyze existing GitHub Actions workflows for deprecated actions, missing timeouts, unpinned third-party actions, trigger risks, and overly broad permissions.</p>
+      </div>
+
+      <form id="inspector-form" class="stack-sm">
+        <div class="form-group">
+          <label for="inspector-repo">GitHub Repository</label>
+          <div class="cluster">
+            <input type="text" id="inspector-repo" placeholder="owner/repo" required class="form-input" style="flex: 1; min-width: 260px;">
+            <button type="submit" class="btn btn-primary" id="btn-inspect-wf">Inspect Workflows</button>
+          </div>
+        </div>
+      </form>
+
+      <div id="inspector-feedback" aria-live="polite"></div>
+
+      <div id="inspector-results" class="stack-md" style="display: none;">
+        <div id="inspector-cards" class="stack-md"></div>
+      </div>
+    </section>
+
+    <!-- Section 4: Code Quality Configurations -->
+    <section id="section-quality" class="card stack-md" aria-labelledby="heading-quality">
+      <div class="stack-xs">
+        <h2 id="heading-quality">4. Code Quality Configurations</h2>
+        <p class="text-muted">Generate deterministic standard configuration files to establish consistent formatting and static analysis rules.</p>
+      </div>
+
+      <div class="stack-sm">
+        <div class="form-group">
+          <label for="quality-template-select">Select Configuration</label>
+          <select id="quality-template-select" class="form-select">
+            <option value="editorconfig" selected>EditorConfig (.editorconfig)</option>
+            <option value="prettier">Prettier (.prettierrc.json)</option>
+            <option value="eslint">ESLint Flat Config (eslint.config.js)</option>
+            <option value="gitattributes">Git Attributes (.gitattributes)</option>
+            <option value="gitignore">Git Ignore (.gitignore)</option>
+          </select>
+        </div>
+
+        <div id="options-editorconfig" class="quality-options stack-sm">
+          <div class="cluster">
+            <div class="form-group">
+              <label for="ec-indent-style">Indent Style</label>
+              <select id="ec-indent-style" class="form-select">
+                <option value="space" selected>Spaces</option>
+                <option value="tab">Tabs</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="ec-indent-size">Indent Size</label>
+              <select id="ec-indent-size" class="form-select">
+                <option value="2" selected>2 Spaces</option>
+                <option value="4">4 Spaces</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div id="options-prettier" class="quality-options stack-sm" style="display: none;">
+          <div class="cluster">
+            <label><input type="checkbox" id="pr-semi" checked> Semicolons</label>
+            <label><input type="checkbox" id="pr-single-quote" checked> Single Quotes</label>
+          </div>
+          <span class="text-xs text-muted">Install with: <code>npm install --save-dev --save-exact prettier</code></span>
+        </div>
+
+        <div id="options-eslint" class="quality-options stack-sm" style="display: none;">
+          <label><input type="checkbox" id="es-ts"> TypeScript Support</label>
+          <span class="text-xs text-muted">Flat config requires modern ESLint v9+. Install: <code>npm install --save-dev eslint @eslint/js</code></span>
+        </div>
+
+        <div id="options-gitattributes" class="quality-options stack-sm" style="display: none;">
+          <label><input type="checkbox" id="ga-binary" checked> Include common binary asset rules (images, fonts, archives)</label>
+        </div>
+
+        <div id="options-gitignore" class="quality-options stack-sm" style="display: none;">
+          <div class="form-group">
+            <label for="gi-ecosystem">Ecosystem</label>
+            <select id="gi-ecosystem" class="form-select">
+              <option value="node" selected>Node.js &amp; JavaScript</option>
+              <option value="python">Python</option>
+              <option value="all">Full Stack (Node &amp; Python)</option>
+              <option value="general">General / OS only</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="cluster">
+          <button type="button" id="btn-generate-quality" class="btn btn-primary">Generate File</button>
+          <button type="button" id="btn-copy-quality" class="btn btn-secondary">Copy</button>
+          <button type="button" id="btn-download-quality" class="btn btn-secondary">Download</button>
+          <button type="button" id="btn-stage-quality" class="btn btn-secondary">Stage for PR</button>
+        </div>
+
+        <div id="quality-preview-wrapper" class="stack-xs" style="margin-top: var(--space-2);">
+          <div class="cluster" style="justify-content: space-between;">
+            <strong id="quality-filename" class="text-sm text-muted">.editorconfig</strong>
+            <span id="quality-copied-indicator" class="text-xs text-muted" aria-live="polite"></span>
+          </div>
+          <pre id="quality-preview" class="code-block" tabindex="0" style="max-height: 380px; overflow-y: auto;"></pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 5: Consolidated Automation PR -->
+    <section id="section-pr" class="card stack-md" aria-labelledby="heading-pr">
+      <div class="stack-xs">
+        <h2 id="heading-pr">5. Consolidated Automation Pull Request</h2>
+        <p class="text-muted">Review staged workflows and configurations, check for existing file conflicts, and submit a single reviewable Pull Request on a dedicated branch.</p>
+      </div>
+
+      <div class="stack-sm">
+        <div class="form-group">
+          <label for="pr-repo">Target Repository</label>
+          <input type="text" id="pr-repo" placeholder="owner/repo" class="form-input" style="max-width: 400px;">
+        </div>
+
+        <div>
+          <h4>Staged Files (<span id="staged-count">0</span>)</h4>
+          <div id="staged-files-list" class="stack-xs" style="margin-top: var(--space-1);">
+            <p class="text-sm text-muted" id="no-staged-msg">No files staged yet. Click "Stage for PR" above in Sections 2 or 4.</p>
+          </div>
+        </div>
+
+        <div class="cluster" style="align-items: center;">
+          <button type="button" id="btn-preview-pr" class="btn btn-secondary">Preview Changes &amp; Check Conflicts</button>
+          <label style="margin: 0; font-size: 0.9rem;">
+            <input type="checkbox" id="pr-replace-existing"> Overwrite existing files (replaceExisting)
+          </label>
+        </div>
+
+        <div id="pr-preview-results" class="stack-sm" style="display: none;">
+          <div id="pr-workflow-warning" class="banner banner-warning" style="display: none;"></div>
+          <div id="pr-conflict-alert" class="banner banner-error" style="display: none;"></div>
+          <div id="pr-ready-alert" class="banner banner-success" style="display: none;"></div>
+          <div id="pr-file-statuses" class="stack-xs"></div>
+        </div>
+
+        <div class="cluster">
+          <button type="button" id="btn-submit-pr" class="btn btn-primary" disabled>Open Automation Pull Request</button>
+        </div>
+
+        <div id="pr-result-banner" aria-live="polite"></div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Authorization Modal for PR mutations -->
+  <dialog id="auth-modal" class="modal" aria-labelledby="auth-modal-title">
+    <div class="modal-box stack-md">
+      <h3 id="auth-modal-title">Authorize Repository Write Access</h3>
+      <p class="text-sm text-muted">To protect repositories from unauthorized modifications, enter a GitHub Personal Access Token (PAT) with <code>write</code> access to the target repository. Your token is verified in-memory and never saved to a database.</p>
+      <form id="auth-form" class="stack-sm">
+        <div class="form-group">
+          <label for="pat-input">GitHub Personal Access Token (classic or fine-grained)</label>
+          <input type="password" id="pat-input" required class="form-input" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx">
+        </div>
+        <div class="cluster" style="justify-content: flex-end;">
+          <button type="button" id="btn-cancel-auth" class="btn btn-secondary">Cancel</button>
+          <button type="submit" id="btn-confirm-auth" class="btn btn-primary">Confirm &amp; Create PR</button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+  <footer class="site-footer">
+    <div class="container site-footer-inner">
+      <div class="cluster" style="gap: var(--space-3); align-items: center;">
+        <img src="assets/open-workers-icon.svg" alt="" width="20" height="20">
+        <span>Open Workers &mdash; Multi-purpose GitHub Automation</span>
+      </div>
+      <div class="cluster text-sm text-muted">
+        <a href="https://github.com/ayushcmd/open-workers" target="_blank" rel="noopener">GitHub</a>
+        <a href="/privacy.html">Privacy</a>
+        <a href="/support.html">Support</a>
+      </div>
+    </div>
+  </footer>
+
+  <script type="module" src="js/automation.js"></script>
+</body>
+</html>

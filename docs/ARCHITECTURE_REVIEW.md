@@ -31,12 +31,13 @@ open-workers/
 ├── public/                     # Static frontend assets
 │   ├── assets/                 # SVGs (logo.svg, workflow.svg, etc.)
 │   ├── css/                    # Modular CSS (base.css, components.css)
-│   ├── js/                     # Client ES6 modules (community.js, security.js, documentation.js, issues.js, etc.)
+│   ├── js/                     # Client ES6 modules (community.js, security.js, documentation.js, issues.js, automation.js, etc.)
 │   ├── index.html              # Home page
 │   ├── community.html          # Community standards, audit, and PR workflow
 │   ├── security.html           # Security configuration audit, generators, and PR workflow
 │   ├── documentation.html       # Documentation audit, README tools, changelog, badges, link checker
 │   ├── issues.html             # PR & Issue management: categorization, quality checks, welcome, duplicates, release notes
+│   ├── automation.html         # Repository automation: setup audits, CI generators, workflow inspector, code quality
 │   ├── analyzer.html           # Repository license inspector
 │   ├── explorer.html           # SPDX license catalog explorer
 │   ├── questionnaire.html      # Deterministic licensing recommendation engine
@@ -55,11 +56,12 @@ open-workers/
 │   │   ├── community/          # Community module (engine.js, communityService.js, templates/)
 │   │   ├── security/           # Security module (engine.js, securityService.js)
 │   │   ├── documentation/      # Documentation module (engine.js, documentationService.js)
-│   │   └── issues/             # PR & Issue management (engine.js, issueService.js, pullRequestService.js, automationService.js)
+│   │   ├── issues/             # PR & Issue management (engine.js, issueService.js, pullRequestService.js, automationService.js)
+│   │   └── automation/         # Repository automation (engine.js, automationService.js)
 │   ├── routes/                 # Express route handlers (api.js, webhooks.js)
 │   ├── services/               # Licensing services (licenseService.js, prService.js, readmeService.js)
 │   └── server.js               # Express application bootstrap and server
-├── tests/                      # Native node:test suite (169 tests across 34 suites)
+├── tests/                      # Native node:test suite (205 tests across 39 suites)
 └── docs/                       # Architecture, development, and operational guides
 ```
 
@@ -146,3 +148,37 @@ For reactive automation responding to GitHub webhook events (`issues`, `pull_req
 4. **Non-Destructive Issue Suggestions:** Duplicate detection and stale triage surfaces actionable recommendations without closing issues or pull requests.
 5. **Caller Write Authorization:** API endpoints performing mutations (`POST /api/issues/apply-labels`, `POST /api/pulls/actions/execute`) verify caller write permissions via personal access tokens in-memory without persistence.
 6. **Diagnostic Permission Hints:** If the GitHub App receives HTTP 403 on label or comment mutations, diagnostic guidance directs administrators to enable `Issues: Read and write` on `github.com/settings/apps`.
+
+
+---
+
+## 6. Repository Automation & Workflow Permission Boundary
+
+The Repository Automation module enforces strict least-privilege boundaries and safety guarantees for CI/CD configuration files:
+
+```
++--------------------------------------------------------------------------------+
+| Proposed Automation Changes (Workflows + Quality Configs)                      |
++--------------------------------------------------------------------------------+
+                                       |
+                                       v
++--------------------------------------------------------------------------------+
+| Permission & File Type Partitioning                                            |
+|  - Workflow files (.github/workflows/*) -> Require `workflows: write`          |
+|  - Standard quality configs (.editorconfig, .prettierrc, etc.) -> `contents: write`|
++--------------------------------------------------------------------------------+
+                                       |
+                   +-------------------+-------------------+
+                   |                                       |
+                   v                                       v
+  [App Has workflows: write]               [App Lacks workflows: write]
+  - Commits both workflows and configs     - Allows preview, copy, download
+  - Submits single consolidated PR         - Refuses workflow mutations (HTTP 403)
+                                           - Permits quality configs independently
+```
+
+### Safety & Guardrails:
+1. **No Autonomous Code Execution:** Open Workers never runs repository build or test scripts on the server. Workflows are generated deterministically as inert text and executed solely in the user's GitHub Actions environment.
+2. **Command Injection Defenses:** Command inputs (e.g. test, lint, and build commands) are strictly sanitized, rejecting shell chaining operators (`&&`, `||`, `;`) and expression interpolations (`${{ ... }}`).
+3. **Bounded Matrix Dimensions:** CI matrix configurations enforce a strict ceiling (maximum 9 combinations) to prevent accidental creation of large, expensive job matrices.
+4. **Official & Pinned Actions:** Generated workflows reference current, supported official actions (`actions/checkout@v4`, `actions/setup-node@v4`, `actions/setup-python@v5`) with minimal permissions (`permissions: contents: read`) and explicit job timeouts.

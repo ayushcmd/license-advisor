@@ -49,6 +49,17 @@ import {
   previewPullRequestAction,
   executePullRequestAction
 } from '../modules/issues/pullRequestService.js';
+import {
+  listAutomationChecks,
+  listAutomationTemplates,
+  generateAutomationFile
+} from '../modules/automation/engine.js';
+import {
+  auditRepositorySetup,
+  inspectRepositoryWorkflows,
+  previewAutomationPr,
+  createAutomationPullRequest
+} from '../modules/automation/automationService.js';
 import { authorizeRepositoryWrite } from '../core/github/authorize.js';
 import { LICENSE_CATALOG, SPDX_DATA_VERSION } from '../../public/js/catalog-data.js';
 import {
@@ -428,6 +439,87 @@ export function createApiRouter({ githubContext, env = process.env, createUserCl
         createUserClient
       });
       res.status(200).json(result);
+    })
+  );
+
+  // Repository Automation routes
+  router.get('/automation/checks', (_req, res) => {
+    res.json({ checks: listAutomationChecks() });
+  });
+
+  router.get('/automation/templates', (_req, res) => {
+    res.json({ templates: listAutomationTemplates() });
+  });
+
+  router.post(
+    '/automation/generate',
+    withServiceErrorHandling(async (req, res) => {
+      const { templateId, options, existingContent } = req.body || {};
+      if (!templateId) {
+        throw new ServiceError(400, 'A "templateId" is required to generate an automation file.', 'INVALID_INPUT');
+      }
+      const generated = generateAutomationFile({ templateId, options, existingContent });
+      res.json(generated);
+    })
+  );
+
+  router.post(
+    '/automation/analyze',
+    withServiceErrorHandling(async (req, res) => {
+      const result = await auditRepositorySetup({
+        repoInput: req.body?.repo,
+        githubContext
+      });
+      res.json(result);
+    })
+  );
+
+  router.post(
+    '/automation/inspect-workflows',
+    withServiceErrorHandling(async (req, res) => {
+      const result = await inspectRepositoryWorkflows({
+        repoInput: req.body?.repo,
+        githubContext
+      });
+      res.json(result);
+    })
+  );
+
+  router.post(
+    '/automation/preview-pr',
+    withServiceErrorHandling(async (req, res) => {
+      const result = await previewAutomationPr({
+        repoInput: req.body?.repo,
+        files: req.body?.files,
+        replaceExisting: Boolean(req.body?.replaceExisting),
+        githubContext
+      });
+      res.json(result);
+    })
+  );
+
+  router.post(
+    '/automation/trigger-pr',
+    withServiceErrorHandling(async (req, res) => {
+      const auth = await authorizeRepositoryWrite({
+        authorization: req.get('authorization'),
+        repoInput: req.body?.repo,
+        githubContext,
+        createUserClient
+      });
+      const result = await createAutomationPullRequest({
+        repoInput: req.body?.repo,
+        files: req.body?.files,
+        replaceExisting: Boolean(req.body?.replaceExisting),
+        customBranch: req.body?.branch,
+        customPrTitle: req.body?.prTitle,
+        customPrBody: req.body?.prBody,
+        githubContext
+      });
+      res.status(201).json({
+        ...result,
+        caller: auth.login
+      });
     })
   );
 
