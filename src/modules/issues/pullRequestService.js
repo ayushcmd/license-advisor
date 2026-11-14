@@ -175,6 +175,70 @@ export async function classifyPullRequest({ repoInput, pullNumber, githubContext
  * @param {object} params.githubContext
  * @returns {Promise<object>}
  */
+export async function generateReleaseNotes({
+  repoInput,
+  releaseTitle = 'Release Notes',
+  previousTag = null,
+  currentTag = null,
+  limit = 50,
+  githubContext
+}) {
+  let parsed;
+  try {
+    parsed = parseRepoInput(repoInput);
+  } catch (error) {
+    throw new ServiceError(400, error.message, 'INVALID_INPUT');
+  }
+  const { owner, repo, fullName } = parsed;
+
+  const maxPulls = Math.min(Math.max(1, parseInt(limit, 10) || 50), 100);
+  const { octokit } = await resolveClient(owner, repo, githubContext);
+
+  let pullsRes;
+  try {
+    pullsRes = await octokit.rest.pulls.list({
+      owner,
+      repo,
+      state: 'closed',
+      sort: 'updated',
+      direction: 'desc',
+      per_page: maxPulls
+    });
+  } catch (err) {
+    throw mapGitHubError(err, `Failed to load closed pull requests for "${fullName}".`);
+  }
+
+  // Filter to merged PRs only
+  const mergedPulls = (Array.isArray(pullsRes.data) ? pullsRes.data : []).filter((p) => p.merged_at);
+
+  const markdown = generateReleaseNotesFromPulls({
+    pulls: mergedPulls,
+    releaseTitle,
+    previousTag,
+    currentTag,
+    repoUrl: `https://github.com/${fullName}`
+  });
+
+  return {
+    repository: fullName,
+    mergedCount: mergedPulls.length,
+    scannedCount: (pullsRes.data || []).length,
+    releaseTitle,
+    markdown
+  };
+}
+
+/**
+ * Preview an authorized pull request action (apply size label or welcome comment)
+ *
+ * @param {object} params
+ * @param {string} params.repoInput
+ * @param {number|string} params.pullNumber
+ * @param {string} params.action 'apply_size_label' | 'post_welcome'
+ * @param {object} [params.options]
+ * @param {object} params.githubContext
+ * @returns {Promise<object>}
+ */
 export async function previewPullRequestAction({ repoInput, pullNumber, action, options = {}, githubContext }) {
   let parsed;
   try {

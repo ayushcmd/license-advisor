@@ -587,3 +587,101 @@ export function evaluateStaleIssue(issue = {}, { daysInactive = 30, exemptLabels
  * @param {string} [params.repoUrl]
  * @returns {string}
  */
+export function generateReleaseNotesFromPulls({
+  pulls = [],
+  releaseTitle = 'Release Notes',
+  previousTag = null,
+  currentTag = null,
+  repoUrl = ''
+} = {}) {
+  const categories = {
+    breaking: { title: '⚠️ Breaking Changes', items: [] },
+    feat: { title: '🚀 Features & Enhancements', items: [] },
+    fix: { title: '🐛 Bug Fixes', items: [] },
+    docs: { title: '📖 Documentation', items: [] },
+    perf: { title: '⚡ Performance Improvements', items: [] },
+    security: { title: '🔒 Security', items: [] },
+    maintenance: { title: '🛠️ Maintenance & Chores', items: [] },
+    other: { title: '📦 Other Changes', items: [] }
+  };
+
+  for (const pr of pulls) {
+    const title = String(pr.title || '').trim();
+    if (!title) continue;
+
+    const prNumber = pr.number;
+    const author = pr.user?.login || pr.author?.login || null;
+    const url = pr.html_url || (repoUrl ? `${repoUrl.replace(/\/+$/, '')}/pull/${prNumber}` : `#${prNumber}`);
+    const labels = Array.isArray(pr.labels)
+      ? pr.labels.map((l) => (typeof l === 'string' ? l.toLowerCase() : String(l?.name || '').toLowerCase()))
+      : [];
+
+    let formatted = `- ${title} ([#${prNumber}](${url}))`;
+    if (author) {
+      formatted += ` by @${author}`;
+    }
+
+    // Determine category
+    const isBreaking = /breaking change/i.test(pr.body || '') || /^([a-z]+)(\([a-z0-9_-]+\))?!:/i.test(title);
+    if (isBreaking) {
+      categories.breaking.items.push(formatted);
+      continue;
+    }
+
+    if (labels.includes('security') || /security|cve|vulnerabilit/i.test(title)) {
+      categories.security.items.push(formatted);
+    } else if (labels.includes('bug') || /^fix(\([a-z0-9_-]+\))?:/i.test(title)) {
+      categories.fix.items.push(formatted);
+    } else if (labels.includes('enhancement') || labels.includes('feature') || /^feat(\([a-z0-9_-]+\))?:/i.test(title)) {
+      categories.feat.items.push(formatted);
+    } else if (labels.includes('documentation') || /^docs(\([a-z0-9_-]+\))?:/i.test(title)) {
+      categories.docs.items.push(formatted);
+    } else if (labels.includes('performance') || /^perf(\([a-z0-9_-]+\))?:/i.test(title)) {
+      categories.perf.items.push(formatted);
+    } else if (labels.includes('maintenance') || /^(chore|build|ci|refactor|test)(\([a-z0-9_-]+\))?:/i.test(title)) {
+      categories.maintenance.items.push(formatted);
+    } else {
+      categories.other.items.push(formatted);
+    }
+  }
+
+  const lines = [
+    `# ${releaseTitle}`,
+    ''
+  ];
+
+  if (currentTag || previousTag) {
+    const tagRange = previousTag && currentTag
+      ? `Changes between \`${previousTag}\` and \`${currentTag}\``
+      : `Release \`${currentTag || previousTag}\``;
+    lines.push(tagRange);
+    lines.push('');
+  }
+
+  let hasSections = false;
+  for (const cat of Object.values(categories)) {
+    if (cat.items.length > 0) {
+      hasSections = true;
+      lines.push(`## ${cat.title}`);
+      lines.push('');
+      for (const item of cat.items) {
+        lines.push(item);
+      }
+      lines.push('');
+    }
+  }
+
+  if (!hasSections) {
+    lines.push('No merged pull requests found in this release.');
+    lines.push('');
+  }
+
+  return lines.join('\n');
+}
+
+/**
+ * Parse and validate repository configuration (.github/open-workers.yml)
+ *
+ * @param {string|object} raw
+ * @returns {object}
+ */
