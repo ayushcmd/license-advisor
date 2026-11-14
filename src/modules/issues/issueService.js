@@ -7,7 +7,7 @@
 
 import { parseRepoInput } from '../../../public/js/analyzer.js';
 import { ServiceError } from '../../services/licenseService.js';
-import { authorizeRepositoryWrite } from '../../core/github/authorize.js';
+import { authorizeRepositoryWrite, authorizeRepositoryRead } from '../../core/github/authorize.js';
 import {
   categorizeIssue,
   findDuplicateCandidates,
@@ -225,7 +225,7 @@ export async function findDuplicateIssues({ repoInput, issueNumber, candidateLim
  * @param {object} params.githubContext
  * @returns {Promise<object>}
  */
-export async function inspectStaleIssues({ repoInput, daysInactive = 30, exemptLabels, limit = 30, githubContext }) {
+export async function inspectStaleIssues({ repoInput, daysInactive = 30, exemptLabels, limit = 30, githubContext, authorization, createUserClient }) {
   let parsed;
   try {
     parsed = parseRepoInput(repoInput);
@@ -239,6 +239,20 @@ export async function inspectStaleIssues({ repoInput, daysInactive = 30, exemptL
   const exempt = Array.isArray(exemptLabels) && exemptLabels.length > 0 ? exemptLabels : DEFAULT_EXEMPT_STALE_LABELS;
 
   const { octokit } = await resolveClient(owner, repo, githubContext);
+
+  if (!octokit) {
+    throw new ServiceError(503, 'GitHub client is unavailable.', 'CLIENT_UNAVAILABLE');
+  }
+
+  const repoRes = await octokit.rest.repos.get({ owner, repo }).catch(() => null);
+  if (repoRes?.data?.private) {
+    await authorizeRepositoryRead({
+      authorization,
+      repoInput: fullName,
+      githubContext,
+      createUserClient
+    });
+  }
 
   let issuesRes;
   try {
