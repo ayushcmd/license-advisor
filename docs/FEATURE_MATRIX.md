@@ -11,7 +11,7 @@ This matrix documents the capability status, API endpoints, user interfaces, req
 | `licensing` | **Licensing** | Governance | **Available** | `/api/*` | `/explorer.html`, `/questionnaire.html`, `/compare.html`, `/analyzer.html`, `/app-install.html` |
 | `community` | **Community** | Community | **Available** | `/api/community/*` | `/community.html` |
 | `security` | **Security** | Security | **Available** | `/api/security/*` | `/security.html` |
-| `documentation` | **Documentation** | Documentation | *Upcoming* | `/api/documentation/*` | *(Planned)* |
+| `documentation` | **Documentation** | Documentation | **Available** | `/api/documentation/*` | `/documentation.html` |
 | `issues` | **PR & Issue Management** | Workflow | *Upcoming* | `/api/issues/*` | *(Planned)* |
 | `automation` | **Repository Automation** | Workflow | *Upcoming* | `/api/automation/*` | *(Planned)* |
 
@@ -53,11 +53,23 @@ This matrix documents the capability status, API endpoints, user interfaces, req
 | **PR Preview & Conflict Check** | Check existing file conflicts and verify workflow permission requirements | `POST /api/security/preview-pr` | None (Public / App token) | Production | `tests/security.test.js` |
 | **Consolidated Security PR** | Deploy configurations on dedicated branch via GitHub App with safety checks | `POST /api/security/trigger-pr` | User PAT (write) + App (`contents: write`, `pull_requests: write`, plus `workflows: write` for workflows) | Production | `tests/security.test.js` |
 
-### D. Upcoming Modules (Roadmap)
+### D. Documentation Module (`documentation`) — Status: Available
+
+| Feature | Description | Endpoints | Permissions | Status | Test Coverage |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **Docs Checks & Discovery** | List supported documentation checks and generation templates | `GET /api/documentation/checks`, `GET /api/documentation/templates` | None (Public) | Production | `tests/documentation.test.js` |
+| **README Completeness Audit** | Audit README format, key developer sections, docs/ folder, changelog | `POST /api/documentation/analyze` | None (Public / App token) | Production | `tests/documentation.test.js` |
+| **README Generator & Assistant** | Generate new README or non-destructively improve existing content | `POST /api/documentation/generate` | None (Public) | Production | `tests/documentation.test.js` |
+| **Changelog Generator** | Generate Conventional Commits changelog, prepend to existing file | `POST /api/documentation/generate` | None (Public) | Production | `tests/documentation.test.js` |
+| **Badge Generator** | Generate Shields.io Markdown badges (license, workflow, release, stars, etc.) | `POST /api/documentation/generate` | None (Public) | Production | `tests/documentation.test.js` |
+| **Markdown Link Checker** | Validate relative repo paths and safe external URLs with SSRF protection | `POST /api/documentation/check-links` | None (Public / App token) | Production | `tests/documentation.test.js` |
+| **PR Conflict Preview** | Preview documentation PR files, branch name, and check existing file conflicts | `POST /api/documentation/preview-pr` | None (Public / App token) | Production | `tests/documentation.test.js` |
+| **Consolidated Documentation PR** | Multi-file documentation pull request on `chore/improve-docs` via GitHub App | `POST /api/documentation/trigger-pr` | User PAT (write) + App (`contents: write`, `pull_requests: write`) | Production | `tests/documentation.test.js` |
+
+### E. Upcoming Modules (Roadmap)
 
 | Module | Planned Capabilities & Subfeatures | Target Scope |
 | :--- | :--- | :--- |
-| **`documentation`** | &bull; README completeness audit & structure recommendations<br>&bull; Automated `CHANGELOG.md` generation from commit history<br>&bull; Status and coverage badge generator<br>&bull; Markdown broken-link checking<br>&bull; Documentation health scoring | Upcoming |
 | **`issues`** | &bull; Rule-based issue and pull request automated labeling<br>&bull; PR classification and contributor welcome automation<br>&bull; PR checklist completeness enforcement<br>&bull; Inactive issue and pull request triage<br>&bull; Release notes compilation from merged pull requests | Upcoming |
 | **`automation`** | &bull; GitHub Actions CI/CD starter workflow generation (build, test, lint, matrix)<br>&bull; Workflow Health Inspector (unpinned actions, deprecated runners, missing timeouts)<br>&bull; Code style config generation (`.editorconfig`, `.prettierrc`, ESLint configs)<br>&bull; Scheduled repository maintenance tasks | Upcoming |
 

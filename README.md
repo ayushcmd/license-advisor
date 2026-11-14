@@ -111,16 +111,18 @@ Repository security configuration inspection, automated security configurations,
 
 *Explore:* [`/security.html`](https://open-workers.onrender.com/security.html)
 
-### 4. Documentation &mdash; Upcoming
+### 4. Documentation &mdash; Available
 
 Tools to keep project documentation clear, comprehensive, and up-to-date:
 
-- **README Completeness Audit:** Analyzes repository READMEs for essential developer sections (Installation, Quick Start, Contributing, License, Architecture).
-- **Automated Changelog Generation:** Compiles Conventional Commits into structured, chronological `CHANGELOG.md` updates.
-- **Shields.io Badge Generator:** Live badge configurations for build status, license identifiers, versioning, and test coverage.
-- **Markdown Broken-Link Checker:** Scans project documentation for broken internal and external hyperlinks.
+- **README Completeness Audit:** Analyzes repository READMEs for essential developer sections (Title, Description, Installation, Usage, Contributing, License, Documentation, Architecture) with transparent completeness scoring and actionable advice (`POST /api/documentation/analyze`).
+- **README Generator & Improvement Assistant:** Generates new clean README templates or non-destructively augments existing READMEs with missing sections while strictly preserving existing license notices and content (`POST /api/documentation/generate`).
+- **Automated Changelog Generation:** Compiles Conventional Commits into structured, chronological `CHANGELOG.md` updates grouped by semantic category (Features, Bug Fixes, Breaking Changes, Performance, Documentation, etc.) and prepends cleanly to existing changelogs (`POST /api/documentation/generate`).
+- **Shields.io Badge Generator:** Live badge configurations for build status, license identifiers, versioning, GitHub stars, open issues, contributors, and Node.js versions (`POST /api/documentation/generate`).
+- **Markdown Broken-Link Checker:** Scans project documentation for broken internal repository paths and validates external hyperlinks with SSRF-hardened protection against private IP, loopback, and cloud metadata requests (`POST /api/documentation/check-links`).
+- **Consolidated Documentation PRs:** Pre-commit conflict preview (`POST /api/documentation/preview-pr`), caller authorization verification, and multi-file automated pull requests (`POST /api/documentation/trigger-pr`) creating dedicated feature branches (`chore/improve-docs`).
 
-*(Note: Automated license badge integration into READMEs is available today in the Licensing module).*
+*Explore:* [`/documentation.html`](https://open-workers.onrender.com/documentation.html)
 
 ### 5. PR & Issue Management &mdash; Upcoming
 
@@ -151,7 +153,7 @@ Continuous maintenance and developer workflow automation:
 | **Licensing** | **Available** | Governance | Full catalog, questionnaire, comparator, analyzer, PR generator (`/api/*`) |
 | **Community** | **Available** | Community | Guidelines, conduct, security, support, issue & PR templates, audit, consolidated PRs (`/api/community/*`) |
 | **Security** | **Available** | Security | Security audit, Dependabot & CodeQL generators, PR automation (`/api/security/*`) |
-| **Documentation** | *Upcoming* | Documentation | README analysis, changelog generation, badge tools, broken-link checks |
+| **Documentation** | **Available** | Documentation | README audits & improvements, changelog generation, badge tools, link validation, PR automation (`/api/documentation/*`) |
 | **PR & Issue Management** | *Upcoming* | Workflow | Auto-labeling, contributor welcome, PR checklists, stale triage |
 | **Repository Automation** | *Upcoming* | Workflow | GitHub Actions CI templates, Action health inspector, code quality configs |
 
