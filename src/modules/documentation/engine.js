@@ -21,6 +21,17 @@ export const README_SECTIONS = Object.freeze([
   { id: 'documentation', label: 'Documentation Links', severity: 'medium', required: false }
 ]);
 
+export const BADGE_TYPES = Object.freeze([
+  { id: 'license', name: 'License Badge' },
+  { id: 'workflow', name: 'GitHub Actions Workflow Status' },
+  { id: 'release', name: 'Latest Release' },
+  { id: 'stars', name: 'GitHub Stars' },
+  { id: 'issues', name: 'Open Issues' },
+  { id: 'contributors', name: 'Contributors' },
+  { id: 'node', name: 'Node.js Version' },
+  { id: 'custom', name: 'Custom Badge' }
+]);
+
 export function listDocumentationChecks() {
   return [
     { id: 'readme-present', name: 'README File Presence', category: 'readme', description: 'Checks if a repository README file exists in root or standard locations.' },
@@ -155,7 +166,7 @@ export function generateReadme(options = {}) {
 
   // Optional badges
   if (Array.isArray(options.badges) && options.badges.length > 0) {
-    const badgeSnippets = options.badges.map((b) => typeof b === 'string' ? b : '').filter(Boolean);
+    const badgeSnippets = options.badges.map((b) => typeof b === 'string' ? b : generateBadge(b)).filter(Boolean);
     if (badgeSnippets.length > 0) {
       lines.push(badgeSnippets.join(' '));
       lines.push('');
@@ -344,4 +355,200 @@ export function improveExistingReadme(originalContent = '', sectionsToAdd = {}) 
     addedSections,
     skippedSections
   };
+}
+
+/**
+ * Generate a clean changelog section from Git commits
+ *
+ * @param {object} params
+ * @param {string} params.version
+ * @param {string} [params.date]
+ * @param {Array<object>} params.commits
+ * @param {string} [params.previousChangelog]
+ * @param {string} [params.repoUrl]
+ * @returns {string}
+ */
+export function generateChangelog({ version, date, commits = [], previousChangelog = '', repoUrl = '' } = {}) {
+  const ver = sanitizeText(version || 'Unreleased', 50);
+  const d = date && /^\d{4}-\d{2}-\d{2}$/.test(date.trim())
+    ? date.trim()
+    : new Date().toISOString().slice(0, 10);
+
+  const categories = {
+    breaking: { title: 'Breaking Changes', items: [] },
+    feat: { title: 'Features', items: [] },
+    fix: { title: 'Bug Fixes', items: [] },
+    perf: { title: 'Performance Improvements', items: [] },
+    refactor: { title: 'Refactoring', items: [] },
+    docs: { title: 'Documentation', items: [] },
+    test: { title: 'Tests', items: [] },
+    build: { title: 'Build & CI', items: [] },
+    chore: { title: 'Maintenance & Chores', items: [] },
+    other: { title: 'Other Changes', items: [] }
+  };
+
+  for (const c of commits) {
+    const rawMsg = typeof c === 'string' ? c : c?.message || c?.commit?.message || '';
+    const firstLine = rawMsg.split('\n')[0].trim();
+    if (!firstLine) continue;
+
+    const sha = typeof c === 'object' && c?.sha ? c.sha.slice(0, 7) : null;
+    const author = typeof c === 'object' && (c?.author?.login || c?.commit?.author?.name) ? (c.author?.login || c.commit.author.name) : null;
+
+    // Check for breaking changes
+    const isBreaking = /BREAKING CHANGE:/i.test(rawMsg) || /^[a-z]+(\([a-z0-9_-]+\))?!:/.test(firstLine);
+
+    // Match conventional commit: type(scope): message
+    const match = firstLine.match(/^([a-z]+)(?:\(([a-z0-9_-]+)\))?!?:\s*(.+)$/i);
+
+    let formattedEntry = firstLine;
+    let categoryKey = 'other';
+
+    if (match) {
+      const type = match[1].toLowerCase();
+      const scope = match[2];
+      const desc = match[3];
+
+      formattedEntry = scope ? `**${scope}:** ${desc}` : desc;
+
+      if (type === 'feat') categoryKey = 'feat';
+      else if (type === 'fix') categoryKey = 'fix';
+      else if (type === 'perf') categoryKey = 'perf';
+      else if (type === 'refactor') categoryKey = 'refactor';
+      else if (type === 'docs') categoryKey = 'docs';
+      else if (type === 'test') categoryKey = 'test';
+      else if (type === 'build' || type === 'ci') categoryKey = 'build';
+      else if (type === 'chore') categoryKey = 'chore';
+    }
+
+    if (sha && repoUrl) {
+      formattedEntry += ` ([${sha}](${repoUrl.replace(/\/+$/, '')}/commit/${sha}))`;
+    } else if (sha) {
+      formattedEntry += ` (${sha})`;
+    }
+
+    if (author) {
+      formattedEntry += ` - @${author}`;
+    }
+
+    if (isBreaking) {
+      categories.breaking.items.push(formattedEntry);
+    } else {
+      categories[categoryKey].items.push(formattedEntry);
+    }
+  }
+
+  // Build the version block
+  const versionLines = [
+    `## [${ver}] - ${d}`,
+    ''
+  ];
+
+  let hasItems = false;
+  for (const cat of Object.values(categories)) {
+    if (cat.items.length > 0) {
+      hasItems = true;
+      versionLines.push(`### ${cat.title}`);
+      versionLines.push('');
+      for (const item of cat.items) {
+        versionLines.push(`- ${item}`);
+      }
+      versionLines.push('');
+    }
+  }
+
+  if (!hasItems) {
+    versionLines.push('No notable changes in this release.');
+    versionLines.push('');
+  }
+
+  const versionBlock = versionLines.join('\n');
+
+  // Prepend to existing changelog or generate full CHANGELOG.md
+  if (!previousChangelog || typeof previousChangelog !== 'string' || !previousChangelog.trim()) {
+    const header = [
+      '# Changelog',
+      '',
+      'All notable changes to this project will be documented in this file.',
+      'The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),',
+      'and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).',
+      '',
+      versionBlock
+    ].join('\n');
+    return header;
+  }
+
+  // Prepend cleanly after top header if present
+  const headerMatch = previousChangelog.match(/^#\s+Changelog[\s\S]*?(?=\n##\s+\[|\n##\s+v?\d)/i);
+  if (headerMatch) {
+    const topHeader = headerMatch[0].trimEnd();
+    const rest = previousChangelog.slice(topHeader.length).trimStart();
+    return `${topHeader}\n\n${versionBlock}\n${rest}`;
+  }
+
+  return `${versionBlock}\n${previousChangelog}`;
+}
+
+/**
+ * Generate a Markdown badge snippet
+ *
+ * @param {object} badge
+ * @returns {string}
+ */
+export function generateBadge(badge = {}) {
+  if (!badge || typeof badge !== 'object') return '';
+  const type = badge.type || badge.id;
+
+  if (type === 'license') {
+    const spdx = encodeURIComponent(badge.spdx || 'MIT');
+    const repo = badge.repo ? badge.repo.trim() : '';
+    const link = repo ? `https://github.com/${repo}/blob/main/LICENSE` : 'LICENSE';
+    return `[![License](https://img.shields.io/badge/license-${spdx}-blue.svg)](${link})`;
+  }
+
+  if (type === 'workflow') {
+    const owner = encodeURIComponent(badge.owner || 'owner');
+    const repo = encodeURIComponent(badge.repo || 'repo');
+    const workflow = encodeURIComponent(badge.workflow || 'ci.yml');
+    return `[![CI Status](https://github.com/${owner}/${repo}/actions/workflows/${workflow}/badge.svg)](https://github.com/${owner}/${repo}/actions)`;
+  }
+
+  if (type === 'release') {
+    const owner = encodeURIComponent(badge.owner || 'owner');
+    const repo = encodeURIComponent(badge.repo || 'repo');
+    return `[![Latest Release](https://img.shields.io/github/v/release/${owner}/${repo})](https://github.com/${owner}/${repo}/releases)`;
+  }
+
+  if (type === 'stars') {
+    const owner = encodeURIComponent(badge.owner || 'owner');
+    const repo = encodeURIComponent(badge.repo || 'repo');
+    return `[![GitHub Stars](https://img.shields.io/github/stars/${owner}/${repo})](https://github.com/${owner}/${repo}/stargazers)`;
+  }
+
+  if (type === 'issues') {
+    const owner = encodeURIComponent(badge.owner || 'owner');
+    const repo = encodeURIComponent(badge.repo || 'repo');
+    return `[![Open Issues](https://img.shields.io/github/issues/${owner}/${repo})](https://github.com/${owner}/${repo}/issues)`;
+  }
+
+  if (type === 'contributors') {
+    const owner = encodeURIComponent(badge.owner || 'owner');
+    const repo = encodeURIComponent(badge.repo || 'repo');
+    return `[![Contributors](https://img.shields.io/github/contributors/${owner}/${repo})](https://github.com/${owner}/${repo}/graphs/contributors)`;
+  }
+
+  if (type === 'node') {
+    const ver = encodeURIComponent(badge.version || '>=20.0.0');
+    return `[![Node.js Version](https://img.shields.io/badge/node-${ver}-brightgreen)](https://nodejs.org/)`;
+  }
+
+  if (type === 'custom') {
+    const label = encodeURIComponent(badge.label || 'badge');
+    const message = encodeURIComponent(badge.message || 'active');
+    const color = encodeURIComponent(badge.color || 'blue');
+    const link = badge.link && /^https?:\/\//i.test(badge.link) ? badge.link : '#';
+    return `[![${badge.label || 'Badge'}](https://img.shields.io/badge/${label}-${message}-${color})](${link})`;
+  }
+
+  return '';
 }
