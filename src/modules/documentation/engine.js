@@ -62,6 +62,64 @@ function sanitizeText(str, maxLength = 2000) {
 }
 
 /**
+ * Check if an IP address string is in private, loopback, or link-local range
+ */
+export function isPrivateIp(ip) {
+  if (typeof ip !== 'string') return false;
+  const trimmed = ip.trim();
+  if (trimmed === '127.0.0.1' || trimmed === '::1' || trimmed === '0.0.0.0') return true;
+
+  // IPv4 checks
+  const parts = trimmed.split('.').map((p) => parseInt(p, 10));
+  if (parts.length === 4 && parts.every((p) => !isNaN(p) && p >= 0 && p <= 255)) {
+    if (parts[0] === 10) return true; // 10.0.0.0/8
+    if (parts[0] === 127) return true; // 127.0.0.0/8
+    if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) return true; // 172.16.0.0/12
+    if (parts[0] === 192 && parts[1] === 168) return true; // 192.168.0.0/16
+    if (parts[0] === 169 && parts[1] === 254) return true; // 169.254.0.0/16 (link-local, cloud metadata)
+  }
+
+  // IPv6 link-local / unique local
+  const lower = trimmed.toLowerCase();
+  if (lower.startsWith('fe80:') || lower.startsWith('fc00:') || lower.startsWith('fd00:')) return true;
+
+  return false;
+}
+
+/**
+ * Check if a URL is safe to inspect externally without SSRF risks
+ */
+export function isSafeExternalUrl(urlStr) {
+  if (typeof urlStr !== 'string') return { safe: false, reason: 'Invalid URL string' };
+  let parsed;
+  try {
+    parsed = new URL(urlStr);
+  } catch {
+    return { safe: false, reason: 'Malformed URL' };
+  }
+
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    return { safe: false, reason: `Unsupported protocol "${parsed.protocol}"` };
+  }
+
+  const host = parsed.hostname.toLowerCase();
+  if (!host || host === 'localhost' || host === '0.0.0.0' || host.endsWith('.local') || host.endsWith('.internal') || host.endsWith('.localhost')) {
+    return { safe: false, reason: `Blocked local/internal hostname "${host}"` };
+  }
+
+  if (isPrivateIp(host)) {
+    return { safe: false, reason: `Blocked private/loopback IP "${host}"` };
+  }
+
+  // Block AWS/GCP/Azure link-local metadata endpoints
+  if (host === '169.254.169.254' || host === 'metadata.google.internal') {
+    return { safe: false, reason: 'Blocked cloud metadata endpoint' };
+  }
+
+  return { safe: true, parsed };
+}
+
+/**
  * Parse Markdown headings and detect present sections
  *
  * @param {string} content
@@ -350,11 +408,7 @@ export function improveExistingReadme(originalContent = '', sectionsToAdd = {}) 
     newContent += appendBlock + '\n';
   }
 
-  return {
-    content: newContent,
-    addedSections,
-    skippedSections
-  };
+  return { content: newContent, addedSections, skippedSections };
 }
 
 /**
@@ -551,4 +605,49 @@ export function generateBadge(badge = {}) {
   }
 
   return '';
+}
+
+/**
+ * Extract Markdown hyperlinks and image links from Markdown text
+ *
+ * @param {string} content
+ * @returns {Array<{ text: string, url: string, type: 'anchor'|'mailto'|'internal'|'external', isImage: boolean, line: number }>}
+ */
+export function extractMarkdownLinks(content = '') {
+  if (typeof content !== 'string') return [];
+
+  const lines = content.split('\n');
+  const links = [];
+
+  // Match Markdown links: [text](url) and ![alt](url)
+  const regex = /(!?\[([^\]]*)\]\(([^)\s]+)(?:\s+"[^"]*")?\))/g;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    let match;
+    while ((match = regex.exec(line)) !== null) {
+      const isImage = match[1].startsWith('!');
+      const text = match[2].trim();
+      const rawUrl = match[3].trim();
+
+      let linkType = 'external';
+      if (rawUrl.startsWith('#')) {
+        linkType = 'anchor';
+      } else if (rawUrl.startsWith('mailto:')) {
+        linkType = 'mailto';
+      } else if (!/^https?:\/\//i.test(rawUrl)) {
+        linkType = 'internal';
+      }
+
+      links.push({
+        text,
+        url: rawUrl,
+        type: linkType,
+        isImage,
+        line: i + 1
+      });
+    }
+  }
+
+  return links;
 }

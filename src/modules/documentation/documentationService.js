@@ -6,9 +6,14 @@
  * and automated documentation pull requests.
  */
 
+import path from 'node:path';
 import { parseRepoInput } from '../../../public/js/analyzer.js';
 import { ServiceError } from '../../services/licenseService.js';
-import { parseReadmeContent } from './engine.js';
+import {
+  parseReadmeContent,
+  extractMarkdownLinks,
+  isSafeExternalUrl
+} from './engine.js';
 
 function mapGitHubError(err, fallbackMessage) {
   if (err instanceof ServiceError) return err;
@@ -353,5 +358,185 @@ export async function auditDocumentationRepository({ repoInput, githubContext })
     },
     checks,
     recommendations
+  };
+}
+
+/**
+ * Safely inspect links in a Markdown file within a repository
+ *
+ * @param {object} params
+ * @param {string} params.repoInput
+ * @param {string} [params.path='README.md']
+ * @param {object} params.githubContext
+ * @param {Function} [params.fetchImpl=fetch]
+ * @returns {Promise<object>}
+ */
+export async function checkDocumentationLinks({ repoInput, path: filePath = 'README.md', githubContext, fetchImpl = fetch }) {
+  let parsed;
+  try {
+    parsed = parseRepoInput(repoInput);
+  } catch (error) {
+    throw new ServiceError(400, error.message, 'INVALID_INPUT');
+  }
+  const { owner, repo, fullName } = parsed;
+
+  const { octokit } = await resolveClient(owner, repo, githubContext);
+
+  let repoRes;
+  try {
+    repoRes = await octokit.rest.repos.get({ owner, repo });
+  } catch (err) {
+    throw mapGitHubError(err, `Failed to load details for "${fullName}".`);
+  }
+
+  const defaultBranch = repoRes.data.default_branch || 'main';
+
+  let contentRes;
+  try {
+    contentRes = await octokit.rest.repos.getContent({ owner, repo, path: filePath, ref: defaultBranch });
+  } catch (err) {
+    throw mapGitHubError(err, `Could not find file "${filePath}" on branch "${defaultBranch}".`);
+  }
+
+  if (!contentRes?.data?.content) {
+    throw new ServiceError(400, `File "${filePath}" has no readable content.`, 'EMPTY_FILE');
+  }
+
+  const rawContent = Buffer.from(contentRes.data.content, 'base64').toString('utf8');
+  const extracted = extractMarkdownLinks(rawContent);
+
+  const fileDir = path.posix.dirname(filePath);
+  const results = [];
+
+  let workingCount = 0;
+  let brokenCount = 0;
+  let redirectedCount = 0;
+  let notVerifiedCount = 0;
+  let internalCount = 0;
+  let externalCount = 0;
+
+  for (const item of extracted) {
+    if (item.type === 'anchor' || item.type === 'mailto') {
+      results.push({
+        ...item,
+        status: 'working',
+        message: item.type === 'anchor' ? 'Local section anchor' : 'Email contact link'
+      });
+      workingCount++;
+      continue;
+    }
+
+    if (item.type === 'internal') {
+      internalCount++;
+      // Clean path, remove query or hash
+      const cleanUrl = item.url.split('#')[0].split('?')[0];
+      const targetRelPath = path.posix.normalize(path.posix.join(fileDir, cleanUrl));
+
+      if (targetRelPath.startsWith('..')) {
+        results.push({
+          ...item,
+          status: 'broken',
+          message: `Relative path escapes repository root: "${item.url}"`
+        });
+        brokenCount++;
+        continue;
+      }
+
+      // Check existence via GitHub API
+      let exists = false;
+      try {
+        const checkRes = await octokit.rest.repos.getContent({ owner, repo, path: targetRelPath, ref: defaultBranch });
+        if (checkRes?.data) exists = true;
+      } catch {
+        exists = false;
+      }
+
+      if (exists) {
+        results.push({
+          ...item,
+          resolvedPath: targetRelPath,
+          status: 'working',
+          message: `Local file verified at "${targetRelPath}"`
+        });
+        workingCount++;
+      } else {
+        results.push({
+          ...item,
+          resolvedPath: targetRelPath,
+          status: 'broken',
+          message: `File not found at resolved repository path "${targetRelPath}"`
+        });
+        brokenCount++;
+      }
+      continue;
+    }
+
+    if (item.type === 'external') {
+      externalCount++;
+      const safety = isSafeExternalUrl(item.url);
+      if (!safety.safe) {
+        results.push({
+          ...item,
+          status: 'not_verified',
+          message: `External link inspection skipped: ${safety.reason}`
+        });
+        notVerifiedCount++;
+        continue;
+      }
+
+      // Perform bounded external HTTP check with 4s timeout
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 4000);
+
+        const resp = await fetchImpl(item.url, {
+          method: 'HEAD',
+          signal: controller.signal,
+          headers: { 'User-Agent': 'OpenWorkers-LinkChecker/1.0 (+https://open-workers.onrender.com)' }
+        });
+        clearTimeout(timeoutId);
+
+        if (resp.status >= 200 && resp.status < 300) {
+          results.push({ ...item, status: 'working', message: `HTTP ${resp.status} OK` });
+          workingCount++;
+        } else if (resp.status >= 300 && resp.status < 400) {
+          results.push({ ...item, status: 'redirected', message: `Redirected (HTTP ${resp.status})` });
+          redirectedCount++;
+        } else if (resp.status === 404 || resp.status === 410) {
+          results.push({ ...item, status: 'broken', message: `HTTP ${resp.status} Not Found` });
+          brokenCount++;
+        } else {
+          // 403, 429, etc. Often bot protections or rate limits - do not mark broken
+          results.push({
+            ...item,
+            status: 'not_verified',
+            message: `External server returned HTTP ${resp.status} (may be bot-protected or rate-limited)`
+          });
+          notVerifiedCount++;
+        }
+      } catch (err) {
+        if (err.name === 'AbortError') {
+          results.push({ ...item, status: 'not_verified', message: 'Request timed out after 4 seconds' });
+          notVerifiedCount++;
+        } else {
+          results.push({ ...item, status: 'not_verified', message: `Could not verify external host: ${err.message}` });
+          notVerifiedCount++;
+        }
+      }
+    }
+  }
+
+  return {
+    filePath,
+    totalLinks: extracted.length,
+    summary: {
+      working: workingCount,
+      broken: brokenCount,
+      redirected: redirectedCount,
+      notVerified: notVerifiedCount,
+      internal: internalCount,
+      external: externalCount
+    },
+    links: results
   };
 }
