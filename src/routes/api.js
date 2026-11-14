@@ -14,6 +14,12 @@ import {
   previewCommunityPr,
   createCommunityPullRequest
 } from '../modules/community/communityService.js';
+import { listSecurityChecks, listSecurityTemplates, generateSecurityConfig } from '../modules/security/engine.js';
+import {
+  auditSecurityRepository,
+  previewSecurityPr,
+  createSecurityPullRequest
+} from '../modules/security/securityService.js';
 import { authorizeRepositoryWrite } from '../core/github/authorize.js';
 import { LICENSE_CATALOG, SPDX_DATA_VERSION } from '../../public/js/catalog-data.js';
 import {
@@ -94,6 +100,64 @@ export function createApiRouter({ githubContext, env = process.env, createUserCl
       const result = await createCommunityPullRequest({
         repoInput: req.body?.repo,
         documents: req.body?.documents,
+        replaceExisting: req.body?.replaceExisting,
+        customBranch: req.body?.branch,
+        githubContext
+      });
+      res.status(201).json(result);
+    })
+  );
+
+  // Security module endpoints
+  router.get('/security/checks', (_req, res) => {
+    res.json({ checks: listSecurityChecks() });
+  });
+
+  router.get('/security/templates', (_req, res) => {
+    res.json({ templates: listSecurityTemplates() });
+  });
+
+  router.post(
+    '/security/generate',
+    withServiceErrorHandling(async (req, res) => {
+      res.json(generateSecurityConfig(req.body));
+    })
+  );
+
+  router.post(
+    '/security/analyze',
+    withServiceErrorHandling(async (req, res) => {
+      const repoInput = req.body?.repo;
+      const report = await auditSecurityRepository({ repoInput, githubContext });
+      res.json(report);
+    })
+  );
+
+  router.post(
+    '/security/preview-pr',
+    withServiceErrorHandling(async (req, res) => {
+      const preview = await previewSecurityPr({
+        repoInput: req.body?.repo,
+        configs: req.body?.configs,
+        replaceExisting: req.body?.replaceExisting,
+        githubContext
+      });
+      res.json(preview);
+    })
+  );
+
+  router.post(
+    '/security/trigger-pr',
+    withServiceErrorHandling(async (req, res) => {
+      await authorizeRepositoryWrite({
+        authorization: req.get('authorization'),
+        repoInput: req.body?.repo,
+        githubContext,
+        createUserClient
+      });
+      const result = await createSecurityPullRequest({
+        repoInput: req.body?.repo,
+        configs: req.body?.configs,
         replaceExisting: req.body?.replaceExisting,
         customBranch: req.body?.branch,
         githubContext

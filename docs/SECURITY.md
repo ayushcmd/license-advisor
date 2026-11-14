@@ -16,7 +16,7 @@
 
 ## 3. Caller In-Memory Authorization (`src/core/github/authorize.js`)
 
-- Mutation endpoints (`POST /api/trigger-pr`, `POST /api/community/trigger-pr`) require caller authorization.
+- Mutation endpoints (`POST /api/trigger-pr`, `POST /api/community/trigger-pr`, `POST /api/security/trigger-pr`) require caller authorization.
 - The caller passes a Personal Access Token in the `Authorization: Bearer <token>` header.
 - The server checks the caller's collaborator permissions on the target repository (`admin`, `maintain`, or `write`).
 - Tokens are held strictly in memory for the duration of the request and are never logged, cached, or saved to disk.
@@ -33,9 +33,9 @@
 
 ## 5. Branch & Repository Mutation Safeguards
 
-- **No Direct Default-Branch Writes:** Commits are written exclusively to an isolated feature branch (`chore/add-license-<spdx>` or `chore/add-community-files-*`).
+- **No Direct Default-Branch Writes:** Commits are written exclusively to an isolated feature branch (`chore/add-license-<spdx>`, `chore/add-community-files-*`, or `chore/configure-security`).
 - **Non-Overwrite Guarantee:** Before branching or committing, services inspect the default branch tree. If target files already exist, operations fail with `409 Conflict` unless explicit `replaceExisting: true` opt-in is provided.
-- **Permission Verification:** Installation tokens are checked for `contents: write` and `pull_requests: write`; missing permissions return `403 Forbidden` cleanly.
+- **Permission Verification & Workflow Safety:** Installation tokens are checked for `contents: write` and `pull_requests: write`. Furthermore, committing files under `.github/workflows/` (such as `codeql.yml`) requires explicit `workflows: write` permission. When `workflows: write` is not granted, Open Workers refuses to attempt an unauthorized workflow write and provides users with a direct YAML copy/download option or instructions to grant workflow permissions in GitHub App settings. Dependabot configurations (`.github/dependabot.yml`) only require `contents: write` and proceed normally.
 - **Input Sanitization:** `parseRepoInput()` restricts owners/repos to `[A-Za-z0-9_.-]+` and blocks `.` / `..` traversal or non-`github.com` hosts. Form text is sanitized and length-capped.
 
 ---
@@ -51,3 +51,10 @@
 ## 7. Reporting a Vulnerability
 
 Please do not open public issues for suspected security vulnerabilities or leaked credentials. Contact the maintainer directly at **ayush_24a12res897@iitp.ac.in**.
+
+---
+
+## 8. Security Module Scope & Limitations
+
+1. **Configuration Hygiene vs Vulnerability Scanning:** Open Workers Security inspects repository configuration files (`SECURITY.md`, `.github/dependabot.yml`, `.github/workflows/codeql.yml`), branch protection settings, and security features. It does **not** execute arbitrary repository code, clone repositories to disk, or perform deep static application security testing (SAST). CodeQL workflow execution occurs inside GitHub Actions runners upon merge.
+2. **Transparent Unverified Handling:** Checks that require administrative permissions (such as branch protection rules or secret scanning push protection) report "Not verified" rather than reporting failures when APIs return 403 or 404 due to lack of admin permissions. Unverified checks are excluded from the health score denominator to ensure an accurate, transparent assessment.

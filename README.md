@@ -99,16 +99,17 @@ Automate community governance, contributor expectations, and issue reporting sta
 
 *Explore:* [`/community.html`](https://open-workers.onrender.com/community.html)
 
-### 3. Security &mdash; Upcoming
+### 3. Security &mdash; Available
 
-Proactive repository security auditing and automated security configurations:
+Repository security configuration inspection, automated security configurations, and pull requests:
 
-- **Dependabot Configuration:** Automated generation of `.github/dependabot.yml` covering package managers (`npm`, `pip`, `GitHub Actions`, `cargo`) and update schedules.
-- **CodeQL Starter Workflows:** GitHub Actions static analysis workflows for automated code vulnerability scanning.
-- **Branch Protection Guidance:** Audit branch rulesets and suggest enforcement for required reviews, status checks, and signed commits.
-- **Security Health Reporting:** Repository security posture scoring based on open advisories and missing protection rules.
+- **Security Configuration Audit:** Non-destructive inspection of `SECURITY.md`, `.github/dependabot.yml`, `.github/workflows/codeql.yml`, default branch protection, and secret scanning settings (`POST /api/security/analyze`).
+- **Dependabot Configuration Generator:** Schema-compliant `.github/dependabot.yml` generator supporting 8 package ecosystems (`npm`, `pip`, `GitHub Actions`, `docker`, `maven`, `gradle`, `bundler`, `cargo`) with customizable update schedules, directories, and PR limits.
+- **CodeQL Workflow Generator:** Modern GitHub Actions CodeQL Action v3 workflow generator (`.github/workflows/codeql.yml`) supporting multi-language matrix builds (`javascript-typescript`, `python`, `go`, `java-kotlin`, `c-cpp`, `csharp`, `ruby`, `rust`), push/PR triggers, and scheduled cron jobs.
+- **Security Configuration Health Reporting:** Transparent hygiene scoring based strictly on verified configuration checks. Unverified administrative checks do not count as failures. *(Note: evaluates configuration hygiene, not active vulnerability scanning).*
+- **Consolidated Security PRs:** Dedicated feature branch (`chore/configure-security`), conflict preview (`POST /api/security/preview-pr`), caller authorization, and automated pull requests (`POST /api/security/trigger-pr`) with explicit `workflows: write` permission safety checks.
 
-*(Note: SECURITY.md policy document generation is available today in the Community module).*
+*Explore:* [`/security.html`](https://open-workers.onrender.com/security.html)
 
 ### 4. Documentation &mdash; Upcoming
 
@@ -149,7 +150,7 @@ Continuous maintenance and developer workflow automation:
 | :--- | :---: | :--- | :--- |
 | **Licensing** | **Available** | Governance | Full catalog, questionnaire, comparator, analyzer, PR generator (`/api/*`) |
 | **Community** | **Available** | Community | Guidelines, conduct, security, support, issue & PR templates, audit, consolidated PRs (`/api/community/*`) |
-| **Security** | *Upcoming* | Security | Dependabot configs, CodeQL workflows, branch protection audit |
+| **Security** | **Available** | Security | Security audit, Dependabot & CodeQL generators, PR automation (`/api/security/*`) |
 | **Documentation** | *Upcoming* | Documentation | README analysis, changelog generation, badge tools, broken-link checks |
 | **PR & Issue Management** | *Upcoming* | Workflow | Auto-labeling, contributor welcome, PR checklists, stale triage |
 | **Repository Automation** | *Upcoming* | Workflow | GitHub Actions CI templates, Action health inspector, code quality configs |
