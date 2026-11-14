@@ -101,7 +101,8 @@ main {
   text-decoration: none;
 }
 
-.skip-link:focus {
+.skip-link:focus,
+.skip-link:focus-visible {
   left: var(--space-3);
   top: var(--space-3);
 }
@@ -133,6 +134,8 @@ h4 {
   font-weight: 600;
   line-height: 1.25;
   color: var(--color-fg-default);
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 h1 {
@@ -193,6 +196,8 @@ code {
   border: 1px solid var(--color-border-muted);
   border-radius: var(--radius-sm);
   padding: 0.12em 0.35em;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 pre {
@@ -425,6 +430,18 @@ hr {
   .nav-link[aria-current="page"] {
     border: 1px solid var(--color-border-default);
     border-bottom: 2px solid var(--color-fg-default);
+  }
+}
+
+/* Accessibility — Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
 
