@@ -13,4 +13,4 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Ping Render health endpoint
-        run: curl -fsS --max-time 60 "https://license-advisor.onrender.com/api/health"
+        run: curl -fsS --max-time 60 "https://open-workers.onrender.com/api/health"
