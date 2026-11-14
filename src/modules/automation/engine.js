@@ -204,6 +204,333 @@ export function listAutomationTemplates() {
 }
 
 // Helper: Sanitize string to prevent untrusted script injection
+function sanitizeCommand(cmd, fallback) {
+  if (typeof cmd !== 'string') return fallback;
+  const trimmed = cmd.trim();
+  if (!trimmed) return fallback;
+  // Disallow shell chaining operators and untrusted variable interpolations
+  if (/(\${{[^}]+}}|`|\$\(|;\s*rm\b|;\s*sudo\b|&&|\|\|)/.test(trimmed)) {
+    throw new Error(`Command "${trimmed}" contains unsafe shell syntax or unvalidated expressions.`);
+  }
+  return trimmed;
+}
+
+/**
+ * Generate Node.js CI Workflow
+ */
+export function generateNodeCiWorkflow(options = {}) {
+  const versions = Array.isArray(options.nodeVersions) && options.nodeVersions.length > 0
+    ? options.nodeVersions.map((v) => String(v).trim()).filter((v) => SUPPORTED_NODE_VERSIONS.includes(v) || /^\d+(\.x)?$/.test(v))
+    : ['20'];
+  if (versions.length === 0) versions.push('20');
+
+  const pkgManager = SUPPORTED_PACKAGE_MANAGERS.includes(options.packageManager)
+    ? options.packageManager
+    : 'npm';
+
+  let installCmd = 'npm ci';
+  if (pkgManager === 'yarn') installCmd = 'yarn install --frozen-lockfile';
+  if (pkgManager === 'pnpm') installCmd = 'pnpm install --frozen-lockfile';
+
+  const testCmd = sanitizeCommand(options.testCommand, `${pkgManager} test`);
+  const includeLint = Boolean(options.includeLint);
+  const lintCmd = includeLint ? sanitizeCommand(options.lintCommand, `${pkgManager} run lint`) : null;
+  const includeBuild = Boolean(options.includeBuild);
+  const buildCmd = includeBuild ? sanitizeCommand(options.buildCommand, `${pkgManager} run build`) : null;
+
+  const versionList = versions.length === 1 ? `[${versions[0]}]` : `[${versions.join(', ')}]`;
+
+  let steps = [
+    '      - name: Check out repository\n        uses: actions/checkout@v4',
+    `      - name: Set up Node.js\n        uses: actions/setup-node@v4\n        with:\n          node-version: \${{ matrix.node-version }}\n          cache: '${pkgManager}'`,
+    `      - name: Install dependencies\n        run: ${installCmd}`
+  ];
+
+  if (includeLint && lintCmd) {
+    steps.push(`      - name: Run linter\n        run: ${lintCmd}`);
+  }
+
+  if (includeBuild && buildCmd) {
+    steps.push(`      - name: Build project\n        run: ${buildCmd}`);
+  }
+
+  steps.push(`      - name: Run test suite\n        run: ${testCmd}`);
+
+  return `# Open Workers — Node.js CI Workflow
+# Deterministic automated testing on push and pull requests.
+# Documentation: https://open-workers.onrender.com/automation.html
+
+name: Node.js CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test (Node \${{ matrix.node-version }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    strategy:
+      matrix:
+        node-version: ${versionList}
+
+    steps:
+${steps.join('\n\n')}
+`;
+}
+
+/**
+ * Generate Python CI Workflow
+ */
+export function generatePythonCiWorkflow(options = {}) {
+  const versions = Array.isArray(options.pythonVersions) && options.pythonVersions.length > 0
+    ? options.pythonVersions.map((v) => String(v).trim()).filter((v) => SUPPORTED_PYTHON_VERSIONS.includes(v) || /^\d+\.\d+$/.test(v))
+    : ['3.11', '3.12'];
+  if (versions.length === 0) versions.push('3.11');
+
+  const installCmd = sanitizeCommand(options.installCommand, 'pip install -r requirements.txt');
+  const testCmd = sanitizeCommand(options.testCommand, 'pytest');
+  const includeLint = Boolean(options.includeLint);
+  const lintCmd = includeLint ? sanitizeCommand(options.lintCommand, 'ruff check .') : null;
+  const includeTypeCheck = Boolean(options.includeTypeCheck);
+  const typeCheckCmd = includeTypeCheck ? sanitizeCommand(options.typeCheckCommand, 'mypy .') : null;
+
+  const versionList = versions.length === 1 ? `['${versions[0]}']` : `['${versions.join("', '")}']`;
+
+  let steps = [
+    '      - name: Check out repository\n        uses: actions/checkout@v4',
+    `      - name: Set up Python\n        uses: actions/setup-python@v5\n        with:\n          python-version: \${{ matrix.python-version }}\n          cache: 'pip'`,
+    `      - name: Install dependencies\n        run: |\n          python -m pip install --upgrade pip\n          ${installCmd}`
+  ];
+
+  if (includeLint && lintCmd) {
+    steps.push(`      - name: Run linter\n        run: ${lintCmd}`);
+  }
+
+  if (includeTypeCheck && typeCheckCmd) {
+    steps.push(`      - name: Run type check\n        run: ${typeCheckCmd}`);
+  }
+
+  steps.push(`      - name: Run test suite\n        run: ${testCmd}`);
+
+  return `# Open Workers — Python CI Workflow
+# Automated testing and verification across Python versions.
+# Documentation: https://open-workers.onrender.com/automation.html
+
+name: Python CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test (Python \${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    strategy:
+      matrix:
+        python-version: ${versionList}
+
+    steps:
+${steps.join('\n\n')}
+`;
+}
+
+/**
+ * Generate Multi-Platform Matrix CI Workflow
+ */
+export function generateMatrixCiWorkflow(options = {}) {
+  const osList = Array.isArray(options.operatingSystems) && options.operatingSystems.length > 0
+    ? options.operatingSystems.filter((os) => SUPPORTED_OPERATING_SYSTEMS.includes(os))
+    : ['ubuntu-latest', 'windows-latest', 'macos-latest'];
+  if (osList.length === 0) osList.push('ubuntu-latest');
+
+  const versions = Array.isArray(options.runtimeVersions) && options.runtimeVersions.length > 0
+    ? options.runtimeVersions.map((v) => String(v).trim()).filter((v) => /^\d+(\.[\dx]+)?$/.test(v))
+    : ['20', '22'];
+  if (versions.length === 0) versions.push('20');
+
+  // Enforce sensible matrix bounds (max 9 total jobs to prevent wasteful CI usage)
+  const totalJobs = osList.length * versions.length;
+  if (totalJobs > 9) {
+    throw new Error(`Matrix size of ${totalJobs} jobs exceeds safe bound (maximum 9 combinations allowed).`);
+  }
+
+  const runtime = options.runtime === 'python' ? 'python' : 'node';
+  const osFormatted = `[${osList.join(', ')}]`;
+  const verFormatted = runtime === 'python'
+    ? `['${versions.join("', '")}']`
+    : `[${versions.join(', ')}]`;
+
+  let setupStep = runtime === 'python'
+    ? `      - name: Set up Python\n        uses: actions/setup-python@v5\n        with:\n          python-version: \${{ matrix.version }}`
+    : `      - name: Set up Node.js\n        uses: actions/setup-node@v4\n        with:\n          node-version: \${{ matrix.version }}`;
+
+  let installStep = runtime === 'python'
+    ? '      - name: Install dependencies\n        run: pip install -r requirements.txt'
+    : '      - name: Install dependencies\n        run: npm ci';
+
+  let testStep = runtime === 'python'
+    ? '      - name: Run test suite\n        run: pytest'
+    : '      - name: Run test suite\n        run: npm test';
+
+  return `# Open Workers — Multi-Platform Matrix CI Workflow
+# Cross-platform testing across operating systems and runtime versions.
+# Documentation: https://open-workers.onrender.com/automation.html
+
+name: Multi-Platform CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  matrix-test:
+    name: Test (\${{ matrix.os }}, \${{ matrix.version }})
+    runs-on: \${{ matrix.os }}
+    timeout-minutes: 20
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ${osFormatted}
+        version: ${verFormatted}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+${setupStep}
+
+${installStep}
+
+${testStep}
+`;
+}
+
+/**
+ * Generate PR Validation Workflow
+ */
+export function generatePrValidationWorkflow(options = {}) {
+  const testCmd = sanitizeCommand(options.testCommand, 'npm test');
+  const includeLint = options.includeLint !== false;
+  const lintCmd = includeLint ? sanitizeCommand(options.lintCommand, 'npm run lint') : null;
+
+  let steps = [
+    '      - name: Check out repository\n        uses: actions/checkout@v4',
+    '      - name: Set up Node.js\n        uses: actions/setup-node@v4\n        with:\n          node-version: 20\n          cache: \'npm\'',
+    '      - name: Install dependencies\n        run: npm ci'
+  ];
+
+  if (includeLint && lintCmd) {
+    steps.push(`      - name: Verify code style\n        run: ${lintCmd}`);
+  }
+
+  steps.push(`      - name: Run tests\n        run: ${testCmd}`);
+
+  return `# Open Workers — Pull Request Validation Workflow
+# Scoped specifically for incoming pull requests with least-privilege permissions.
+# Documentation: https://open-workers.onrender.com/automation.html
+
+name: PR Validation
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate Pull Request
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+${steps.join('\n\n')}
+`;
+}
+
+/**
+ * Generate Scheduled Maintenance Workflow
+ */
+export function generateMaintenanceWorkflow(options = {}) {
+  const cronSchedule = typeof options.cron === 'string' && /^([0-5]?\d|\*)\s+([01]?\d|2[0-3]|\*)\s+([01]?\d|2\d|3[01]|\*)\s+([1-9]|1[0-2]|\*)\s+([0-6]|\*)$/.test(options.cron.trim())
+    ? options.cron.trim()
+    : '0 0 * * 1'; // Default: every Monday at midnight UTC
+
+  const allowedTasks = ['npm-audit', 'pip-check', 'docs-links', 'custom'];
+  const task = allowedTasks.includes(options.task) ? options.task : 'npm-audit';
+
+  let jobSteps = [
+    '      - name: Check out repository\n        uses: actions/checkout@v4'
+  ];
+
+  if (task === 'npm-audit') {
+    jobSteps.push('      - name: Set up Node.js\n        uses: actions/setup-node@v4\n        with:\n          node-version: 20');
+    jobSteps.push('      - name: Run security audit\n        run: npm audit --audit-level=moderate');
+  } else if (task === 'pip-check') {
+    jobSteps.push('      - name: Set up Python\n        uses: actions/setup-python@v5\n        with:\n          python-version: \'3.11\'');
+    jobSteps.push('      - name: Check package dependencies\n        run: pip list --outdated');
+  } else if (task === 'docs-links') {
+    jobSteps.push('      - name: Verify documentation links\n        run: npx --yes markdown-link-check **/*.md');
+  } else {
+    const customCmd = sanitizeCommand(options.customCommand, 'npm audit');
+    jobSteps.push(`      - name: Execute maintenance check\n        run: ${customCmd}`);
+  }
+
+  return `# Open Workers — Scheduled Maintenance Workflow
+# Runs non-destructive hygiene checks on a recurring schedule or via manual dispatch.
+# Documentation: https://open-workers.onrender.com/automation.html
+
+name: Scheduled Maintenance
+
+on:
+  schedule:
+    - cron: '${cronSchedule}'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  maintenance:
+    name: Repository Maintenance Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+${jobSteps.join('\n\n')}
+`;
+}
+
+/**
+ * Generate EditorConfig (.editorconfig)
+ */
 export function inspectWorkflowContent({ path = '.github/workflows/unknown.yml', content = '' } = {}) {
   const findings = [];
   const lines = content.split('\n');
