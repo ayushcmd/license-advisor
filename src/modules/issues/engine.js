@@ -192,3 +192,215 @@ export function categorizeIssue(issue = {}) {
  * @param {object} pr
  * @returns {object}
  */
+export function evaluatePullRequestQuality(pr = {}) {
+  const prNumber = pr.number || null;
+  const title = String(pr.title || '').trim();
+  const body = String(pr.body || '').trim();
+  const draft = Boolean(pr.draft);
+  const additions = typeof pr.additions === 'number' ? pr.additions : 0;
+  const deletions = typeof pr.deletions === 'number' ? pr.deletions : 0;
+  const totalChangedLines = additions + deletions;
+
+  const checks = [];
+  const recommendations = [];
+
+  // Check 1: Description presence and quality
+  const isPlaceholder = !body || /^(todo|tbd|none|n\/a|fix|as title)\.?$/i.test(body) || body.replace(/<!--[\s\S]*?-->/g, '').trim().length < 15;
+  checks.push({
+    id: 'description',
+    name: 'Pull Request Description',
+    status: isPlaceholder ? 'missing' : 'passed',
+    message: isPlaceholder
+      ? 'Pull request body is empty, placeholder, or contains only template boilerplate.'
+      : 'Comprehensive description provided explaining the purpose of changes.',
+    recommendation: isPlaceholder ? 'Add a descriptive summary of what this pull request changes and why.' : null
+  });
+  if (isPlaceholder) recommendations.push('Add a meaningful description to help reviewers understand the changes.');
+
+  // Check 2: Linked Issue reference
+  const hasIssueRef = /(?:fixes|closes|resolves|refs?|issue|#)\s*#?([0-9]+)|github\.com\/[^/]+\/[^/]+\/issues\/([0-9]+)/i.test(body);
+  checks.push({
+    id: 'issue_reference',
+    name: 'Linked Issue Reference',
+    status: hasIssueRef ? 'passed' : 'missing',
+    message: hasIssueRef
+      ? 'Pull request references a related issue or ticket.'
+      : 'No related issue reference (e.g. "Fixes #123") found in description.',
+    recommendation: hasIssueRef ? null : 'Link the relevant issue using "Fixes #<number>" or "Closes #<number>".'
+  });
+  if (!hasIssueRef) recommendations.push('Link related issues to enable automatic issue closure on merge.');
+
+  // Check 3: Testing details
+  const mentionsTests = /(test(s|ed|ing)?|npm test|spec|verification|verified with|manual testing)/i.test(body) || /\[x\]\s*.*test/i.test(body);
+  checks.push({
+    id: 'testing',
+    name: 'Testing Instructions & Verification',
+    status: mentionsTests ? 'passed' : 'missing',
+    message: mentionsTests
+      ? 'Testing steps, test suite execution, or verification notes detected.'
+      : 'No testing instructions or verification steps mentioned in the description.',
+    recommendation: mentionsTests ? null : 'Describe how these changes were tested or include automated test additions.'
+  });
+  if (!mentionsTests) recommendations.push('Include testing instructions or specify how the changes were verified.');
+
+  // Check 4: Breaking changes declaration
+  const isBreaking = /breaking change/i.test(body) || /^([a-z]+)(\([a-z0-9_-]+\))?!:/i.test(title);
+  checks.push({
+    id: 'breaking_changes',
+    name: 'Breaking Change Declaration',
+    status: 'passed',
+    declaredBreaking: isBreaking,
+    message: isBreaking
+      ? 'Pull request explicitly declares breaking changes.'
+      : 'No breaking changes declared (standard backward-compatible change).'
+  });
+
+  // Check 5: Checklist completion
+  const taskMatches = body.match(/- \[[ xX]\]/g) || [];
+  const completedTasks = body.match(/- \[[xX]\]/g) || [];
+  const totalTasks = taskMatches.length;
+  const completedCount = completedTasks.length;
+  const incompleteCount = totalTasks - completedCount;
+
+  let checklistStatus = 'not_applicable';
+  let checklistMsg = 'No checklist items found in description.';
+  if (totalTasks > 0) {
+    if (incompleteCount === 0) {
+      checklistStatus = 'passed';
+      checklistMsg = `All ${totalTasks} checklist items are marked complete.`;
+    } else {
+      checklistStatus = 'needs_attention';
+      checklistMsg = `${incompleteCount} of ${totalTasks} checklist items remain incomplete.`;
+      recommendations.push(`Complete the ${incompleteCount} remaining checklist items before requesting review.`);
+    }
+  }
+  checks.push({
+    id: 'checklist',
+    name: 'Checklist Completion',
+    status: checklistStatus,
+    totalTasks,
+    completedTasks: completedCount,
+    incompleteTasks: incompleteCount,
+    message: checklistMsg
+  });
+
+  // Check 6: Title convention (Conventional Commits)
+  const isConventionalTitle = /^([a-z]+)(?:\(([a-z0-9_-]+)\))?!?:/i.test(title);
+  checks.push({
+    id: 'title_convention',
+    name: 'Conventional Commit Title',
+    status: isConventionalTitle ? 'passed' : 'needs_attention',
+    message: isConventionalTitle
+      ? 'PR title adheres to Conventional Commits format (e.g. "feat: ...", "fix: ...").'
+      : 'PR title does not use Conventional Commits prefix (e.g. feat, fix, docs, chore).',
+    recommendation: isConventionalTitle ? null : 'Format PR title using Conventional Commits syntax (e.g. "feat: add feature" or "fix(parser): resolve error").'
+  });
+
+  // Check 7: Draft status
+  checks.push({
+    id: 'draft_status',
+    name: 'Draft Status',
+    status: draft ? 'warning' : 'passed',
+    isDraft: draft,
+    message: draft
+      ? 'Pull request is currently marked as Draft (work in progress).'
+      : 'Pull request is ready for review.'
+  });
+
+  // Check 8: Size review
+  const isTooLarge = totalChangedLines > 500;
+  checks.push({
+    id: 'size_review',
+    name: 'Change Scope & Size',
+    status: isTooLarge ? 'warning' : 'passed',
+    changedLines: totalChangedLines,
+    message: isTooLarge
+      ? `Large pull request (${totalChangedLines} lines changed). Consider breaking into smaller, reviewable PRs.`
+      : `Reasonable PR size (${totalChangedLines} lines changed).`
+  });
+  if (isTooLarge) recommendations.push('Consider splitting large pull requests into smaller independent PRs to speed up review.');
+
+  // Overall status
+  const missingCount = checks.filter((c) => c.status === 'missing').length;
+  const needsAttentionCount = checks.filter((c) => c.status === 'needs_attention').length;
+  let overallStatus = 'passed';
+  if (missingCount > 0) overallStatus = 'needs_attention';
+  else if (needsAttentionCount > 0 || draft) overallStatus = 'warning';
+
+  return {
+    pullRequest: prNumber,
+    status: overallStatus,
+    summary: {
+      totalChecks: checks.length,
+      passed: checks.filter((c) => c.status === 'passed').length,
+      missing: missingCount,
+      needsAttention: needsAttentionCount,
+      warnings: checks.filter((c) => c.status === 'warning').length
+    },
+    checks,
+    recommendations
+  };
+}
+
+/**
+ * Classify pull request size based on changed lines and files
+ *
+ * @param {object} params
+ * @param {number} [params.additions=0]
+ * @param {number} [params.deletions=0]
+ * @param {number} [params.changedFiles=0]
+ * @param {Array<string>} [params.fileNames=[]]
+ * @returns {object}
+ */
+export function classifyPullRequestSize({ additions = 0, deletions = 0, changedFiles = 0, fileNames = [] } = {}) {
+  const totalLines = (Number(additions) || 0) + (Number(deletions) || 0);
+
+  let classification = 'NONE';
+  let label = null;
+  let description = '0 lines changed';
+
+  if (totalLines > 0) {
+    for (const t of PR_SIZE_THRESHOLDS) {
+      if (totalLines >= t.min && totalLines <= t.max) {
+        classification = t.id;
+        label = t.label;
+        description = t.description;
+        break;
+      }
+    }
+  }
+
+  // Detect generated or lockfiles
+  const lockfilePattern = /(package-lock\.json|yarn\.lock|pnpm-lock\.yaml|Cargo\.lock|Gemfile\.lock|composer\.lock)$/i;
+  const minifiedPattern = /(\.min\.(js|css)|bundle\.js|dist\/)/i;
+
+  const generatedFiles = (Array.isArray(fileNames) ? fileNames : []).filter(
+    (name) => lockfilePattern.test(name) || minifiedPattern.test(name)
+  );
+
+  return {
+    linesChanged: totalLines,
+    additions: Number(additions) || 0,
+    deletions: Number(deletions) || 0,
+    changedFiles: Number(changedFiles) || 0,
+    classification,
+    label,
+    description,
+    hasGeneratedFiles: generatedFiles.length > 0,
+    generatedFiles,
+    notice: generatedFiles.length > 0
+      ? `Line count may be inflated by ${generatedFiles.length} generated/lock file(s): ${generatedFiles.slice(0, 3).join(', ')}.`
+      : null
+  };
+}
+
+/**
+ * Format a first-time contributor welcome message with variable substitution and idempotency marker
+ *
+ * @param {object} params
+ * @param {string} params.username
+ * @param {string} params.repo
+ * @param {string} [params.customMessage]
+ * @param {object} [params.links]
+ * @returns {string}
+ */
