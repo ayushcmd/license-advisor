@@ -13,20 +13,14 @@ import { createFeatureBranch } from '../../core/pullRequests/branches.js';
 import { commitFiles } from '../../core/pullRequests/files.js';
 import { repositoryService } from '../../core/repository/service.js';
 import { authorizeRepositoryRead } from '../../core/github/authorize.js';
+import { mapGitHubError } from '../../core/github/errors.js';
 import {
   parseReadmeContent,
   extractMarkdownLinks,
   isSafeExternalUrl
 } from './engine.js';
 
-function mapGitHubError(err, fallbackMessage) {
-  if (err instanceof ServiceError) return err;
-  const status = err?.status || 500;
-  if (status === 404) return new ServiceError(404, 'Repository or file not found.', 'NOT_FOUND');
-  if (status === 403) return new ServiceError(403, 'GitHub API access denied or rate limit exceeded.', 'INSUFFICIENT_PERMISSIONS');
-  if (status === 401) return new ServiceError(401, 'GitHub authentication failed or credentials expired.', 'AUTH_REQUIRED');
-  return new ServiceError(502, `${fallbackMessage}: ${err?.message || 'Upstream error'}`, 'GITHUB_API_ERROR');
-}
+export { mapGitHubError };
 
 /**
  * Resolve an Octokit client (App installation or public) for a repository
@@ -66,9 +60,12 @@ async function resolveClient(owner, repo, githubContext) {
  * @param {object} params
  * @param {string} params.repoInput
  * @param {object} params.githubContext
+ * @param {string} [params.authorization]
+ * @param {Function} [params.createUserClient]
+ * @param {object} [params.context]
  * @returns {Promise<object>}
  */
-export async function auditDocumentationRepository({ repoInput, githubContext, authorization, createUserClient }) {
+export async function auditDocumentationRepository({ repoInput, githubContext, authorization, createUserClient, context = null }) {
   let parsed;
   try {
     parsed = parseRepoInput(repoInput);
@@ -76,31 +73,55 @@ export async function auditDocumentationRepository({ repoInput, githubContext, a
     throw new ServiceError(400, error.message, 'INVALID_INPUT');
   }
   const { owner, repo, fullName } = parsed;
+  const isContextValid = Boolean(context && context.fullName === fullName);
 
-  const { octokit, installed, installation } = await resolveClient(owner, repo, githubContext);
+  let octokit = null;
+  let installed = false;
+  let installation = null;
+  let repoData = null;
 
-  let repoRes;
-  try {
-    repoRes = await octokit.rest.repos.get({ owner, repo });
-  } catch (err) {
-    throw mapGitHubError(err, `Failed to load details for "${fullName}".`);
+  if (isContextValid) {
+    const clientRes = await context.resolveClient();
+    octokit = clientRes.octokit;
+    installed = clientRes.installed;
+    installation = clientRes.installation;
+    repoData = await context.getRepoData();
+
+    if (repoData?.private) {
+      await context.authorizeRead();
+    }
+  } else {
+    const clientRes = await resolveClient(owner, repo, githubContext);
+    octokit = clientRes.octokit;
+    installed = clientRes.installed;
+    installation = clientRes.installation;
+
+    let repoRes;
+    try {
+      repoRes = await octokit.rest.repos.get({ owner, repo });
+      repoData = repoRes.data;
+    } catch (err) {
+      throw mapGitHubError(err, `Failed to load details for "${fullName}".`);
+    }
+
+    if (repoData?.private) {
+      await authorizeRepositoryRead({
+        authorization,
+        repoInput: fullName,
+        githubContext,
+        createUserClient
+      });
+    }
   }
 
-  if (repoRes.data?.private) {
-    await authorizeRepositoryRead({
-      authorization,
-      repoInput: fullName,
-      githubContext,
-      createUserClient
-    });
-  }
-
-  const defaultBranch = repoRes.data.default_branch || 'main';
+  const defaultBranch = repoData.default_branch || 'main';
 
   // Read root entries
   let rootEntries = [];
   try {
-    const rootRes = await octokit.rest.repos.getContent({ owner, repo, path: '', ref: defaultBranch });
+    const rootRes = isContextValid
+      ? await context.getContent('', defaultBranch)
+      : await octokit.rest.repos.getContent({ owner, repo, path: '', ref: defaultBranch });
     rootEntries = Array.isArray(rootRes.data) ? rootRes.data : [];
   } catch (err) {
     if (err?.status !== 404) throw mapGitHubError(err, 'Failed to inspect repository root directory.');
@@ -121,7 +142,9 @@ export async function auditDocumentationRepository({ repoInput, githubContext, a
       const hasSubDir = rootEntries.some((e) => e.name === subDir && e.type === 'dir');
       if (hasSubDir) {
         try {
-          const subRes = await octokit.rest.repos.getContent({ owner, repo, path: subDir, ref: defaultBranch });
+          const subRes = isContextValid
+            ? await context.getContent(subDir, defaultBranch)
+            : await octokit.rest.repos.getContent({ owner, repo, path: subDir, ref: defaultBranch });
           const entries = Array.isArray(subRes.data) ? subRes.data : [];
           const subReadme = entries.find((e) => e.type === 'file' && /^readme(\.(md|markdown|rst|txt))?$/i.test(e.name));
           if (subReadme) {
@@ -143,7 +166,9 @@ export async function auditDocumentationRepository({ repoInput, githubContext, a
 
   if (readmePath) {
     try {
-      const fileRes = await octokit.rest.repos.getContent({ owner, repo, path: readmePath, ref: defaultBranch });
+      const fileRes = isContextValid
+        ? await context.getContent(readmePath, defaultBranch)
+        : await octokit.rest.repos.getContent({ owner, repo, path: readmePath, ref: defaultBranch });
       if (fileRes?.data?.content) {
         readmeContent = Buffer.from(fileRes.data.content, 'base64').toString('utf8');
         readmeSha = fileRes.data.sha;
@@ -333,14 +358,14 @@ export async function auditDocumentationRepository({ repoInput, githubContext, a
 
   return {
     repository: {
-      fullName: repoRes.data.full_name,
-      owner: repoRes.data.owner?.login || owner,
-      repo: repoRes.data.name || repo,
-      description: repoRes.data.description || '',
-      htmlUrl: repoRes.data.html_url,
+      fullName: repoData.full_name,
+      owner: repoData.owner?.login || owner,
+      repo: repoData.name || repo,
+      description: repoData.description || '',
+      htmlUrl: repoData.html_url,
       defaultBranch,
-      private: Boolean(repoRes.data.private),
-      archived: Boolean(repoRes.data.archived),
+      private: Boolean(repoData.private),
+      archived: Boolean(repoData.archived),
       installed,
       installationId: installation?.id || null
     },
