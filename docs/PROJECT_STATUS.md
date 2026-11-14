@@ -95,10 +95,17 @@ Open Workers is structured around **six core product modules**:
 - **Cross-Module Maintenance Integration:** Seamlessly correlates setup audit findings with Security (Dependabot, CodeQL), Community (Security policy, contributing guidelines), and Documentation (README).
 - **Consolidated Automation Pull Requests:** Multi-file pre-commit preview (`POST /api/automation/preview-pr`) and automated PR creation on dedicated `ci/*` or `chore/*` branches (`POST /api/automation/trigger-pr`) with in-memory caller write PAT verification and strict enforcement of the GitHub App's `workflows: write` permission boundary.
 
+### 7. Unified Repository Dashboard — Status: Available (Orchestration Layer)
+- **Single-Entry Repository Health Audit:** One unified entry point allowing maintainers to inspect any repository once and receive an actionable health overview spanning Licensing, Community Standards, Security Policies, Documentation Quality, PR & Issue Health, and Repository Automation (`public/dashboard.html`, `POST /api/dashboard/analyze`).
+- **Bounded Concurrency with Error Isolation:** Parallel audit execution orchestrated via `Promise.allSettled` in `src/core/dashboard/coordinator.js`, guaranteeing that an isolated failure or rate limit in one capability does not break the overall dashboard evaluation.
+- **Cross-Module Findings Normalization & Priority Ranking:** All module findings are normalized into uniform structured objects, ranked by impact (High, Medium, Low), and surfaced with direct deep-links (`?repo=owner%2Frepo`) to specialized modules for instant remediation (`src/core/dashboard/findings.js`).
+- **Private Repository Privacy Guard:** Rejects unauthenticated inspections of private repositories with `HTTP 401 AUTH_REQUIRED` and verifies caller collaborator write permissions (`HTTP 403 FORBIDDEN`) before exposing any metadata or findings.
+- **Stateless Zero-Persistence Execution:** Preserves Open Workers' core design constraint by caching and persisting zero tokens, source code, or audit findings.
+
 ---
 
 ## 5. Verification & Quality Control
 
 - **Test Suite:** Built-in Node.js runner (`node:test`) and strict assertions (`node:assert/strict`). Zero external test runner dependencies.
-- **Test Results:** **205 passing tests** across 39 test suites with **0 failures**.
-- **Syntax Check:** `npm run lint:syntax` validates all 50 ES module JavaScript files using `node --check`.
+- **Test Results:** **220 passing tests** across 42 test suites with **0 failures**.
+- **Syntax Check:** `npm run lint:syntax` validates all 54 ES module JavaScript files using `node --check`.

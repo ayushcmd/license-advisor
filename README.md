@@ -10,7 +10,7 @@
   [![GitHub App](https://img.shields.io/badge/GitHub%20App-open--license--advisor-0969DA?style=flat-square&logo=github&logoColor=white)](https://github.com/apps/open-license-advisor)
   [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg?style=flat-square)](./LICENSE)
   [![Node.js](https://img.shields.io/badge/Node.js-%3E%3D20.0.0-339933.svg?style=flat-square&logo=nodedotjs&logoColor=white)](https://nodejs.org)
-  [![Tests](https://img.shields.io/badge/Tests-77%20Passing-2DA44E.svg?style=flat-square&logo=githubactions&logoColor=white)](./tests)
+  [![Tests](https://img.shields.io/badge/Tests-220%20Passing-2DA44E.svg?style=flat-square&logo=githubactions&logoColor=white)](./tests)
 
   <p align="center">
     <a href="https://open-workers.onrender.com"><strong>Launch Web App</strong></a> &bull;
@@ -151,6 +151,23 @@ Continuous maintenance and developer workflow automation:
 
 ---
 
+## Unified Repository Dashboard
+
+The **Unified Repository Dashboard** connects all six core platform capabilities into a single coherent inspection:
+
+$$\textbf{One Repository} \longrightarrow \textbf{Six Capabilities} \longrightarrow \textbf{One Actionable Report}$$
+
+Instead of jumping between disconnected tools, developers can enter a repository specifier (`owner/repo` or GitHub URL) once to receive an aggregated assessment:
+
+- **Cross-Module Health Overview:** Parallel execution of Licensing, Community, Security, Documentation, PR & Issues, and Automation audits using bounded concurrency with strict per-module error isolation (`Promise.allSettled`).
+- **Prioritized Action Items:** Findings from all modules are normalized, ranked by impact (High, Medium, Low), and presented with one-click fix buttons that link directly to the relevant tool with the repository pre-filled.
+- **Privacy & Authorization Guard:** Public repositories can be audited immediately. Private repositories require user authorization (`Authorization: Bearer <token>`) and verify collaborator write access in memory before exposing findings.
+- **Stateless & Database-Free:** Zero repository code, tokens, or audit records are cached or stored on disk.
+
+*Explore:* [`/dashboard.html`](https://open-workers.onrender.com/dashboard.html) &bull; `POST /api/dashboard/analyze`
+
+---
+
 ## Capability Status Summary
 
 | Capability Module | Status | Category | Scope & Endpoints |
@@ -203,9 +220,14 @@ open-workers/
 ├── public/                     # Static frontend web application
 │   ├── assets/                 # SVGs, icons, and official branding assets
 │   ├── css/                    # Modular Primer-inspired CSS (base.css, components.css)
-│   ├── js/                     # Client ES6 modules (community.js, analyzer.js, etc.)
+│   ├── js/                     # Client ES6 modules (dashboard.js, community.js, analyzer.js, etc.)
 │   ├── index.html              # Open Workers home page & capability showcase
+│   ├── dashboard.html          # Unified cross-module repository dashboard
 │   ├── community.html          # Community standards generator, audit, and PR UI
+│   ├── security.html           # Security policies, Dependabot & CodeQL UI
+│   ├── documentation.html      # README audits, changelog, and badge tools
+│   ├── issues.html             # Issue triage, stale inspection, and PR quality
+│   ├── automation.html         # Repository setup audit and CI workflow manager
 │   ├── analyzer.html           # Repository license analyzer
 │   ├── explorer.html           # SPDX license catalog explorer
 │   ├── questionnaire.html      # Deterministic licensing recommendation wizard
@@ -217,16 +239,21 @@ open-workers/
 │   ├── config/                 # Environment loader and GitHub App configuration
 │   ├── core/                   # Shared infrastructure across all modules
 │   │   ├── capabilities/       # Capability registry (registry.js)
+│   │   ├── dashboard/          # Cross-module coordinator & findings normalizer
 │   │   ├── github/             # In-memory caller authorization (authorize.js)
 │   │   ├── pullRequests/       # Isolated branch creation & multi-file commits (branches.js, files.js)
 │   │   └── repository/         # Repository specifier parsing and tree inspection
 │   ├── data/                   # 12 OSI-approved SPDX license database (licenses.json)
 │   ├── modules/                # Feature modules
-│   │   └── community/          # Community module engine, templates, and PR service
+│   │   ├── community/          # Community module engine, templates, and PR service
+│   │   ├── security/           # Security checks, Dependabot/CodeQL generators, and PR service
+│   │   ├── documentation/      # Documentation checks, README engine, badge generator, and PR service
+│   │   ├── issues/             # Issue triage, categorization, stale inspection, and release notes
+│   │   └── automation/         # Setup audit, CI workflow generators, and linting standards
 │   ├── routes/                 # Express route handlers (api.js, webhooks.js)
 │   ├── services/               # Licensing services (licenseService.js, prService.js, readmeService.js)
 │   └── server.js               # Application bootstrap and server entry point
-├── tests/                      # Built-in node:test test suite (77 tests)
+├── tests/                      # Built-in node:test test suite (220 tests across 11 suites)
 └── docs/                       # Project status, feature matrix, roadmap, and architecture docs
 ```
 
@@ -309,6 +336,12 @@ All endpoints return JSON and adhere to standard HTTP status codes:
 | `/api/config` | `GET` | Public App configuration, permissions, and installation URL |
 | `/api/capabilities` | `GET` | List all 6 Open Workers product capabilities and statuses |
 | `/api/capabilities/:id` | `GET` | Retrieve details for a specific capability module |
+
+### Unified Dashboard
+
+| Endpoint | Method | Description |
+| :--- | :---: | :--- |
+| `/api/dashboard/analyze` | `POST` | Orchestrate cross-module health analysis across all 6 capabilities |
 
 ### Licensing Endpoints
 

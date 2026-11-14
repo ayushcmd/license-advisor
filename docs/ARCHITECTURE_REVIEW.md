@@ -47,6 +47,7 @@ open-workers/
 │   ├── config/                 # Environment variables and GitHub App config
 │   ├── core/                   # Shared infrastructure across all modules
 │   │   ├── capabilities/       # Capability registry (registry.js)
+│   │   ├── dashboard/          # Cross-module coordinator & findings normalizer (coordinator.js, findings.js)
 │   │   ├── events/             # Webhook event dispatcher and idempotency markers (dispatcher.js, idempotency.js)
 │   │   ├── github/             # GitHub authentication and caller authorization (authorize.js)
 │   │   ├── pullRequests/       # Reusable branch creation and multi-file commits (branches.js, files.js)
@@ -61,7 +62,7 @@ open-workers/
 │   ├── routes/                 # Express route handlers (api.js, webhooks.js)
 │   ├── services/               # Licensing services (licenseService.js, prService.js, readmeService.js)
 │   └── server.js               # Express application bootstrap and server
-├── tests/                      # Native node:test suite (205 tests across 39 suites)
+├── tests/                      # Native node:test suite (220 tests across 42 suites)
 └── docs/                       # Architecture, development, and operational guides
 ```
 
@@ -182,3 +183,54 @@ The Repository Automation module enforces strict least-privilege boundaries and 
 2. **Command Injection Defenses:** Command inputs (e.g. test, lint, and build commands) are strictly sanitized, rejecting shell chaining operators (`&&`, `||`, `;`) and expression interpolations (`${{ ... }}`).
 3. **Bounded Matrix Dimensions:** CI matrix configurations enforce a strict ceiling (maximum 9 combinations) to prevent accidental creation of large, expensive job matrices.
 4. **Official & Pinned Actions:** Generated workflows reference current, supported official actions (`actions/checkout@v4`, `actions/setup-node@v4`, `actions/setup-python@v5`) with minimal permissions (`permissions: contents: read`) and explicit job timeouts.
+
+---
+
+## 7. Cross-Module Orchestration & Coordinator Architecture
+
+The Unified Repository Dashboard introduces an orchestration and presentation layer on top of all six capabilities without mutating or duplicating underlying module logic:
+
+```
++--------------------------------------------------------------------------------+
+| Client Request: POST /api/dashboard/analyze ({ repo: "owner/repo" })           |
++--------------------------------------------------------------------------------+
+                                       |
+                                       v
++--------------------------------------------------------------------------------+
+| Privacy Guard & Access Check (coordinator.js)                                  |
+|  - If repository is private:                                                   |
+|    - Verify `Authorization: Bearer <token>` (HTTP 401 on missing/malformed)    |
+|    - Verify user has collaborator access (HTTP 403 on denied)                  |
++--------------------------------------------------------------------------------+
+                                       |
+                                       v
++--------------------------------------------------------------------------------+
+| Parallel Audits via Promise.allSettled                                         |
+|  +---------------------------+       +---------------------------+             |
+|  | 1. Licensing Audit        |       | 2. Community Standards    |             |
+|  +---------------------------+       +---------------------------+             |
+|  | 3. Security Config Audit  |       | 4. Documentation Analysis |             |
+|  +---------------------------+       +---------------------------+             |
+|  | 5. PR & Issue Dormancy    |       | 6. Repository Setup CI    |             |
+|  +---------------------------+       +---------------------------+             |
++--------------------------------------------------------------------------------+
+                                       |
+                                       v
++--------------------------------------------------------------------------------+
+| Normalization & Aggregation Layer (findings.js)                                |
+|  - Error Isolation: Failed module audit -> status: 'failed', others complete   |
+|  - Normalizes findings into standard schema: { module, status, summary, score }|
+|  - Compiles actionable recommendations deduplicated & ranked: High > Med > Low |
+|  - Injects target URL pre-fills: `?repo=owner%2Frepo`                          |
++--------------------------------------------------------------------------------+
+                                       |
+                                       v
++--------------------------------------------------------------------------------+
+| Actionable Health Report (JSON) -> Rendered in /dashboard.html                 |
++--------------------------------------------------------------------------------+
+```
+
+### Coordinator Design Guarantees:
+1. **Bounded Concurrency & Fault Tolerance:** Promise execution via `Promise.allSettled` ensures that network timeouts, rate limit events, or unexpected exceptions in one capability audit do not abort or compromise the overall repository overview.
+2. **Stateless Privacy Boundary:** Private repository access is strictly authenticated before exposing metadata, file structures, or findings. No repository content, findings, or user tokens are cached or persisted to disk.
+3. **Transparent Non-Averaged Scoring:** Capability scores remain domain-specific (e.g., Community completeness, Security health, Documentation score). The dashboard does not artificially average disparate metrics into a misleading single percentage, instead highlighting actionable priority items.
