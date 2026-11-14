@@ -31,11 +31,12 @@ open-workers/
 ├── public/                     # Static frontend assets
 │   ├── assets/                 # SVGs (logo.svg, workflow.svg, etc.)
 │   ├── css/                    # Modular CSS (base.css, components.css)
-│   ├── js/                     # Client ES6 modules (community.js, security.js, documentation.js, etc.)
+│   ├── js/                     # Client ES6 modules (community.js, security.js, documentation.js, issues.js, etc.)
 │   ├── index.html              # Home page
 │   ├── community.html          # Community standards, audit, and PR workflow
 │   ├── security.html           # Security configuration audit, generators, and PR workflow
 │   ├── documentation.html       # Documentation audit, README tools, changelog, badges, link checker
+│   ├── issues.html             # PR & Issue management: categorization, quality checks, welcome, duplicates, release notes
 │   ├── analyzer.html           # Repository license inspector
 │   ├── explorer.html           # SPDX license catalog explorer
 │   ├── questionnaire.html      # Deterministic licensing recommendation engine
@@ -45,6 +46,7 @@ open-workers/
 │   ├── config/                 # Environment variables and GitHub App config
 │   ├── core/                   # Shared infrastructure across all modules
 │   │   ├── capabilities/       # Capability registry (registry.js)
+│   │   ├── events/             # Webhook event dispatcher and idempotency markers (dispatcher.js, idempotency.js)
 │   │   ├── github/             # GitHub authentication and caller authorization (authorize.js)
 │   │   ├── pullRequests/       # Reusable branch creation and multi-file commits (branches.js, files.js)
 │   │   └── repository/         # Repository specifier parsing and tree inspection
@@ -52,11 +54,12 @@ open-workers/
 │   ├── modules/                # Feature modules
 │   │   ├── community/          # Community module (engine.js, communityService.js, templates/)
 │   │   ├── security/           # Security module (engine.js, securityService.js)
-│   │   └── documentation/      # Documentation module (engine.js, documentationService.js)
+│   │   ├── documentation/      # Documentation module (engine.js, documentationService.js)
+│   │   └── issues/             # PR & Issue management (engine.js, issueService.js, pullRequestService.js, automationService.js)
 │   ├── routes/                 # Express route handlers (api.js, webhooks.js)
 │   ├── services/               # Licensing services (licenseService.js, prService.js, readmeService.js)
 │   └── server.js               # Express application bootstrap and server
-├── tests/                      # Native node:test suite (127 tests across 26 suites)
+├── tests/                      # Native node:test suite (169 tests across 34 suites)
 └── docs/                       # Architecture, development, and operational guides
 ```
 
@@ -99,3 +102,47 @@ open-workers/
 2. **Branch Isolation:** A new branch is created using the default branch's latest commit SHA as reference. If a branch already exists, a collision-resistant timestamp suffix is appended.
 3. **SHA Tracking:** When replacing existing files, the exact Git blob SHA on the default branch is retrieved and passed to GitHub's Contents API to guarantee optimistic concurrency and prevent overwriting concurrent commits.
 4. **Zero Code Retention:** No repository code is stored on the server or logged. Only metadata (repository name, default branch name, file paths) is inspected during processing.
+
+---
+
+## 5. Event-Driven Webhook Architecture & Idempotency Model
+
+For reactive automation responding to GitHub webhook events (`issues`, `pull_request`), Open Workers implements a dedicated event architecture:
+
+```
++--------------------------------------------------------------------------------+
+| GitHub Webhook Payload (POST /api/webhooks)                                    |
++--------------------------------------------------------------------------------+
+                                      |
+                                      v
++--------------------------------------------------------------------------------+
+| Webhook Verification Layer                                                     |
+|  - Validates HMAC SHA-256 signature (X-Hub-Signature-256)                      |
+|  - Deduplicates events using in-memory LRU Delivery Tracker (X-GitHub-Delivery) |
+|  - Ignores bot-generated payloads (prevents infinite webhook reply loops)     |
++--------------------------------------------------------------------------------+
+                                      | Verified Event
+                                      v
++--------------------------------------------------------------------------------+
+| Pluggable EventDispatcher (src/core/events/dispatcher.js)                      |
+|  - Routes events to registered domain handlers with per-handler error isolation|
+|  - Checks repository `.github/open-workers.yml` for explicit opt-in            |
+|  - Skips execution when opt-in is absent, unparseable, or disabled             |
++--------------------------------------------------------------------------------+
+                                      | Opt-in Verified
+                                      v
++--------------------------------------------------------------------------------+
+| Automation Actions & Idempotency Guards (src/core/events/idempotency.js)       |
+|  - Checks for HTML idempotency comment markers (e.g. <!-- open-workers:welcome -->)|
+|  - Atomic label management (removes previous size/* before adding new size/*)  |
+|  - Graceful diagnostic mapping if GitHub App lacks `issues: write` permission  |
++--------------------------------------------------------------------------------+
+```
+
+### Safety Principles for Issue & PR Automation:
+1. **Strict Opt-In:** Webhook automation never performs mutations unless the repository owner explicitly maintains `.github/open-workers.yml` with `features.issue_triage.enabled: true` or `features.pr_triage.enabled: true`.
+2. **Infinite Loop Prevention:** Events originating from senders matching `[bot]` or type `Bot` are discarded immediately prior to processing.
+3. **Comment Idempotency Markers:** Automated comments include invisible HTML markers (`<!-- open-workers:welcome -->`). The system scans existing comments for the marker before posting to ensure first-time contributors are never spammed.
+4. **Non-Destructive Issue Suggestions:** Duplicate detection and stale triage surfaces actionable recommendations without closing issues or pull requests.
+5. **Caller Write Authorization:** API endpoints performing mutations (`POST /api/issues/apply-labels`, `POST /api/pulls/actions/execute`) verify caller write permissions via personal access tokens in-memory without persistence.
+6. **Diagnostic Permission Hints:** If the GitHub App receives HTTP 403 on label or comment mutations, diagnostic guidance directs administrators to enable `Issues: Read and write` on `github.com/settings/apps`.

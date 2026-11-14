@@ -12,7 +12,7 @@ This matrix documents the capability status, API endpoints, user interfaces, req
 | `community` | **Community** | Community | **Available** | `/api/community/*` | `/community.html` |
 | `security` | **Security** | Security | **Available** | `/api/security/*` | `/security.html` |
 | `documentation` | **Documentation** | Documentation | **Available** | `/api/documentation/*` | `/documentation.html` |
-| `issues` | **PR & Issue Management** | Workflow | *Upcoming* | `/api/issues/*` | *(Planned)* |
+| `issues` | **PR & Issue Management** | Workflow | **Available** | `/api/issues/*`, `/api/pulls/*` | `/issues.html` |
 | `automation` | **Repository Automation** | Workflow | *Upcoming* | `/api/automation/*` | *(Planned)* |
 
 ---
@@ -66,11 +66,27 @@ This matrix documents the capability status, API endpoints, user interfaces, req
 | **PR Conflict Preview** | Preview documentation PR files, branch name, and check existing file conflicts | `POST /api/documentation/preview-pr` | None (Public / App token) | Production | `tests/documentation.test.js` |
 | **Consolidated Documentation PR** | Multi-file documentation pull request on `chore/improve-docs` via GitHub App | `POST /api/documentation/trigger-pr` | User PAT (write) + App (`contents: write`, `pull_requests: write`) | Production | `tests/documentation.test.js` |
 
-### E. Upcoming Modules (Roadmap)
+### E. PR & Issue Management Module (`issues`) — Status: Available
+
+| Feature | Description | Endpoints | Permissions | Status | Test Coverage |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **Issue Capabilities** | Discover issue/PR features, checks, and supported categories | `GET /api/issues/capabilities` | None (Public) | Production | `tests/issues.test.js` |
+| **Issue Categorization** | Deterministic rule-based categorization with security vulnerability flags | `POST /api/issues/analyze` | None (Public / App) | Production | `tests/issues.test.js` |
+| **Duplicate Issue Suggestions** | Vocabulary & title similarity search over candidate issues | `POST /api/issues/duplicates` | None (Public / App) | Production | `tests/issues.test.js` |
+| **Stale Issue Inspector** | Inactivity threshold detection with security and pinned exemptions | `POST /api/issues/stale` | None (Public / App) | Production | `tests/issues.test.js` |
+| **Label Modification Preview** | Preview new vs existing vs missing repository labels | `POST /api/issues/preview-labels` | None (Public / App) | Production | `tests/issues.test.js` |
+| **Authorized Label Application** | Apply approved labels to issues without overwriting existing labels | `POST /api/issues/apply-labels` | User PAT (write) + App (`issues: write`) | Production | `tests/issues.test.js` |
+| **PR Quality & Checklist Audit** | Evaluates description, linked issues, tests, checklist tasks, draft status | `POST /api/pulls/analyze` | None (Public / App) | Production | `tests/issues.test.js` |
+| **PR Size Classification** | Classifies size (XS to XL) and flags lockfile inflation | `POST /api/pulls/size` | None (Public / App) | Production | `tests/issues.test.js` |
+| **Release Notes Preparation** | Compiles merged PRs into Conventional Commits release notes | `POST /api/pulls/release-notes` | None (Public / App) | Production | `tests/issues.test.js` |
+| **PR Action Preview** | Preview managed size label update or first-timer welcome comment | `POST /api/pulls/preview-action` | None (Public / App) | Production | `tests/issues.test.js` |
+| **Authorized PR Action** | Apply managed size label or post welcome comment with marker | `POST /api/pulls/execute-action` | User PAT (write) + App (`issues: write`, `pull_requests: write`) | Production | `tests/issues.test.js` |
+| **Opt-In Webhook Automation** | Event dispatcher routing `issues` and `pull_request` events via `.github/open-workers.yml` | Webhook Receiver | App Webhook Secret + App Scopes | Production | `tests/issues.test.js` |
+
+### F. Upcoming Modules (Roadmap)
 
 | Module | Planned Capabilities & Subfeatures | Target Scope |
 | :--- | :--- | :--- |
-| **`issues`** | &bull; Rule-based issue and pull request automated labeling<br>&bull; PR classification and contributor welcome automation<br>&bull; PR checklist completeness enforcement<br>&bull; Inactive issue and pull request triage<br>&bull; Release notes compilation from merged pull requests | Upcoming |
 | **`automation`** | &bull; GitHub Actions CI/CD starter workflow generation (build, test, lint, matrix)<br>&bull; Workflow Health Inspector (unpinned actions, deprecated runners, missing timeouts)<br>&bull; Code style config generation (`.editorconfig`, `.prettierrc`, ESLint configs)<br>&bull; Scheduled repository maintenance tasks | Upcoming |
 
 ---

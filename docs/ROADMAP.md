@@ -11,8 +11,8 @@ This document outlines the phased evolution of **Open Workers**, organized aroun
          COMPLETED                           COMPLETED                             COMPLETED
                                                                                           |
                                                                                           v
-[Phase 4: Security Module]     -->  [Phase 5: Documentation]     -->  [Phase 6: PR, Issues & Automation]
-         COMPLETED                           COMPLETED                             PLANNED
+[Phase 4: Security Module]     -->  [Phase 5: Documentation]     -->  [Phase 6: PR & Issue Management]
+         COMPLETED                           COMPLETED                             COMPLETED
                                                                                           |
                                                                                           v
                                                                       [Phase 7: Production Rebranding Cutover]
@@ -62,6 +62,15 @@ This document outlines the phased evolution of **Open Workers**, organized aroun
 - **Documentation PR Automation:** Pre-commit preview (`POST /api/documentation/preview-pr`) and automated PR creation on `chore/improve-docs` (`POST /api/documentation/trigger-pr`) with caller in-memory write authorization.
 - **Test Suite:** 127 passing tests across 26 test suites with zero failures.
 
+### Phase 6: PR & Issue Management Module (Completed)
+- **Deterministic Issue Categorization & Labeling:** Keyword-based classification across 8 core categories (`bug`, `feature`, `documentation`, `question`, `enhancement`, `performance`, `maintenance`, `security`) with transparent score explanations, preview labeling, and confidential security advisory routing.
+- **Pull Request Quality & Size Checks:** Comprehensive review checklist inspector (description length, open tasks, issue references, tests, breaking changes, Conventional Commits titles, draft status) and line-based size classification (`size/XS` through `size/XL`) with lockfile inflation warnings and mutual-exclusion managed size label replacement.
+- **Contributor Welcome & Duplicate Suggestions:** Automated first-time contributor greetings using idempotency comment markers (`<!-- open-workers:welcome -->`); duplicate issue discovery using token and title similarity without auto-closing.
+- **Stale Issue & Inactive PR Triage:** Non-destructive stale inspection flagging dormant items against configurable inactivity thresholds with security and exempt label protections.
+- **Semantic Release Notes Compiler:** Conventional Commits aggregation of merged pull requests with Markdown preview, copy, and download.
+- **Opt-In Webhook Automation Engine:** Verified GitHub webhook event dispatcher (`src/core/events/dispatcher.js`) routing `issues` and `pull_request` events with bot loop prevention and strict opt-in gating via repository `.github/open-workers.yml` configuration.
+- **Test Suite:** 169 passing tests across 34 test suites with zero failures.
+
 ---
 
 ## 3. Phased Roadmap (Six Core Modules)
@@ -83,16 +92,20 @@ This document outlines the phased evolution of **Open Workers**, organized aroun
   - Shields.io badge generator for licenses, build status, versioning, and documentation.
   - Markdown broken-link auditor for repository documentation with SSRF protection.
   - Pull Request workflow to deploy documentation enhancements (`chore/improve-docs`).
-  - Pull Request workflow to deploy documentation enhancements (`chore/improve-docs`).
 
-### Phase 6: PR & Issue Management (`issues`) and Repository Automation (`automation`)
-- **Objective:** Streamline everyday maintenance workflows, issue triage, and continuous integration.
-- **PR & Issue Management Deliverables:**
-  - Automated rule-based labeling for incoming issues and pull requests.
-  - First-time contributor welcome bot with customizable responses.
-  - Pull request checklist verification.
-  - Stale issue and inactive PR triage rules.
-  - Release notes compilation from merged PR labels and milestone data.
+### Phase 6: PR & Issue Management (`issues`) — Completed
+- **Objective:** Streamline everyday maintenance workflows, issue triage, and collaboration quality.
+- **Deliverables:**
+  - Automated rule-based labeling for incoming issues and pull requests with preview and mutation safety.
+  - First-time contributor welcome bot with customizable community links and idempotency markers.
+  - Pull request checklist verification and quality status assessment.
+  - Size classification (`size/XS` to `size/XL`) with lockfile detection.
+  - Stale issue and inactive PR triage inspection without destructive auto-closing.
+  - Release notes compilation from merged PR labels and Conventional Commits.
+  - Opt-in GitHub webhook event dispatching gated by `.github/open-workers.yml`.
+
+### Phase 6b: Repository Automation (`automation`) — Upcoming
+- **Objective:** Automated repository health maintenance and CI/CD workflow generation.
 - **Repository Automation Deliverables:**
   - GitHub Actions CI starter workflow generator (Node.js, Python, multi-platform matrix).
   - Action Health Inspector: detects unpinned 3rd-party actions, deprecated runners, and missing timeout settings.

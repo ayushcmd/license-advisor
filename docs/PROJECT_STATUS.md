@@ -41,7 +41,7 @@ Open Workers is structured around **six core product modules**:
 | **2** | **Community** | Community | **Available** (Production) | `/community.html`, `/api/community/templates`, `/api/community/generate`, `/api/community/analyze`, `/api/community/preview-pr`, `/api/community/trigger-pr` |
 | **3** | **Security** | Security | **Available** (Production) | `/security.html`, `/api/security/checks`, `/api/security/templates`, `/api/security/generate`, `/api/security/analyze`, `/api/security/preview-pr`, `/api/security/trigger-pr` |
 | **4** | **Documentation** | Documentation | **Available** (Production) | `/documentation.html`, `/api/documentation/checks`, `/api/documentation/templates`, `/api/documentation/generate`, `/api/documentation/analyze`, `/api/documentation/check-links`, `/api/documentation/preview-pr`, `/api/documentation/trigger-pr` |
-| **5** | **PR & Issue Management** | Workflow | *Upcoming* (Planned) | `/api/issues/*` |
+| **5** | **PR & Issue Management** | Workflow | **Available** (Production) | `/issues.html`, `/api/issues/*`, `/api/pulls/*` |
 | **6** | **Repository Automation** | Workflow | *Upcoming* (Planned) | `/api/automation/*` |
 
 ---
@@ -77,12 +77,15 @@ Open Workers is structured around **six core product modules**:
 - **Markdown Broken Link Checker:** Inspects Markdown content, validates relative repository paths against the tree, and checks external URLs with strict SSRF defenses against loopback, private RFC 1918/3927 IPs, and cloud metadata endpoints (`POST /api/documentation/check-links`).
 - **Consolidated Documentation PRs:** Pre-commit conflict preview (`POST /api/documentation/preview-pr`) and automated multi-file pull requests on isolated `chore/improve-docs` branches (`POST /api/documentation/trigger-pr`) using caller in-memory write authorization and least-privilege GitHub App credentials.
 
-### 5. PR & Issue Management — Status: Upcoming
-- Rule-based issue and pull request labeling.
-- Contributor welcome messages and response automation.
-- Pull request checklist verification.
-- Stale issue and inactive PR triage.
-- Release notes drafting from merged pull requests.
+### 5. PR & Issue Management — Status: Available
+- **Deterministic Issue Categorization:** Evaluates issue title and body against keyword dictionaries for 8 categories (`bug`, `feature`, `documentation`, `question`, `enhancement`, `performance`, `maintenance`, `security`) with transparent score breakdowns and confidential security vulnerability reporting guidance (`src/modules/issues/engine.js`, `POST /api/issues/analyze`).
+- **Rule-Based Issue Labeling:** Non-destructive label preview (`POST /api/issues/preview-labels`) and mutation (`POST /api/issues/apply-labels`) with color consistency, caller in-memory write authorization, and diagnostic error handling for `issues: write` GitHub App permission requirements.
+- **Pull Request Quality Checker:** Analyzes PR description length, markdown checklist completion status, issue reference linkage (`Fixes #123`), test plan inclusion, breaking changes declarations, Conventional Commits title formatting, and draft status (`POST /api/pulls/analyze`).
+- **Pull Request Size Classification:** Computes net changed lines excluding generated lockfiles, assigns mutually exclusive size labels (`size/XS`, `size/S`, `size/M`, `size/L`, `size/XL`), warns on lockfile inflation, and atomically manages size labels (`POST /api/pulls/classify`, `POST /api/pulls/actions/execute`).
+- **First-Time Contributor Experience:** Generates welcoming greetings with customizable community links (`CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`), using idempotency markers (`<!-- open-workers:welcome -->`) to prevent duplicate bot comments (`POST /api/pulls/actions/preview`, `POST /api/pulls/actions/execute`).
+- **Duplicate Issue Suggestions & Stale Triage:** Identifies duplicate issue candidates using title and keyword token similarity without destructive auto-closing (`POST /api/issues/duplicates`); inspects dormant issues against configurable inactivity thresholds with security and exempt label protections (`POST /api/issues/stale`).
+- **Semantic Release Notes Compiler:** Groups merged pull requests into Conventional Commits categories (Breaking Changes, Features, Fixes, Maintenance, Other) with contributor shoutouts, in-browser markdown preview, copy, and download (`POST /api/pulls/release-notes`).
+- **Opt-In Webhook Automation Engine:** Verified GitHub webhook event dispatcher (`src/core/events/dispatcher.js`) routing `issues` and `pull_request` events with bot loop prevention and strict opt-in gating via repository `.github/open-workers.yml` configuration.
 
 ### 6. Repository Automation — Status: Upcoming
 - GitHub Actions CI/CD starter workflow generation (build, test, lint, matrix).
@@ -95,5 +98,5 @@ Open Workers is structured around **six core product modules**:
 ## 5. Verification & Quality Control
 
 - **Test Suite:** Built-in Node.js runner (`node:test`) and strict assertions (`node:assert/strict`). Zero external test runner dependencies.
-- **Test Results:** **127 passing tests** across 26 test suites with **0 failures**.
-- **Syntax Check:** `npm run lint:syntax` validates all 38 ES module JavaScript files using `node --check`.
+- **Test Results:** **169 passing tests** across 34 test suites with **0 failures**.
+- **Syntax Check:** `npm run lint:syntax` validates all 46 ES module JavaScript files using `node --check`.
