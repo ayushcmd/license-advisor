@@ -1,22 +1,29 @@
 /**
- * Open Workers — Unified Repository Dashboard
+ * Open Workers — Unified Repository Dashboard Controller
  *
  * Coordinates cross-module repository overview across all 6 platform capabilities:
  * Licensing, Community Standards, Security Policies, Documentation Quality,
  * PR & Issue Health, and Repository Automation.
  *
  * Workflow: Single Inspection → 6 Capabilities → 1 Actionable Report
+ *
+ * Optimizations:
+ * - Uses shared UI utilities from ui-utils.js
+ * - AbortController for in-flight request cancellation
+ * - Duplicate submission prevention
+ * - Safe URL sanitization for dynamic outbound action links
+ * - Strict separation between executionStatus and healthStatus
+ * - Accessible live-region announcements and loading states
+ * - Reduced motion support for smooth scrolling
  */
 
-function escapeHtml(str) {
-  if (typeof str !== 'string') return '';
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-}
+import {
+  escapeHtml,
+  sanitizeUrl,
+  showBanner as renderBanner,
+  setButtonLoading,
+  getQueryParam
+} from './ui-utils.js';
 
 const form = document.getElementById('dashboard-form');
 const repoInputEl = document.getElementById('dashboard-repo');
@@ -96,19 +103,11 @@ const MODULE_CONFIG = {
   }
 };
 
+let activeAbortController = null;
+let isAnalyzing = false;
+
 function showBanner(message, type = 'info') {
-  if (!feedbackEl) return;
-  const alertClass =
-    type === 'error'
-      ? 'banner-error'
-      : type === 'warning'
-        ? 'banner-warning'
-        : type === 'success'
-          ? 'banner-success'
-          : 'banner-info';
-  feedbackEl.innerHTML = `<div class="flash ${alertClass}" style="margin-top: var(--space-3);" role="alert">${escapeHtml(
-    message
-  )}</div>`;
+  renderBanner(feedbackEl, message, type);
 }
 
 function clearBanner() {
@@ -116,7 +115,11 @@ function clearBanner() {
 }
 
 function setLoading(isLoading) {
-  if (submitBtn) submitBtn.disabled = isLoading;
+  isAnalyzing = isLoading;
+  if (submitBtn) {
+    submitBtn.disabled = isLoading;
+    submitBtn.setAttribute('aria-busy', String(isLoading));
+  }
   if (btnText) btnText.textContent = isLoading ? 'Analyzing...' : 'Analyze Repository';
   if (btnSpinner) btnSpinner.style.display = isLoading ? 'inline-block' : 'none';
 }
@@ -134,14 +137,25 @@ function getPriorityBadgeClass(priority) {
   return 'badge-info';
 }
 
-async function runDashboardAnalysis(repoInput, token = '') {
-  if (!repoInput) return;
+export async function runDashboardAnalysis(repoInput, token = '') {
+  if (!repoInput || typeof repoInput !== 'string') return;
+  const targetRepo = repoInput.trim();
+  if (!targetRepo) return;
+
+  // Cancel any prior in-flight analysis
+  if (activeAbortController) {
+    activeAbortController.abort('New analysis request initiated');
+    activeAbortController = null;
+  }
+
+  const abortController = new AbortController();
+  activeAbortController = abortController;
 
   clearBanner();
   setLoading(true);
   if (resultsEl) resultsEl.style.display = 'none';
 
-  showBanner(`Auditing repository "${repoInput}" across all six capabilities...`, 'info');
+  showBanner(`Auditing repository "${targetRepo}" across all six capabilities...`, 'info');
 
   try {
     const headers = { 'Content-Type': 'application/json' };
@@ -152,7 +166,8 @@ async function runDashboardAnalysis(repoInput, token = '') {
     const res = await fetch('/api/dashboard/analyze', {
       method: 'POST',
       headers,
-      body: JSON.stringify({ repo: repoInput })
+      body: JSON.stringify({ repo: targetRepo }),
+      signal: abortController.signal
     });
 
     const data = await res.json();
@@ -185,8 +200,8 @@ async function runDashboardAnalysis(repoInput, token = '') {
     clearBanner();
     renderDashboard(data);
 
-    // Update query string in URL without page refresh
-    if (window.history && typeof window.history.replaceState === 'function') {
+    // Update query string in URL without page refresh (safe: never stores PAT)
+    if (window?.history && typeof window.history.replaceState === 'function') {
       const url = new URL(window.location.href);
       url.searchParams.set('repo', data.repository.fullName);
       window.history.replaceState(null, '', url.toString());
@@ -194,22 +209,37 @@ async function runDashboardAnalysis(repoInput, token = '') {
 
     if (resultsEl) {
       resultsEl.style.display = 'block';
-      resultsEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      const prefersReducedMotion =
+        typeof window !== 'undefined' &&
+        window.matchMedia &&
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      resultsEl.scrollIntoView({
+        behavior: prefersReducedMotion ? 'auto' : 'smooth',
+        block: 'start'
+      });
     }
   } catch (err) {
+    if (err.name === 'AbortError') {
+      // Ignored: aborted due to a newer request
+      return;
+    }
     showBanner(err.message || 'An unexpected error occurred during repository analysis.', 'error');
   } finally {
-    setLoading(false);
+    if (activeAbortController === abortController) {
+      activeAbortController = null;
+      setLoading(false);
+    }
   }
 }
 
-function renderDashboard(data) {
+export function renderDashboard(data) {
   const { repository, summary, modules, prioritizedRecommendations } = data;
 
   // 1. Render Repository Metadata Card
   if (repoLink) {
     repoLink.textContent = repository.fullName;
-    repoLink.href = repository.htmlUrl || `https://github.com/${repository.fullName}`;
+    const rawUrl = repository.htmlUrl || `https://github.com/${repository.fullName}`;
+    repoLink.href = sanitizeUrl(rawUrl, `https://github.com/${repository.fullName}`);
   }
 
   if (badgeVisibility) {
@@ -264,20 +294,21 @@ function renderDashboard(data) {
       recommendationsList.innerHTML = prioritizedRecommendations
         .map((rec) => {
           const pBadge = getPriorityBadgeClass(rec.priority);
+          const safeActionUrl = sanitizeUrl(rec.actionUrl, '#');
           return `
           <div class="card" style="padding: var(--space-3); border-left: 3px solid var(--color-${
             rec.priority === 'high' ? 'danger' : rec.priority === 'medium' ? 'attention' : 'accent'
           }-fg);">
             <div class="cluster-between" style="align-items: flex-start; gap: var(--space-2);">
-              <div class="stack-xs" style="flex: 1;">
+              <div class="stack-xs" style="flex: 1; min-width: 0;">
                 <div class="cluster" style="gap: var(--space-2); align-items: center;">
                   <span class="badge ${pBadge}">${escapeHtml(rec.priority.toUpperCase())}</span>
                   <span class="badge badge-neutral">${escapeHtml(rec.module)}</span>
-                  <strong style="font-size: 0.95rem;">${escapeHtml(rec.title)}</strong>
+                  <strong style="font-size: 0.95rem; overflow-wrap: break-word;">${escapeHtml(rec.title)}</strong>
                 </div>
-                <p class="text-sm text-muted" style="margin: 0;">${escapeHtml(rec.description)}</p>
+                <p class="text-sm text-muted" style="margin: 0; overflow-wrap: break-word;">${escapeHtml(rec.description)}</p>
               </div>
-              <a href="${escapeHtml(rec.actionUrl)}" class="btn btn-secondary btn-sm" style="flex-shrink: 0;">${escapeHtml(
+              <a href="${escapeHtml(safeActionUrl)}" class="btn btn-secondary btn-sm" style="flex-shrink: 0;">${escapeHtml(
                 rec.actionLabel || 'Fix'
               )} &rarr;</a>
             </div>
@@ -295,7 +326,7 @@ function renderDashboard(data) {
     const mod = modules[key];
     if (!mod) continue;
 
-    // Badge styling and text
+    // Badge styling and text: strict separation between executionStatus and healthStatus
     if (cfg.badge) {
       if (mod.executionStatus === 'failed' || mod.status === 'failed') {
         cfg.badge.textContent = 'Failed';
@@ -363,6 +394,7 @@ function renderDashboard(data) {
 if (form) {
   form.addEventListener('submit', (e) => {
     e.preventDefault();
+    if (isAnalyzing) return; // Prevent duplicate concurrent submissions
     const repo = repoInputEl?.value?.trim();
     const token = tokenInputEl?.value?.trim();
     if (repo) {
@@ -372,8 +404,7 @@ if (form) {
 }
 
 // Initial query param check e.g. /dashboard.html?repo=owner/repo
-const urlParams = new URLSearchParams(window.location.search);
-const initialRepoParam = urlParams.get('repo');
+const initialRepoParam = getQueryParam('repo');
 if (initialRepoParam && repoInputEl) {
   repoInputEl.value = initialRepoParam;
   runDashboardAnalysis(initialRepoParam);
