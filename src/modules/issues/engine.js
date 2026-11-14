@@ -685,3 +685,72 @@ export function generateReleaseNotesFromPulls({
  * @param {string|object} raw
  * @returns {object}
  */
+export function parseOpenWorkersConfig(raw = '') {
+  const defaults = {
+    version: 1,
+    enabled: false,
+    issues: {
+      labeling: { enabled: false, rules: [] },
+      stale: { enabled: false, days: 30, exemptLabels: DEFAULT_EXEMPT_STALE_LABELS }
+    },
+    pullRequests: {
+      sizeLabeling: { enabled: false },
+      welcome: { enabled: false, message: null },
+      qualityChecks: { enabled: false }
+    }
+  };
+
+  if (!raw) return defaults;
+
+  // Simple key-value / YAML-subset parser or JSON
+  if (typeof raw === 'object') {
+    return {
+      version: raw.version || 1,
+      enabled: Boolean(raw.enabled),
+      issues: {
+        labeling: {
+          enabled: Boolean(raw.issues?.labeling?.enabled),
+          rules: Array.isArray(raw.issues?.labeling?.rules) ? raw.issues.labeling.rules : []
+        },
+        stale: {
+          enabled: Boolean(raw.issues?.stale?.enabled),
+          days: Number(raw.issues?.stale?.days) || 30,
+          exemptLabels: Array.isArray(raw.issues?.stale?.exemptLabels) ? raw.issues.stale.exemptLabels : DEFAULT_EXEMPT_STALE_LABELS
+        }
+      },
+      pullRequests: {
+        sizeLabeling: { enabled: Boolean(raw.pullRequests?.sizeLabeling?.enabled) },
+        welcome: {
+          enabled: Boolean(raw.pullRequests?.welcome?.enabled),
+          message: typeof raw.pullRequests?.welcome?.message === 'string' ? raw.pullRequests.welcome.message : null
+        },
+        qualityChecks: { enabled: Boolean(raw.pullRequests?.qualityChecks?.enabled) }
+      }
+    };
+  }
+
+  try {
+    const parsed = JSON.parse(raw);
+    return parseOpenWorkersConfig(parsed);
+  } catch {
+    // If not JSON, check simple yaml flags
+    const enabled = /enabled:\s*true/i.test(raw);
+    const welcomeEnabled = /welcome:[\s\S]*?enabled:\s*true/i.test(raw);
+    const sizeEnabled = /size(Labeling)?:[\s\S]*?enabled:\s*true/i.test(raw);
+    const labelingEnabled = /labeling:[\s\S]*?enabled:\s*true/i.test(raw);
+
+    return {
+      version: 1,
+      enabled,
+      issues: {
+        labeling: { enabled: labelingEnabled, rules: [] },
+        stale: { enabled: false, days: 30, exemptLabels: DEFAULT_EXEMPT_STALE_LABELS }
+      },
+      pullRequests: {
+        sizeLabeling: { enabled: sizeEnabled },
+        welcome: { enabled: welcomeEnabled, message: null },
+        qualityChecks: { enabled: false }
+      }
+    };
+  }
+}
