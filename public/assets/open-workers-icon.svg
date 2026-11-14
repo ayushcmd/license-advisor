@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200" role="img" aria-label="Open Workers Icon">
+  <rect x="16" y="16" width="168" height="168" rx="38" fill="#0D1117" />
+  <!-- Connecting stem between top and bottom-left rings -->
+  <line x1="72" y1="72" x2="72" y2="132" stroke="#34D058" stroke-width="12" stroke-linecap="round" />
+  <!-- Branch from top ring over to right and down -->
+  <path d="M 72 72 H 108 A 20 20 0 0 1 128 92 V 116" fill="none" stroke="#34D058" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" />
+  <!-- Downward arrow head pointing into bottom-right ring -->
+  <path d="M 115 106 L 128 119 L 141 106" fill="none" stroke="#34D058" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" />
+  <!-- Three node rings (top, bottom-left, bottom-right) -->
+  <circle cx="72" cy="72" r="17" fill="#0D1117" stroke="#34D058" stroke-width="10" />
+  <circle cx="72" cy="132" r="17" fill="#0D1117" stroke="#34D058" stroke-width="10" />
+  <circle cx="128" cy="132" r="17" fill="#0D1117" stroke="#34D058" stroke-width="10" />
+</svg>

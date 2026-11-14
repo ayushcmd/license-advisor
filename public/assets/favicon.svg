@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" role="img" aria-label="Open Workers Favicon">
+  <rect x="2" y="2" width="28" height="28" rx="6.5" fill="#0D1117" />
+  <line x1="11.5" y1="11.5" x2="11.5" y2="21" stroke="#34D058" stroke-width="2.2" stroke-linecap="round" />
+  <path d="M 11.5 11.5 H 17.5 A 3.5 3.5 0 0 1 21 15 V 18.5" fill="none" stroke="#34D058" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
+  <path d="M 18.8 16.8 L 21 19 L 23.2 16.8" fill="none" stroke="#34D058" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+  <circle cx="11.5" cy="11.5" r="3" fill="#0D1117" stroke="#34D058" stroke-width="1.8" />
+  <circle cx="11.5" cy="21" r="3" fill="#0D1117" stroke="#34D058" stroke-width="1.8" />
+  <circle cx="21" cy="21" r="3" fill="#0D1117" stroke="#34D058" stroke-width="1.8" />
+</svg>

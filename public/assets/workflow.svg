@@ -1,68 +1,88 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 220" width="1100" height="220" role="img" aria-labelledby="workflowTitle workflowDesc">
-  <title id="workflowTitle">Open License Advisor 4-Stage Architecture Workflow</title>
-  <desc id="workflowDesc">Horizontal diagram depicting Policy Evaluation, Repository Audit, Isolated Branch creation, and Pull Request Review.</desc>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 240" width="1100" height="240" role="img" aria-labelledby="workflowTitle workflowDesc">
+  <title id="workflowTitle">Open Workers Platform Architecture &amp; Workflow</title>
+  <desc id="workflowDesc">Architectural flow: GitHub / Browser to Express API, Capability Modules, Shared GitHub Services, and Reviewable Pull Requests.</desc>
 
   <!-- Outer container -->
-  <rect x="1" y="1" width="1098" height="218" rx="12" fill="#FFFFFF" stroke="#D0D7DE" stroke-width="2" />
+  <rect x="2" y="2" width="1096" height="236" rx="14" fill="#FFFFFF" stroke="#D0D7DE" stroke-width="2" />
 
-  <!-- Stage 1: Policy Evaluation -->
-  <g>
-    <rect x="34" y="34" width="228" height="152" rx="10" fill="#FFFFFF" stroke="#D0D7DE" stroke-width="2" />
-    <rect x="34" y="34" width="228" height="6" rx="3" fill="#24292F" />
-    <text x="52" y="70" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" font-weight="700" fill="#24292F">1. Policy Evaluation</text>
-    <text x="52" y="98" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" fill="#57606A">Inputs: Distribution,</text>
-    <text x="52" y="118" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" fill="#57606A">Copyleft, Patents, and</text>
-    <text x="52" y="138" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" fill="#57606A">Network-Use triggers</text>
-    <rect x="52" y="154" width="128" height="20" rx="10" fill="#F6F8FA" stroke="#D0D7DE" stroke-width="1" />
-    <text x="116" y="168" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" fill="#24292F">Language-Agnostic</text>
+  <!-- Block 1: GitHub / Browser -->
+  <g transform="translate(24, 28)">
+    <rect x="0" y="0" width="190" height="184" rx="10" fill="#FFFFFF" stroke="#D0D7DE" stroke-width="2" />
+    <rect x="0" y="0" width="190" height="6" rx="3" fill="#24292F" />
+    <text x="18" y="34" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="14" font-weight="700" fill="#24292F">1. GitHub / Browser</text>
+    <text x="18" y="62" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="12" fill="#57606A">&bull; Web Application</text>
+    <text x="18" y="84" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="12" fill="#57606A">&bull; REST API Requests</text>
+    <text x="18" y="106" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="12" fill="#57606A">&bull; GitHub App Events</text>
+    <text x="18" y="128" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="12" fill="#57606A">&bull; Public Repository Scans</text>
+    <rect x="18" y="148" width="120" height="20" rx="10" fill="#F6F8FA" stroke="#D0D7DE" stroke-width="1" />
+    <text x="78" y="162" text-anchor="middle" font-family="ui-monospace, monospace" font-size="10" fill="#24292F">Client / Webhook</text>
   </g>
 
   <!-- Arrow 1 -> 2 -->
-  <line x1="266" y1="110" x2="290" y2="110" stroke="#2DA44E" stroke-width="3" />
-  <polygon points="288,103 300,110 288,117" fill="#2DA44E" />
+  <line x1="218" y1="120" x2="238" y2="120" stroke="#2DA44E" stroke-width="3" />
+  <polygon points="236,114 246,120 236,126" fill="#2DA44E" />
 
-  <!-- Stage 2: Repository Audit -->
-  <g>
-    <rect x="302" y="34" width="228" height="152" rx="10" fill="#FFFFFF" stroke="#D0D7DE" stroke-width="2" />
-    <rect x="302" y="34" width="228" height="6" rx="3" fill="#0969DA" />
-    <text x="320" y="70" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" font-weight="700" fill="#24292F">2. Repository Audit</text>
-    <text x="320" y="98" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" fill="#57606A">Checks LICENSE, NOTICE,</text>
-    <text x="320" y="118" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" fill="#57606A">&amp; dependency manifests</text>
-    <text x="320" y="138" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" fill="#57606A">via GitHub REST API</text>
-    <rect x="320" y="154" width="126" height="20" rx="10" fill="#DDF4FF" stroke="#54AEFF" stroke-width="1" />
-    <text x="383" y="168" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" fill="#0969DA">Stateless Lookup</text>
+  <!-- Block 2: Express API -->
+  <g transform="translate(250, 28)">
+    <rect x="0" y="0" width="190" height="184" rx="10" fill="#FFFFFF" stroke="#D0D7DE" stroke-width="2" />
+    <rect x="0" y="0" width="190" height="6" rx="3" fill="#0969DA" />
+    <text x="18" y="34" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="14" font-weight="700" fill="#24292F">2. Express API</text>
+    <text x="18" y="62" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="12" fill="#57606A">&bull; Helmet CSP &amp; CORS</text>
+    <text x="18" y="84" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="12" fill="#57606A">&bull; Input Sanitization</text>
+    <text x="18" y="106" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="12" fill="#57606A">&bull; Caller In-Memory Auth</text>
+    <text x="18" y="128" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="12" fill="#57606A">&bull; HMAC Webhook Check</text>
+    <rect x="18" y="148" width="128" height="20" rx="10" fill="#DDF4FF" stroke="#54AEFF" stroke-width="1" />
+    <text x="82" y="162" text-anchor="middle" font-family="ui-monospace, monospace" font-size="10" fill="#0969DA">Zero Database</text>
   </g>
 
   <!-- Arrow 2 -> 3 -->
-  <line x1="534" y1="110" x2="558" y2="110" stroke="#2DA44E" stroke-width="3" />
-  <polygon points="556,103 568,110 556,117" fill="#2DA44E" />
+  <line x1="444" y1="120" x2="464" y2="120" stroke="#2DA44E" stroke-width="3" />
+  <polygon points="462,114 472,120 462,126" fill="#2DA44E" />
 
-  <!-- Stage 3: Isolated Branch -->
-  <g>
-    <rect x="570" y="34" width="228" height="152" rx="10" fill="#FFFFFF" stroke="#D0D7DE" stroke-width="2" />
-    <rect x="570" y="34" width="228" height="6" rx="3" fill="#24292F" />
-    <text x="588" y="70" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" font-weight="700" fill="#24292F">3. Isolated Branch</text>
-    <text x="588" y="98" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" fill="#57606A">Creates branch</text>
-    <text x="588" y="118" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12" fill="#0969DA">chore/add-license-&lt;spdx&gt;</text>
-    <text x="588" y="138" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" fill="#57606A">Aborts 409 if LICENSE exists</text>
-    <rect x="588" y="154" width="144" height="20" rx="10" fill="#F6F8FA" stroke="#D0D7DE" stroke-width="1" />
-    <text x="660" y="168" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" fill="#24292F">Default Branch Safe</text>
+  <!-- Block 3: Capability Modules -->
+  <g transform="translate(476, 28)">
+    <rect x="0" y="0" width="190" height="184" rx="10" fill="#FFFFFF" stroke="#D0D7DE" stroke-width="2" />
+    <rect x="0" y="0" width="190" height="6" rx="3" fill="#2DA44E" />
+    <text x="18" y="34" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="14" font-weight="700" fill="#24292F">3. Capability Modules</text>
+    <text x="18" y="62" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="12" fill="#166534">&bull; Licensing (Available)</text>
+    <text x="18" y="84" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="12" fill="#166534">&bull; Community (Available)</text>
+    <text x="18" y="106" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="12" fill="#57606A">&bull; Security (Upcoming)</text>
+    <text x="18" y="128" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="12" fill="#57606A">&bull; Docs &amp; Automation</text>
+    <rect x="18" y="148" width="140" height="20" rx="10" fill="#DCFCE7" stroke="#4ADE80" stroke-width="1" />
+    <text x="88" y="162" text-anchor="middle" font-family="ui-monospace, monospace" font-size="10" fill="#166534">Inspect / Recommend</text>
   </g>
 
   <!-- Arrow 3 -> 4 -->
-  <line x1="802" y1="110" x2="826" y2="110" stroke="#2DA44E" stroke-width="3" />
-  <polygon points="824,103 836,110 824,117" fill="#2DA44E" />
+  <line x1="670" y1="120" x2="690" y2="120" stroke="#2DA44E" stroke-width="3" />
+  <polygon points="688,114 698,120 688,126" fill="#2DA44E" />
 
-  <!-- Stage 4: Pull Request Review -->
-  <g>
-    <rect x="838" y="34" width="228" height="152" rx="10" fill="#FFFFFF" stroke="#2DA44E" stroke-width="2" />
-    <rect x="838" y="34" width="228" height="6" rx="3" fill="#2DA44E" />
-    <text x="856" y="70" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" font-weight="700" fill="#24292F">4. Pull Request Review</text>
-    <text x="856" y="98" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" fill="#57606A">Opens formatted PR via</text>
-    <text x="856" y="118" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12" fill="#2DA44E">open-license-advisor[bot]</text>
-    <text x="856" y="138" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" fill="#57606A">for maintainer merge</text>
-    <rect x="856" y="154" width="136" height="20" rx="10" fill="#DAFBE1" stroke="#4AC26B" stroke-width="1" />
-    <text x="924" y="168" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" fill="#1A7F37">Human Merge Control</text>
+  <!-- Block 4: Shared GitHub Services -->
+  <g transform="translate(702, 28)">
+    <rect x="0" y="0" width="190" height="184" rx="10" fill="#FFFFFF" stroke="#D0D7DE" stroke-width="2" />
+    <rect x="0" y="0" width="190" height="6" rx="3" fill="#0969DA" />
+    <text x="18" y="34" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="14" font-weight="700" fill="#24292F">4. Shared Services</text>
+    <text x="18" y="62" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="12" fill="#57606A">&bull; Tree Inspection</text>
+    <text x="18" y="84" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="12" fill="#57606A">&bull; @octokit/app Client</text>
+    <text x="18" y="106" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="12" fill="#57606A">&bull; Branch &amp; Commit</text>
+    <text x="18" y="128" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="12" fill="#57606A">&bull; Conflict &amp; SHA Guards</text>
+    <rect x="18" y="148" width="134" height="20" rx="10" fill="#F6F8FA" stroke="#D0D7DE" stroke-width="1" />
+    <text x="85" y="162" text-anchor="middle" font-family="ui-monospace, monospace" font-size="10" fill="#24292F">Least-Privilege</text>
+  </g>
+
+  <!-- Arrow 4 -> 5 -->
+  <line x1="896" y1="120" x2="916" y2="120" stroke="#2DA44E" stroke-width="3" />
+  <polygon points="914,114 924,120 914,126" fill="#2DA44E" />
+
+  <!-- Block 5: Reviewable PR -->
+  <g transform="translate(928, 28)">
+    <rect x="0" y="0" width="148" height="184" rx="10" fill="#FFFFFF" stroke="#D0D7DE" stroke-width="2" />
+    <rect x="0" y="0" width="148" height="6" rx="3" fill="#2DA44E" />
+    <text x="14" y="34" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="14" font-weight="700" fill="#24292F">5. Reviewable PR</text>
+    <text x="14" y="62" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="12" fill="#57606A">&bull; chore/* Branch</text>
+    <text x="14" y="84" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="12" fill="#57606A">&bull; Atomic Commits</text>
+    <text x="14" y="106" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="12" fill="#57606A">&bull; Full Audit Trail</text>
+    <text x="14" y="128" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="12" fill="#57606A">&bull; Zero Code Retained</text>
+    <rect x="14" y="148" width="120" height="20" rx="10" fill="#DCFCE7" stroke="#4ADE80" stroke-width="1" />
+    <text x="74" y="162" text-anchor="middle" font-family="ui-monospace, monospace" font-size="10" fill="#166534">Ready to Merge</text>
   </g>
 </svg>
-

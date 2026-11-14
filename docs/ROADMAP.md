@@ -1,83 +1,92 @@
 # Open Workers — Development Roadmap
 
-This document outlines the phased evolution of **Open Workers** from a standalone license advisor into a multi-purpose repository automation suite.
+This document outlines the phased evolution of **Open Workers**, organized around our **six core product modules**.
 
 ---
 
-## Evolution Timeline
+## 1. Evolution Timeline
 
 ```
-[Phase 1: Licensing Core]  -->  [Phase 2: Registry & Standards]  -->  [Phase 3: Community PRs & Rename]
+[Phase 1: Licensing Core]  -->  [Phase 2: Registry & Standards]  -->  [Phase 3: Community PRs & Branding]
          COMPLETED                           COMPLETED                             COMPLETED (Current)
                                                                                           |
                                                                                           v
-[Phase 4: Workflow Automation]  <--  [Phase 5: Release Automation]  <--  [Phase 6: Quality & Security]
+[Phase 4: Security Module]     -->  [Phase 5: Documentation]     -->  [Phase 6: PR, Issues & Automation]
             PLANNED                             PLANNED                             PLANNED
                                                                                           |
                                                                                           v
-                                                                        [Phase 7: Production Rebranding]
+                                                                      [Phase 7: Production Rebranding Cutover]
                                                                                    PLANNED
 ```
 
 ---
 
-## Phase Breakdown
+## 2. Completed Milestones
 
 ### Phase 1: Licensing Core (Completed)
+- 12 OSI-approved SPDX license catalog with full legal texts, permissions, and conditions.
 - Deterministic 4-question licensing recommendation engine.
-- 12 OSI-approved SPDX license catalog with full legal texts.
 - Interactive Explorer, Comparator, and Questionnaire frontend pages.
-- Public repository analyzer auditing `LICENSE`, `NOTICE`, manifests, and README badges.
+- Public repository license analyzer auditing root files, notices, manifests, and badges.
 - Automated Pull Request flow via GitHub App creating `chore/add-license-<spdx>` branches.
-- HMAC SHA-256 webhook verification with duplicate delivery protection.
-- Apache-2.0 repository license with attribution requirements.
+- Webhook HMAC SHA-256 verification and delivery deduplication.
+- Apache-2.0 license adoption with attribution preservation in `NOTICE`.
 
 ### Phase 2: Capability Registry & Initial Standards (Completed)
-- Capability registry (`src/core/capabilities/registry.js`) establishing clear service boundaries across 6 modules.
+- Capability registry (`src/core/capabilities/registry.js`) establishing clear service boundaries across the six core product modules.
 - Initial community document generators: `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md` (Contributor Covenant 3.0), `SECURITY.md`, `SUPPORT.md`.
 - Shared PR and branch infrastructure (`src/core/pullRequests/`).
 - Initial community web UI (`public/community.html`).
 
-### Phase 3: Community Module Completion & Repository Rename (Completed — Current)
-- **Repository Rename:** Renamed GitHub repository from `ayushcmd/license-advisor` to `ayushcmd/open-workers` and updated local git remote.
+### Phase 3: Community Module Completion & Repository Rename (Completed)
+- **Repository Rename:** Renamed GitHub repository from `ayushcmd/license-advisor` to `ayushcmd/open-workers` and updated git remotes.
 - **Issue Templates Generator:** Structured GitHub issue forms (`bug_report.md`, `feature_request.md`, `documentation.md`) under `.github/ISSUE_TEMPLATE/` with YAML front matter validation.
 - **PR Template Generator:** Pull request template (`.github/PULL_REQUEST_TEMPLATE.md`) with contributor checklists and testing guidelines.
-- **Community Health Audit:** Comprehensive inspection across root, `.github/`, and `docs/` directories with health scoring and actionable findings (`POST /api/community/analyze`).
+- **Community Health Audit:** Deep inspection across root, `.github/`, and `docs/` directories for 6 standard files with health scoring (`POST /api/community/analyze`).
 - **Consolidated Community PRs:** Multi-document selection, conflict preview (`POST /api/community/preview-pr`), caller authorization check, and single-PR deployment via GitHub App (`POST /api/community/trigger-pr`).
-- **Comprehensive Test Suite:** 77 passing tests across 14 test suites with zero failures.
+- **Branding Implementation:** Official Open Workers logo, favicon suite, banner, social card, and updated architecture diagrams.
+- **Test Suite:** 77 passing tests across 14 test suites with zero failures.
 
 ---
 
-## Upcoming Phases
+## 3. Phased Roadmap (Six Core Modules)
 
-### Phase 4: Workflow Automation Module (`workflows`)
-- **Objective:** Streamline CI/CD pipeline configuration and Action health management.
-- **Key Features:**
-  - Automated generation of starter GitHub Actions workflows:
-    - Node.js test & build workflow (`.github/workflows/ci.yml`).
-    - Multi-platform matrix testing workflow.
-    - Automated pull request labeling and size checks.
-  - Action Health Inspector: Audit repository `.github/workflows/` for deprecated actions, unpinned third-party actions, and missing timeout settings.
-  - Consolidated Workflow PR: Submit selected GitHub Actions workflows directly via GitHub App.
+### Phase 4: Security Module (`security`)
+- **Objective:** Provide actionable repository security audits, automated security configurations, and vulnerability guidance.
+- **Deliverables:**
+  - Dependabot configuration generator (`.github/dependabot.yml`) supporting npm, GitHub Actions, pip, etc.
+  - CodeQL static analysis starter workflow.
+  - Branch protection rule recommendations and audit.
+  - Security configuration health scorecard.
+  - Integration with GitHub App to open security configuration Pull Requests (`chore/configure-security`).
 
-### Phase 5: Release Management Module (`releases`)
-- **Objective:** Automate release preparation, semantic versioning, and changelogs.
-- **Key Features:**
-  - Conventional Commits analyzer to calculate the next semantic version (`major`, `minor`, `patch`).
-  - Automated `CHANGELOG.md` generator categorizing features, fixes, and breaking changes.
-  - Automated Release Preparation PR: Bumps package versions, updates changelogs, and drafts GitHub Releases.
+### Phase 5: Documentation Module (`documentation`)
+- **Objective:** Help developers maintain accurate, complete, and engaging project documentation.
+- **Deliverables:**
+  - Repository README analysis: completeness score, missing sections detector (Installation, Usage, Contributing, License).
+  - Automated `CHANGELOG.md` generator based on Conventional Commits history.
+  - Shields.io badge generator for licenses, build status, versioning, and documentation.
+  - Markdown broken-link auditor for repository documentation.
+  - Pull Request workflow to deploy documentation enhancements (`chore/improve-docs`).
 
-### Phase 6: Code Quality & Security Standards (`quality` & `security`)
-- **Objective:** Enforce coding consistency and security defaults.
-- **Key Features:**
-  - Generator for code style configs: `.editorconfig`, `.prettierrc`, ESLint configs.
-  - Dependabot configuration generator (`.github/dependabot.yml`) with scheduled dependency updates.
-  - Security advisory and vulnerability scanning guidance.
+### Phase 6: PR & Issue Management (`issues`) and Repository Automation (`automation`)
+- **Objective:** Streamline everyday maintenance workflows, issue triage, and continuous integration.
+- **PR & Issue Management Deliverables:**
+  - Automated rule-based labeling for incoming issues and pull requests.
+  - First-time contributor welcome bot with customizable responses.
+  - Pull request checklist verification.
+  - Stale issue and inactive PR triage rules.
+  - Release notes compilation from merged PR labels and milestone data.
+- **Repository Automation Deliverables:**
+  - GitHub Actions CI starter workflow generator (Node.js, Python, multi-platform matrix).
+  - Action Health Inspector: detects unpinned 3rd-party actions, deprecated runners, and missing timeout settings.
+  - Code style configuration generator (`.editorconfig`, `.prettierrc`, ESLint).
+  - Opt-in scheduled maintenance tasks.
 
-### Phase 7: Production App & Marketplace Rebranding
+### Phase 7: Production App & Marketplace Rebranding Cutover
 - **Objective:** Final cutover of external production integrations.
-- **Key Features:**
-  - Rename GitHub App from `open-license-advisor` to `open-workers` on `github.com/settings/apps`.
+- **Deliverables:**
+  - Rename production GitHub App from `open-license-advisor` to `open-workers` on `github.com/settings/apps`.
   - Update GitHub Marketplace listing title, description, and icons to **Open Workers**.
   - Migrate production Render domain from `license-advisor.onrender.com` to `open-workers.onrender.com` with 301 redirects.
   - Update environment variables (`GITHUB_APP_SLUG`, etc.) across deployment environments.
