@@ -107,17 +107,30 @@ This matrix documents the capability status, API endpoints, user interfaces, req
 
 ---
 
-## 3. Two-Layer Permission & Security Architecture
+## 3. Multi-Layer Permission & Security Architecture
 
-1. **User Identity & Write Permission Layer:**
-   - Callers initiating mutation requests pass a GitHub token in the `Authorization: Bearer <token>` header.
-   - The token is verified in-memory against the GitHub REST API (`@octokit/rest`).
+1. **User Identity & Read Authorization Layer (Private Repositories):**
+   - Callers initiating inspection of private repositories pass a GitHub user token in the `Authorization: Bearer <token>` header across all module audit endpoints (`POST /api/analyze`, `POST /api/community/audit`, `POST /api/security/audit`, `POST /api/documentation/audit`, `POST /api/issues/stale`, `POST /api/automation/audit`, `POST /api/dashboard/analyze`).
+   - The token is verified in-memory using `authorizeRepositoryRead()`, authenticating the caller and verifying collaborator permission level (`read`, `triage`, `write`, `admin`, `maintain`).
+   - Anonymous callers cannot query private repositories through GitHub App installation credentials.
+   - Tokens are never persisted on disk, cached in memory, or logged.
+
+2. **User Identity & Write Permission Layer (Mutations):**
+   - Callers initiating mutation requests pass a GitHub user token in the `Authorization: Bearer <token>` header.
+   - The token is verified in-memory using `authorizeRepositoryWrite()`.
    - The caller must hold `admin`, `maintain`, or `write` collaborator permissions on the target repository.
-   - Tokens are never stored on disk, cached in memory, or logged.
-2. **Execution Layer:**
+
+3. **Execution Layer & GitHub App Permission Matrix:**
    - Once authorized, mutations are executed using the GitHub App's scoped installation credentials.
-   - Permissions are strictly least-privilege: `contents: write` and `pull_requests: write`.
-3. **Branch Isolation & Conflict Guards:**
+   - GitHub App Permissions:
+     - `metadata: read` &mdash; Repository metadata, default branch, visibility
+     - `contents: write` &mdash; Feature branch creation and file commits
+     - `pull_requests: write` &mdash; Pull request creation and management
+     - `issues: write` &mdash; Issue labeling and comment posting
+     - `workflows: write` &mdash; (Optional) Required only when committing GitHub Actions workflow files under `.github/workflows/`
+
+4. **Branch Isolation & Conflict Guards:**
    - Changes are committed exclusively to isolated feature branches (`chore/*`).
    - The repository's default branch is never modified directly.
    - Pre-commit conflict checks prevent overwriting existing files unless explicit `replaceExisting: true` opt-in is provided.
+   - All mutations track blob SHAs for optimistic concurrency.
