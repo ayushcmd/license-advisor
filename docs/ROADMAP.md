@@ -12,7 +12,7 @@ This document outlines the phased evolution of **Open Workers**, organized aroun
                                                                                           |
                                                                                           v
 [Phase 4: Security Module]     -->  [Phase 5: Documentation]     -->  [Phase 6: PR, Issues & Automation]
-    COMPLETED (Current)                     PLANNED                             PLANNED
+         COMPLETED                           COMPLETED                             PLANNED
                                                                                           |
                                                                                           v
                                                                       [Phase 7: Production Rebranding Cutover]
@@ -53,6 +53,15 @@ This document outlines the phased evolution of **Open Workers**, organized aroun
 - **Security PR Previews & Automation:** Conflict detection (`POST /api/security/preview-pr`) and automated PR creation (`POST /api/security/trigger-pr`) with dedicated branch isolation, caller authorization, and explicit `workflows: write` permission safety checks.
 - **Test Suite:** 103 passing tests across 19 test suites with zero failures.
 
+### Phase 5: Documentation Module & Quality Automation (Completed)
+- **Repository README Completeness & Structure Audit:** Non-destructive inspection of README format, essential sections, dedicated `docs/` folder, and changelog (`POST /api/documentation/analyze`).
+- **README Generator & Improvement Assistant:** Generates clean initial scaffolds or non-destructively injects missing sections into existing READMEs while strictly preserving license notices and existing text (`POST /api/documentation/generate`).
+- **Conventional Commits Changelog Generator:** Inspects commit histories, categorizes commits into semantic Conventional Commits groups, and prepends to `CHANGELOG.md` (`POST /api/documentation/generate`).
+- **Shields.io Status Badge Generator:** Deterministic badge Markdown generator supporting License, Workflow, Release, Stars, Issues, Contributors, and Node.js badges (`POST /api/documentation/generate`).
+- **Markdown Broken Link Checker:** Validates relative repository paths and external URLs with SSRF protection blocking private IP, loopback, and cloud metadata targets (`POST /api/documentation/check-links`).
+- **Documentation PR Automation:** Pre-commit preview (`POST /api/documentation/preview-pr`) and automated PR creation on `chore/improve-docs` (`POST /api/documentation/trigger-pr`) with caller in-memory write authorization.
+- **Test Suite:** 127 passing tests across 26 test suites with zero failures.
+
 ---
 
 ## 3. Phased Roadmap (Six Core Modules)
@@ -66,13 +75,14 @@ This document outlines the phased evolution of **Open Workers**, organized aroun
   - Security configuration health scorecard.
   - Integration with GitHub App to open security configuration Pull Requests (`chore/configure-security`).
 
-### Phase 5: Documentation Module (`documentation`)
+### Phase 5: Documentation Module (`documentation`) — Completed
 - **Objective:** Help developers maintain accurate, complete, and engaging project documentation.
 - **Deliverables:**
   - Repository README analysis: completeness score, missing sections detector (Installation, Usage, Contributing, License).
   - Automated `CHANGELOG.md` generator based on Conventional Commits history.
   - Shields.io badge generator for licenses, build status, versioning, and documentation.
-  - Markdown broken-link auditor for repository documentation.
+  - Markdown broken-link auditor for repository documentation with SSRF protection.
+  - Pull Request workflow to deploy documentation enhancements (`chore/improve-docs`).
   - Pull Request workflow to deploy documentation enhancements (`chore/improve-docs`).
 
 ### Phase 6: PR & Issue Management (`issues`) and Repository Automation (`automation`)

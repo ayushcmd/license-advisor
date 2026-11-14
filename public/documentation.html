@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Documentation Analysis &amp; Automation — Open Workers</title>
+  <meta name="description" content="Audit repository README completeness, generate structured READMEs and changelogs, build Markdown badges, inspect links safely, and open automated documentation pull requests.">
+  <meta property="og:image" content="https://open-workers.onrender.com/assets/open-workers-social.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://open-workers.onrender.com/assets/open-workers-social.png">
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16.png">
+  <link rel="apple-touch-icon" href="assets/open-workers-icon-128.png">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css">
+</head>
+<body data-page="documentation">
+  <a href="#main-content" class="skip-link">Skip to main content</a>
+
+  <header class="site-header">
+    <div class="container site-header-inner">
+      <a href="index.html" class="brand-link">
+        <img src="assets/open-workers-icon.svg" alt="Open Workers logo" class="brand-logo" width="26" height="26">
+        <span>Open Workers</span>
+      </a>
+      <nav class="site-nav" aria-label="Primary">
+        <a href="/index.html" class="nav-link">Home</a>
+        <a href="/community.html" class="nav-link">Community</a>
+        <a href="/security.html" class="nav-link">Security</a>
+        <a href="/documentation.html" class="nav-link" aria-current="page">Documentation</a>
+        <details class="nav-dropdown">
+          <summary class="nav-link licensing-toggle" aria-controls="licensing-links" aria-expanded="false">Licensing <span class="nav-caret" aria-hidden="true">&#9662;</span></summary>
+          <div id="licensing-links" class="nav-dropdown-panel">
+            <a href="/explorer.html" class="nav-dropdown-link">Explore Licenses</a>
+            <a href="/questionnaire.html" class="nav-dropdown-link">Find a License</a>
+            <a href="/compare.html" class="nav-dropdown-link">Compare Licenses</a>
+            <a href="/app-install.html" class="nav-dropdown-link">Create License PR</a>
+          </div>
+        </details>
+        <a href="/analyzer.html" class="nav-link">Check Repository</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main-content" class="container stack-lg">
+    <section class="page-header stack-sm">
+      <h1>Documentation Analysis &amp; Automation</h1>
+      <p>Audit README completeness, generate structured READMEs and changelogs, build Markdown badges, inspect links, and open documentation pull requests.</p>
+      <nav class="cluster" aria-label="Documentation quick navigation" style="margin-top: var(--space-2);">
+        <a href="#section-audit" class="btn btn-secondary btn-sm">1. Docs Audit</a>
+        <a href="#section-readme" class="btn btn-secondary btn-sm">2. README Tools</a>
+        <a href="#section-changelog" class="btn btn-secondary btn-sm">3. Changelog Generator</a>
+        <a href="#section-badges" class="btn btn-secondary btn-sm">4. Badge Generator</a>
+        <a href="#section-links" class="btn btn-secondary btn-sm">5. Link Checker</a>
+        <a href="#section-pr" class="btn btn-primary btn-sm">6. Create Docs PR</a>
+      </nav>
+    </section>
+
+    <!-- Section 1: Documentation Audit -->
+    <section id="section-audit" class="stack-md" aria-labelledby="heading-audit">
+      <div class="box-header" style="border-radius: var(--radius-md); border: 1px solid var(--color-border-default);">
+        <div>
+          <h2 id="heading-audit" class="box-title">1. Documentation Completeness Audit</h2>
+          <p class="text-small text-muted">Inspect repository README sections, installation guides, usage instructions, docs/ folder, and changelog presence.</p>
+        </div>
+      </div>
+
+      <form id="audit-form" class="cluster" style="align-items: flex-end;">
+        <div class="form-group" style="flex: 1; min-width: 280px; margin-bottom: 0;">
+          <label for="audit-repo" class="form-label">GitHub Repository</label>
+          <input
+            type="text"
+            id="audit-repo"
+            class="input"
+            placeholder="e.g. owner/repo or https://github.com/owner/repo"
+            required
+            autocomplete="off"
+            spellcheck="false"
+          >
+        </div>
+        <button id="audit-submit" class="btn btn-primary" type="submit">Audit Documentation</button>
+      </form>
+
+      <div class="cluster text-small" style="gap: var(--space-2);">
+        <span class="text-muted">Try sample:</span>
+        <button type="button" class="btn btn-secondary btn-sm sample-repo" data-repo="expressjs/express">expressjs/express</button>
+        <button type="button" class="btn btn-secondary btn-sm sample-repo" data-repo="ayushcmd/open-workers">ayushcmd/open-workers</button>
+      </div>
+
+      <div id="audit-error" class="flash flash-error" hidden></div>
+
+      <!-- Audit Results Mount -->
+      <div id="audit-results" class="stack-md" hidden>
+        <div class="box box-body stack-md">
+          <div class="cluster-between">
+            <div>
+              <h3 id="audit-repo-name" style="margin: 0;"></h3>
+              <p id="audit-repo-desc" class="text-small text-muted" style="margin-top: var(--space-1);"></p>
+            </div>
+            <div id="audit-score-container" class="cluster" style="align-items: center;"></div>
+          </div>
+
+          <div id="audit-stats" class="cluster text-small" style="gap: var(--space-3); padding-top: var(--space-2); border-top: 1px solid var(--color-border-muted);"></div>
+
+          <p id="audit-notice" class="text-small text-muted" style="margin: 0;"></p>
+        </div>
+
+        <div class="box">
+          <div class="box-header">
+            <h3 class="box-title">Documentation Standards Evaluation</h3>
+          </div>
+          <div id="audit-checks-list" class="stack-sm" style="padding: var(--space-3);"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 2: README Tools -->
+    <section id="section-readme" class="stack-md" aria-labelledby="heading-readme">
+      <div class="box-header" style="border-radius: var(--radius-md); border: 1px solid var(--color-border-default);">
+        <div>
+          <h2 id="heading-readme" class="box-title">2. README Generator &amp; Improvement Assistant</h2>
+          <p class="text-small text-muted">Generate a clean, structured README from scratch or propose targeted section additions to an existing README without destroying existing content.</p>
+        </div>
+      </div>
+
+      <div class="grid-2" style="align-items: start;">
+        <div class="box box-body stack-md">
+          <div class="cluster" style="gap: var(--space-2); margin-bottom: var(--space-2);">
+            <button type="button" id="tab-readme-new" class="btn btn-primary btn-sm">Generate New README</button>
+            <button type="button" id="tab-readme-improve" class="btn btn-secondary btn-sm">Improve Existing README</button>
+          </div>
+
+          <!-- Mode 1: Generate New README -->
+          <form id="readme-new-form" class="stack-md">
+            <div class="form-group">
+              <label for="readme-project-name" class="form-label">Project Name *</label>
+              <input type="text" id="readme-project-name" class="input" placeholder="e.g. Open Workers" required>
+            </div>
+            <div class="form-group">
+              <label for="readme-description" class="form-label">Short Description</label>
+              <textarea id="readme-description" class="textarea" rows="2" placeholder="Brief summary of project purpose and capabilities..."></textarea>
+            </div>
+            <div class="form-group">
+              <label for="readme-installation" class="form-label">Installation Instructions</label>
+              <textarea id="readme-installation" class="textarea" rows="2" placeholder="e.g. npm install my-package"></textarea>
+            </div>
+            <div class="form-group">
+              <label for="readme-usage" class="form-label">Usage Instructions</label>
+              <textarea id="readme-usage" class="textarea" rows="2" placeholder="e.g. import { run } from 'my-package'; run();"></textarea>
+            </div>
+            <div class="form-group">
+              <label for="readme-license" class="form-label">License</label>
+              <input type="text" id="readme-license" class="input" value="MIT">
+            </div>
+            <button type="submit" class="btn btn-primary">Generate README</button>
+          </form>
+
+          <!-- Mode 2: Improve Existing README -->
+          <form id="readme-improve-form" class="stack-md" hidden>
+            <div class="form-group">
+              <label for="readme-original-content" class="form-label">Existing README Content *</label>
+              <textarea id="readme-original-content" class="textarea" rows="6" placeholder="Paste existing Markdown content here..." required></textarea>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Sections to Add (Skipped if already present)</label>
+              <div class="stack-sm">
+                <label class="cluster" style="align-items: center;">
+                  <input type="checkbox" name="improve-section" value="installation" checked>
+                  <span><strong>Installation</strong></span>
+                </label>
+                <label class="cluster" style="align-items: center;">
+                  <input type="checkbox" name="improve-section" value="usage" checked>
+                  <span><strong>Usage &amp; Examples</strong></span>
+                </label>
+                <label class="cluster" style="align-items: center;">
+                  <input type="checkbox" name="improve-section" value="testing" checked>
+                  <span><strong>Running Tests</strong></span>
+                </label>
+                <label class="cluster" style="align-items: center;">
+                  <input type="checkbox" name="improve-section" value="contributing" checked>
+                  <span><strong>Contributing</strong></span>
+                </label>
+              </div>
+            </div>
+            <button type="submit" class="btn btn-primary">Propose Additions</button>
+          </form>
+        </div>
+
+        <div class="box box-body stack-md">
+          <div class="cluster-between">
+            <span class="text-muted text-small">Preview: <code>README.md</code></span>
+            <div class="cluster" style="gap: var(--space-2);">
+              <button type="button" id="copy-readme" class="btn btn-secondary btn-sm">Copy Markdown</button>
+              <button type="button" id="download-readme" class="btn btn-secondary btn-sm">Download</button>
+            </div>
+          </div>
+          <pre style="margin: 0; max-height: 440px; overflow: auto; background: var(--color-canvas-subtle); padding: var(--space-3); border-radius: var(--radius-sm); font-size: 13px;"><code id="readme-preview"># Click Generate README or Propose Additions to preview...</code></pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 3: Changelog Generator -->
+    <section id="section-changelog" class="stack-md" aria-labelledby="heading-changelog">
+      <div class="box-header" style="border-radius: var(--radius-md); border: 1px solid var(--color-border-default);">
+        <div>
+          <h2 id="heading-changelog" class="box-title">3. Changelog Generator</h2>
+          <p class="text-small text-muted">Compile commit history into structured release notes formatted by Conventional Commits (Features, Bug Fixes, Breaking Changes).</p>
+        </div>
+      </div>
+
+      <div class="grid-2" style="align-items: start;">
+        <form id="changelog-form" class="box box-body stack-md">
+          <div class="form-group">
+            <label for="changelog-version" class="form-label">Release Version *</label>
+            <input type="text" id="changelog-version" class="input" value="1.0.0" required>
+          </div>
+          <div class="form-group">
+            <label for="changelog-date" class="form-label">Release Date</label>
+            <input type="date" id="changelog-date" class="input">
+          </div>
+          <div class="form-group">
+            <label for="changelog-commits" class="form-label">Commit Messages (One per line)</label>
+            <textarea id="changelog-commits" class="textarea" rows="6" placeholder="feat(auth): add OAuth2 provider&#10;fix(router): resolve route collision&#10;docs: update API documentation&#10;BREAKING CHANGE: change configuration schema"></textarea>
+            <span class="text-small text-muted">Accepts Conventional Commits (<code>feat</code>, <code>fix</code>, <code>docs</code>, <code>perf</code>, <code>test</code>, <code>chore</code>).</span>
+          </div>
+          <button type="submit" class="btn btn-primary">Generate Changelog</button>
+        </form>
+
+        <div class="box box-body stack-md">
+          <div class="cluster-between">
+            <span class="text-muted text-small">Target: <code>CHANGELOG.md</code></span>
+            <div class="cluster" style="gap: var(--space-2);">
+              <button type="button" id="copy-changelog" class="btn btn-secondary btn-sm">Copy Changelog</button>
+              <button type="button" id="download-changelog" class="btn btn-secondary btn-sm">Download</button>
+            </div>
+          </div>
+          <pre style="margin: 0; max-height: 440px; overflow: auto; background: var(--color-canvas-subtle); padding: var(--space-3); border-radius: var(--radius-sm); font-size: 13px;"><code id="changelog-preview"># Click Generate Changelog to preview...</code></pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 4: Badge Generator -->
+    <section id="section-badges" class="stack-md" aria-labelledby="heading-badges">
+      <div class="box-header" style="border-radius: var(--radius-md); border: 1px solid var(--color-border-default);">
+        <div>
+          <h2 id="heading-badges" class="box-title">4. Status Badge Generator</h2>
+          <p class="text-small text-muted">Generate standard Markdown status badges for licenses, GitHub Actions CI workflows, releases, and metrics.</p>
+        </div>
+      </div>
+
+      <div class="grid-2" style="align-items: start;">
+        <form id="badge-form" class="box box-body stack-md">
+          <div class="form-group">
+            <label for="badge-type" class="form-label">Badge Type</label>
+            <select id="badge-type" class="select">
+              <option value="license" selected>License Badge</option>
+              <option value="workflow">GitHub Actions CI Workflow</option>
+              <option value="release">Latest Release</option>
+              <option value="stars">GitHub Stars</option>
+              <option value="issues">Open Issues</option>
+              <option value="contributors">Contributors</option>
+              <option value="node">Node.js Version</option>
+              <option value="custom">Custom Static Badge</option>
+            </select>
+          </div>
+
+          <div id="badge-fields" class="stack-md">
+            <div class="form-group">
+              <label for="badge-spdx" class="form-label">SPDX License Identifier</label>
+              <input type="text" id="badge-spdx" class="input" value="Apache-2.0">
+            </div>
+            <div class="form-group">
+              <label for="badge-repo" class="form-label">Repository (owner/repo)</label>
+              <input type="text" id="badge-repo" class="input" value="ayushcmd/open-workers">
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary">Generate Badge</button>
+        </form>
+
+        <div class="box box-body stack-md">
+          <div class="cluster-between">
+            <span class="text-muted text-small">Markdown Snippet</span>
+            <button type="button" id="copy-badge" class="btn btn-secondary btn-sm">Copy Badge</button>
+          </div>
+          <div id="badge-visual-preview" style="padding: var(--space-3); background: var(--color-canvas-subtle); border-radius: var(--radius-sm); min-height: 44px; display: flex; align-items: center;"></div>
+          <pre style="margin: 0; overflow: auto; background: var(--color-canvas-subtle); padding: var(--space-3); border-radius: var(--radius-sm); font-size: 13px;"><code id="badge-preview"># Click Generate Badge to preview...</code></pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 5: Link Checker -->
+    <section id="section-links" class="stack-md" aria-labelledby="heading-links">
+      <div class="box-header" style="border-radius: var(--radius-md); border: 1px solid var(--color-border-default);">
+        <div>
+          <h2 id="heading-links" class="box-title">5. Markdown Link Checker</h2>
+          <p class="text-small text-muted">Inspect internal relative repository links and safely validate external HTTP/HTTPS links against broken URLs.</p>
+        </div>
+      </div>
+
+      <form id="links-form" class="cluster" style="align-items: flex-end;">
+        <div class="form-group" style="flex: 1; min-width: 240px; margin-bottom: 0;">
+          <label for="links-repo" class="form-label">GitHub Repository</label>
+          <input type="text" id="links-repo" class="input" placeholder="e.g. owner/repo" required>
+        </div>
+        <div class="form-group" style="width: 180px; margin-bottom: 0;">
+          <label for="links-path" class="form-label">File Path</label>
+          <input type="text" id="links-path" class="input" value="README.md" required>
+        </div>
+        <button id="links-submit" class="btn btn-primary" type="submit">Check Links</button>
+      </form>
+
+      <div id="links-error" class="flash flash-error" hidden></div>
+
+      <div id="links-results" class="stack-md" hidden>
+        <div class="box box-body stack-md">
+          <div id="links-summary-stats" class="cluster text-small" style="gap: var(--space-3);"></div>
+          <div id="links-table-container" style="overflow-x: auto;">
+            <table class="table" style="width: 100%; border-collapse: collapse; font-size: 13px;">
+              <thead>
+                <tr style="border-bottom: 1px solid var(--color-border-default); text-align: left;">
+                  <th style="padding: 8px;">Line</th>
+                  <th style="padding: 8px;">Text</th>
+                  <th style="padding: 8px;">URL / Target</th>
+                  <th style="padding: 8px;">Type</th>
+                  <th style="padding: 8px;">Status</th>
+                </tr>
+              </thead>
+              <tbody id="links-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 6: Create Documentation PR -->
+    <section id="section-pr" class="stack-md" aria-labelledby="heading-pr">
+      <div class="box-header" style="border-radius: var(--radius-md); border: 1px solid var(--color-border-default);">
+        <div>
+          <h2 id="heading-pr" class="box-title">6. Create Documentation Pull Request</h2>
+          <p class="text-small text-muted">Select generated README and changelog improvements, preview file changes, and submit an authorized pull request.</p>
+        </div>
+      </div>
+
+      <form id="pr-form" class="box box-body stack-md">
+        <div class="form-group">
+          <label class="form-label">Select Files to Deploy</label>
+          <div class="stack-sm">
+            <label class="cluster" style="align-items: center;">
+              <input type="checkbox" id="pr-include-readme" checked>
+              <span><strong>README.md</strong> (Generated or improved README)</span>
+            </label>
+            <label class="cluster" style="align-items: center;">
+              <input type="checkbox" id="pr-include-changelog">
+              <span><strong>CHANGELOG.md</strong> (Release notes and version log)</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="pr-repo" class="form-label">Target GitHub Repository</label>
+          <input
+            type="text"
+            id="pr-repo"
+            class="input"
+            placeholder="e.g. owner/repo"
+            required
+            autocomplete="off"
+            spellcheck="false"
+          >
+        </div>
+
+        <div class="form-group">
+          <label for="pr-token" class="form-label">GitHub Personal Access Token</label>
+          <input
+            type="password"
+            id="pr-token"
+            class="input"
+            placeholder="ghp_... (requires repo write access to authorize PR creation)"
+            required
+            autocomplete="off"
+          >
+          <span class="text-small text-muted">Verified solely in-memory against GitHub collaborator permissions. Never logged or saved.</span>
+        </div>
+
+        <div class="form-group">
+          <label class="cluster" style="align-items: center;">
+            <input type="checkbox" id="pr-replace-existing">
+            <span>Overwrite existing files if already present</span>
+          </label>
+        </div>
+
+        <div id="pr-preview-box" class="flash flash-info" hidden></div>
+        <div id="pr-error-box" class="flash flash-error" hidden></div>
+        <div id="pr-success-box" class="flash flash-success" hidden></div>
+
+        <div class="cluster" style="gap: var(--space-2);">
+          <button type="button" id="pr-preview-btn" class="btn btn-secondary">Preview Pull Request</button>
+          <button type="submit" id="pr-submit-btn" class="btn btn-primary" disabled>Open Documentation PR</button>
+        </div>
+      </form>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container cluster-between">
+      <span>Open Workers &middot; Apache-2.0 Licensed &middot; Informational only, not legal advice.</span>
+      <nav class="footer-links" aria-label="Footer">
+        <a href="app-install.html">Create PR</a>
+        <a href="privacy.html">Privacy Policy</a>
+        <a href="support.html">Support</a>
+        <a href="https://github.com/ayushcmd/open-workers" target="_blank" rel="noopener noreferrer">GitHub Repo</a>
+      </nav>
+    </div>
+  </footer>
+
+  <script type="module" src="js/documentation.js"></script>
+  <script type="module" src="js/navigation.js"></script>
+</body>
+</html>

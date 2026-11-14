@@ -40,7 +40,7 @@ Open Workers is structured around **six core product modules**:
 | **1** | **Licensing** | Governance | **Available** (Production) | `/explorer.html`, `/questionnaire.html`, `/compare.html`, `/app-install.html`, `/analyzer.html`, `/api/recommend`, `/api/trigger-pr` |
 | **2** | **Community** | Community | **Available** (Production) | `/community.html`, `/api/community/templates`, `/api/community/generate`, `/api/community/analyze`, `/api/community/preview-pr`, `/api/community/trigger-pr` |
 | **3** | **Security** | Security | **Available** (Production) | `/security.html`, `/api/security/checks`, `/api/security/templates`, `/api/security/generate`, `/api/security/analyze`, `/api/security/preview-pr`, `/api/security/trigger-pr` |
-| **4** | **Documentation** | Documentation | *Upcoming* (Planned) | `/api/documentation/*` |
+| **4** | **Documentation** | Documentation | **Available** (Production) | `/documentation.html`, `/api/documentation/checks`, `/api/documentation/templates`, `/api/documentation/generate`, `/api/documentation/analyze`, `/api/documentation/check-links`, `/api/documentation/preview-pr`, `/api/documentation/trigger-pr` |
 | **5** | **PR & Issue Management** | Workflow | *Upcoming* (Planned) | `/api/issues/*` |
 | **6** | **Repository Automation** | Workflow | *Upcoming* (Planned) | `/api/automation/*` |
 
@@ -69,13 +69,13 @@ Open Workers is structured around **six core product modules**:
 - **Transparent Security Configuration Health Score:** Calculates percentage purely over verified checks (excluding unverified administrative checks from failure penalty) with clear configuration hygiene disclaimers.
 - **Consolidated Security PRs:** Pre-commit preview (`POST /api/security/preview-pr`) and automated PR creation (`POST /api/security/trigger-pr`) with dedicated branch isolation, conflict guards, and explicit `workflows: write` permission safety enforcement.
 
-
-### 4. Documentation — Status: Upcoming
-- Comprehensive README analysis and completeness scores.
-- Changelog generation from commit histories.
-- Documentation structure guidance.
-- Status badge generation.
-- Broken link inspection for repository Markdown files.
+### 4. Documentation — Status: Available
+- **README Completeness & Structure Audit:** Non-destructive remote inspection of README existence, Markdown formatting, key developer sections (Title, Description, Installation, Usage, Contributing, License, Documentation, Architecture), dedicated `docs/` folder, and changelog (`POST /api/documentation/analyze`).
+- **README Generator & Improvement Assistant:** Generates clean initial README scaffolds or non-destructively augments existing repository READMEs with missing sections while preserving existing content and License positioning (`src/modules/documentation/engine.js`, `POST /api/documentation/generate`).
+- **Conventional Commits Changelog Generator:** Inspects commit history, categorizes commits into standard semantic groups (Breaking Changes, Features, Bug Fixes, Performance, Refactoring, Documentation, Tests, Build/CI, Chores), and cleanly prepends to existing `CHANGELOG.md` (`POST /api/documentation/generate`).
+- **Shields.io Status Badge Generator:** Deterministic badge Markdown generator supporting License, GitHub Workflow, Latest Release, GitHub Stars, Open Issues, Contributors, Node.js version, and custom badge parameters (`POST /api/documentation/generate`).
+- **Markdown Broken Link Checker:** Inspects Markdown content, validates relative repository paths against the tree, and checks external URLs with strict SSRF defenses against loopback, private RFC 1918/3927 IPs, and cloud metadata endpoints (`POST /api/documentation/check-links`).
+- **Consolidated Documentation PRs:** Pre-commit conflict preview (`POST /api/documentation/preview-pr`) and automated multi-file pull requests on isolated `chore/improve-docs` branches (`POST /api/documentation/trigger-pr`) using caller in-memory write authorization and least-privilege GitHub App credentials.
 
 ### 5. PR & Issue Management — Status: Upcoming
 - Rule-based issue and pull request labeling.
@@ -95,5 +95,5 @@ Open Workers is structured around **six core product modules**:
 ## 5. Verification & Quality Control
 
 - **Test Suite:** Built-in Node.js runner (`node:test`) and strict assertions (`node:assert/strict`). Zero external test runner dependencies.
-- **Test Results:** **103 passing tests** across 19 test suites with **0 failures**.
-- **Syntax Check:** `npm run lint:syntax` validates all 34 ES module JavaScript files using `node --check`.
+- **Test Results:** **127 passing tests** across 26 test suites with **0 failures**.
+- **Syntax Check:** `npm run lint:syntax` validates all 38 ES module JavaScript files using `node --check`.

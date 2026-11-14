@@ -31,10 +31,11 @@ open-workers/
 ├── public/                     # Static frontend assets
 │   ├── assets/                 # SVGs (logo.svg, workflow.svg, etc.)
 │   ├── css/                    # Modular CSS (base.css, components.css)
-│   ├── js/                     # Client ES6 modules (community.js, analyzer.js, etc.)
+│   ├── js/                     # Client ES6 modules (community.js, security.js, documentation.js, etc.)
 │   ├── index.html              # Home page
 │   ├── community.html          # Community standards, audit, and PR workflow
 │   ├── security.html           # Security configuration audit, generators, and PR workflow
+│   ├── documentation.html       # Documentation audit, README tools, changelog, badges, link checker
 │   ├── analyzer.html           # Repository license inspector
 │   ├── explorer.html           # SPDX license catalog explorer
 │   ├── questionnaire.html      # Deterministic licensing recommendation engine
@@ -50,11 +51,12 @@ open-workers/
 │   ├── data/                   # SPDX license database (licenses.json)
 │   ├── modules/                # Feature modules
 │   │   ├── community/          # Community module (engine.js, communityService.js, templates/)
-│   │   └── security/           # Security module (engine.js, securityService.js)
+│   │   ├── security/           # Security module (engine.js, securityService.js)
+│   │   └── documentation/      # Documentation module (engine.js, documentationService.js)
 │   ├── routes/                 # Express route handlers (api.js, webhooks.js)
 │   ├── services/               # Licensing services (licenseService.js, prService.js, readmeService.js)
 │   └── server.js               # Express application bootstrap and server
-├── tests/                      # Native node:test suite (103 tests across 19 suites)
+├── tests/                      # Native node:test suite (127 tests across 26 suites)
 └── docs/                       # Architecture, development, and operational guides
 ```
 
