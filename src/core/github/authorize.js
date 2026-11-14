@@ -54,7 +54,8 @@ export async function authorizeRepositoryRead({
   authorization,
   repoInput,
   githubContext,
-  createUserClient = (token) => new Octokit({ auth: token, log: { debug() {}, info() {}, warn() {}, error() {} } })
+  createUserClient = (token) => new Octokit({ auth: token, log: { debug() {}, info() {}, warn() {}, error() {} } }),
+  authCache = null
 }) {
   const match = typeof authorization === 'string' && authorization.match(/^Bearer\s+([A-Za-z0-9_.-]+)$/i);
   if (!match || match[1].length > 512) {
@@ -66,6 +67,14 @@ export async function authorizeRepositoryRead({
   } catch (error) {
     throw new ServiceError(400, error.message, 'INVALID_INPUT');
   }
+
+  const cacheKey = authCache ? `${repository.fullName}::${match[1]}` : null;
+  if (cacheKey && authCache.has(cacheKey)) {
+    const cached = authCache.get(cacheKey);
+    if (cached instanceof Error) throw cached;
+    return cached;
+  }
+
   try {
     const userClient = createUserClient(match[1]);
     let username = null;
@@ -97,7 +106,9 @@ export async function authorizeRepositoryRead({
       if (!['read', 'triage', 'write', 'admin', 'maintain'].includes(data.permission)) {
         throw new ServiceError(403, 'Access to private repository was denied.', 'FORBIDDEN');
       }
-      return { login: username, repository: repository.fullName, permission: data.permission };
+      const verified = { login: username, repository: repository.fullName, permission: data.permission };
+      if (cacheKey && authCache) authCache.set(cacheKey, verified);
+      return verified;
     }
 
     // Direct repo check via caller's client
@@ -108,8 +119,11 @@ export async function authorizeRepositoryRead({
     if (!userCheck?.data) {
       throw new ServiceError(403, 'Access to private repository was denied.', 'FORBIDDEN');
     }
-    return { login: username || 'authorized-user', repository: repository.fullName };
+    const verified = { login: username || 'authorized-user', repository: repository.fullName };
+    if (cacheKey && authCache) authCache.set(cacheKey, verified);
+    return verified;
   } catch (error) {
+    if (cacheKey && authCache) authCache.set(cacheKey, error);
     if (error instanceof ServiceError) throw error;
     if (error.status === 401) throw new ServiceError(401, 'GitHub user token is invalid or expired.', 'AUTH_REQUIRED');
     if ([403, 404].includes(error.status)) throw new ServiceError(403, 'Access to private repository was denied.', 'FORBIDDEN');
