@@ -602,6 +602,19 @@ async function init() {
     }
     renderTplFields();
     tplSelect.disabled = tplGenerate.disabled = false;
+
+    // Check URL query param e.g. /community.html?repo=owner/repo
+    const params = new URLSearchParams(window.location.search);
+    const initialRepo = params.get('repo');
+    if (initialRepo) {
+      if (healthRepoInput) healthRepoInput.value = initialRepo;
+      if (prRepo) prRepo.value = initialRepo;
+      if (healthForm && typeof healthForm.requestSubmit === 'function') {
+        healthForm.requestSubmit();
+      } else if (healthForm) {
+        healthForm.dispatchEvent(new Event('submit', { cancelable: true }));
+      }
+    }
   } catch (err) {
     if (docStatus) docStatus.textContent = err.message;
     if (tplStatus) tplStatus.textContent = err.message;

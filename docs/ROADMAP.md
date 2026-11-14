@@ -70,6 +70,13 @@ This document outlines the phased evolution of **Open Workers**, organized aroun
 - **Consolidated Automation Pull Requests:** Multi-file pre-commit preview (`POST /api/automation/preview-pr`) and automated PR creation on dedicated `ci/*` or `chore/*` branches (`POST /api/automation/trigger-pr`) with in-memory caller write PAT verification and strict enforcement of the GitHub App's `workflows: write` permission boundary.
 - **Test Suite:** 205 passing tests across 39 test suites with zero failures.
 
+### Unified Repository Dashboard & Cross-Module Integration (Completed)
+- **Single-Entry Repository Inspection:** Cross-module inspection connecting all six capabilities into one actionable report (`One Repository → Six Capabilities → One Actionable Report`).
+- **Coordinator & Error Isolation:** Bounded concurrency using `Promise.allSettled` to isolate module failures without breaking overall dashboard assessment (`src/core/dashboard/coordinator.js`).
+- **Findings Normalization & Prioritized Actions:** Aggregates recommendations across all modules, ranked by impact (High, Medium, Low) with direct links pre-filling target repositories (`?repo=owner%2Frepo`).
+- **Privacy & Authorization Enforcement:** Strict privacy boundary requiring `Authorization: Bearer <token>` and collaborator write verification before inspecting private repositories.
+- **Test Suite:** 220 passing tests across 42 test suites with zero failures.
+
 ---
 
 ### Phase 6: PR & Issue Management Module (Completed)

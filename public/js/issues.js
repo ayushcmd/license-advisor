@@ -611,4 +611,16 @@ document.addEventListener('DOMContentLoaded', () => {
       URL.revokeObjectURL(url);
     });
   }
+
+  // Check URL query param e.g. /issues.html?repo=owner/repo
+  const params = new URLSearchParams(window.location.search);
+  const initialRepo = params.get('repo');
+  if (initialRepo) {
+    if (triageRepoInput) triageRepoInput.value = initialRepo;
+    if (prRepoInput) prRepoInput.value = initialRepo;
+    if (labelRepoInput) labelRepoInput.value = initialRepo;
+    if (staleRepo) staleRepo.value = initialRepo;
+    if (rnRepo) rnRepo.value = initialRepo;
+    if (welcomeRepo) welcomeRepo.value = initialRepo;
+  }
 });

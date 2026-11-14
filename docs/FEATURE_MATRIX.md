@@ -95,6 +95,16 @@ This matrix documents the capability status, API endpoints, user interfaces, req
 | **PR Preview & Conflict Guard** | Previews generated workflows/configs, detects conflicts, and checks `workflows: write` permissions | `POST /api/automation/preview-pr` | None (Public / App) | Production | `tests/automation.test.js` |
 | **Consolidated Automation PR** | Multi-file deployment on dedicated feature branch with caller PAT authorization and SHA tracking | `POST /api/automation/trigger-pr` | User PAT (write) + App (`contents: write`, `pull_requests: write`, plus `workflows: write` for workflows) | Production | `tests/automation.test.js` |
 
+### G. Unified Repository Dashboard — Status: Available
+
+| Feature | Description | Endpoints | Permissions | Status | Test Coverage |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **Cross-Module Inspection** | Orchestrates 6-module analysis with error isolation via `Promise.allSettled` | `POST /api/dashboard/analyze` | None (Public repos) / User PAT (Private repos) | Production | `tests/dashboard.test.js` |
+| **Action Item Prioritization** | Aggregates findings and normalizes recommendations sorted by severity (High, Medium, Low) | `POST /api/dashboard/analyze` | None (Public) | Production | `tests/dashboard.test.js` |
+| **Unified UI Overview** | Primer-inspired interface presenting repository metadata, 6 capability cards, and action pills | `/dashboard.html` | None (Browser) | Production | `tests/dashboard.test.js` |
+| **Direct Tool Navigation** | Pre-fills query parameters (`?repo=owner%2Frepo`) linking directly to specialized capability tools | Client Navigation | None (Browser) | Production | `tests/dashboard.test.js` |
+| **Private Repo Privacy Guard** | Rejects unauthenticated private repo audits (401) and verifies collaborator access (403) | `POST /api/dashboard/analyze` | `Authorization: Bearer <token>` | Production | `tests/dashboard.test.js` |
+
 ---
 
 ## 3. Two-Layer Permission & Security Architecture
