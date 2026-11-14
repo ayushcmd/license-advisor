@@ -1,5 +1,5 @@
 /**
- * GitHub License Advisor — Client UI Coordinator
+ * Open Workers — Client UI Coordinator
  *
  * Modular ES6 controller for static HTML5 pages. Uses safe DOM element
  * construction (never interpolating untrusted inputs into innerHTML).
@@ -1019,7 +1019,7 @@ function initAnalyzerPage() {
   });
 
   if (examplesMount) {
-    const samples = ['expressjs/express', 'ayushcmd/license-advisor', 'facebook/react'];
+    const samples = ['expressjs/express', 'ayushcmd/open-workers', 'facebook/react'];
     for (const sample of samples) {
       examplesMount.appendChild(
         el(

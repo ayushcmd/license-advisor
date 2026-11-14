@@ -258,7 +258,7 @@ describe('Webhook HMAC SHA-256 Verification & Duplicate Delivery Protection', ()
 
     const payload = JSON.stringify({
       action: 'created',
-      repository: { full_name: 'ayushcmd/license-advisor' },
+      repository: { full_name: 'ayushcmd/open-workers' },
       installation: { id: 99 }
     });
     const signature = signPayload(payload);

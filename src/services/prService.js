@@ -140,7 +140,7 @@ export async function createLicensePullRequest({ repo: repoInput, licenseId, yea
   if (!resolution?.installed || !resolution.octokit) {
     throw new ServiceError(
       404,
-      `GitHub License Advisor is not installed on "${fullName}". Install the GitHub App on this repository first.`,
+      `Open Workers is not installed on "${fullName}". Install the GitHub App on this repository first.`,
       'APP_NOT_INSTALLED'
     );
   }

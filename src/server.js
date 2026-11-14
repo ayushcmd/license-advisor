@@ -130,7 +130,7 @@ export function startServer() {
   const { app, githubContext } = createApp({ env: process.env });
 
   const server = app.listen(port, () => {
-    console.log(`[server] GitHub License Advisor listening on http://localhost:${port}`);
+    console.log(`[server] Open Workers listening on http://localhost:${port}`);
     console.log(`[server] Static dir: ${PUBLIC_DIR}`);
     console.log(`[server] GitHub App configured: ${githubContext.isAppConfigured}`);
   });

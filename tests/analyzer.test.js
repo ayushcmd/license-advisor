@@ -15,25 +15,25 @@ describe('Repository Specifier Parsing', () => {
       repo: 'express',
       fullName: 'expressjs/express'
     });
-    assert.deepEqual(parseRepoInput('https://github.com/ayushcmd/license-advisor'), {
+    assert.deepEqual(parseRepoInput('https://github.com/ayushcmd/open-workers'), {
       owner: 'ayushcmd',
-      repo: 'license-advisor',
-      fullName: 'ayushcmd/license-advisor'
+      repo: 'open-workers',
+      fullName: 'ayushcmd/open-workers'
     });
-    assert.deepEqual(parseRepoInput('https://github.com/ayushcmd/license-advisor.git/'), {
+    assert.deepEqual(parseRepoInput('https://github.com/ayushcmd/open-workers.git/'), {
       owner: 'ayushcmd',
-      repo: 'license-advisor',
-      fullName: 'ayushcmd/license-advisor'
+      repo: 'open-workers',
+      fullName: 'ayushcmd/open-workers'
     });
     assert.deepEqual(parseRepoInput('https://github.com/torvalds/linux/tree/master'), {
       owner: 'torvalds',
       repo: 'linux',
       fullName: 'torvalds/linux'
     });
-    assert.deepEqual(parseRepoInput('git@github.com:ayushcmd/license-advisor.git'), {
+    assert.deepEqual(parseRepoInput('git@github.com:ayushcmd/open-workers.git'), {
       owner: 'ayushcmd',
-      repo: 'license-advisor',
-      fullName: 'ayushcmd/license-advisor'
+      repo: 'open-workers',
+      fullName: 'ayushcmd/open-workers'
     });
   });
 
@@ -113,14 +113,14 @@ describe('Public GitHub API Client (Mocked Fetch)', () => {
     });
 
     const mockFetch = async (url) => {
-      if (url.endsWith('/repos/ayushcmd/license-advisor')) {
+      if (url.endsWith('/repos/ayushcmd/open-workers')) {
         return new Response(
           JSON.stringify({
-            full_name: 'ayushcmd/license-advisor',
-            name: 'license-advisor',
+            full_name: 'ayushcmd/open-workers',
+            name: 'open-workers',
             owner: { login: 'ayushcmd' },
             default_branch: 'main',
-            html_url: 'https://github.com/ayushcmd/license-advisor',
+            html_url: 'https://github.com/ayushcmd/open-workers',
             private: false,
             archived: false,
             fork: false,
@@ -144,8 +144,8 @@ describe('Public GitHub API Client (Mocked Fetch)', () => {
       );
     };
 
-    const report = await analyzePublicRepository('ayushcmd/license-advisor', { fetchImpl: mockFetch });
-    assert.equal(report.repository.fullName, 'ayushcmd/license-advisor');
+    const report = await analyzePublicRepository('ayushcmd/open-workers', { fetchImpl: mockFetch });
+    assert.equal(report.repository.fullName, 'ayushcmd/open-workers');
     assert.equal(report.licenseStatus, 'licensed');
     assert.equal(report.rateLimit?.remaining, 57);
   });
@@ -167,7 +167,7 @@ describe('Public GitHub API Client (Mocked Fetch)', () => {
         })
       });
     await assert.rejects(
-      () => analyzePublicRepository('ayushcmd/license-advisor', { fetchImpl: rateLimitedFetch }),
+      () => analyzePublicRepository('ayushcmd/open-workers', { fetchImpl: rateLimitedFetch }),
       /rate limit reached/
     );
   });
