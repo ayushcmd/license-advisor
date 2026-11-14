@@ -33,7 +33,7 @@
         <a href="/issues.html" class="nav-link">PRs &amp; Issues</a>
         <a href="/automation.html" class="nav-link" aria-current="page">Automation</a>
         <details class="nav-dropdown">
-          <summary class="nav-link licensing-toggle" aria-controls="licensing-links" aria-expanded="false">Licensing <span class="nav-caret" aria-hidden="true">&#9662;</span></summary>
+          <summary class="nav-link licensing-toggle" aria-controls="licensing-links" aria-expanded="false" aria-haspopup="true">Licensing <span class="nav-caret" aria-hidden="true">&#9662;</span></summary>
           <div id="licensing-links" class="nav-dropdown-panel">
             <a href="/explorer.html" class="nav-dropdown-link">Explore Licenses</a>
             <a href="/questionnaire.html" class="nav-dropdown-link">Find a License</a>
@@ -394,7 +394,7 @@
       <form id="auth-form" class="stack-sm">
         <div class="form-group">
           <label for="pat-input">GitHub Personal Access Token (classic or fine-grained)</label>
-          <input type="password" id="pat-input" required class="form-input" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx">
+          <input type="password" id="pat-input" required class="form-input" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" autocomplete="off">
         </div>
         <div class="cluster" style="justify-content: flex-end;">
           <button type="button" id="btn-cancel-auth" class="btn btn-secondary">Cancel</button>
@@ -418,6 +418,7 @@
     </div>
   </footer>
 
-  <script type="module" src="js/automation.js"></script>
+  <script type="module" src="/js/automation.js"></script>
+  <script type="module" src="/js/navigation.js"></script>
 </body>
 </html>
