@@ -848,7 +848,18 @@ function initAnalyzerPage() {
   const submitBtn = document.getElementById('analyzer-submit');
   const resultMount = document.getElementById('analyzer-results');
   const examplesMount = document.getElementById('analyzer-examples');
+  const referralLink = document.getElementById('dashboard-referral-link');
   if (!form || !input || !resultMount) return;
+
+  function updateReferralLink(target) {
+    if (!referralLink) return;
+    const trimmed = (target || '').trim();
+    referralLink.href = trimmed ? `dashboard.html?repo=${encodeURIComponent(trimmed)}` : 'dashboard.html';
+  }
+
+  input.addEventListener('input', () => {
+    updateReferralLink(input.value);
+  });
 
   async function runAnalysis(targetRepo) {
     clearNode(resultMount);
@@ -1012,6 +1023,7 @@ function initAnalyzerPage() {
   form.addEventListener('submit', (event) => {
     event.preventDefault();
     const target = input.value.trim();
+    updateReferralLink(target);
     const url = new URL(window.location.href);
     if (target) url.searchParams.set('repo', target);
     window.history.replaceState({}, '', url);
@@ -1029,6 +1041,7 @@ function initAnalyzerPage() {
             className: 'btn btn-secondary btn-sm',
             onClick: () => {
               input.value = sample;
+              updateReferralLink(sample);
               runAnalysis(sample);
             }
           },
@@ -1041,7 +1054,10 @@ function initAnalyzerPage() {
   const initialRepo = new URLSearchParams(window.location.search).get('repo');
   if (initialRepo) {
     input.value = initialRepo;
+    updateReferralLink(initialRepo);
     runAnalysis(initialRepo);
+  } else {
+    updateReferralLink('');
   }
 }
 
