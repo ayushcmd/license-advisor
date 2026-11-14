@@ -12,6 +12,8 @@ export function normalizeLicensingFindings(result, repoFullName) {
   if (!result) {
     return {
       module: 'licensing',
+      executionStatus: 'failed',
+      healthStatus: 'unknown',
       status: 'failed',
       summary: 'Licensing analysis failed or was unavailable.',
       score: null,
@@ -22,11 +24,14 @@ export function normalizeLicensingFindings(result, repoFullName) {
 
   const isLicensed =
     result.status === 'licensed' ||
+    result.licenseStatus === 'licensed' ||
     result.hasLicense === true ||
-    Boolean(result.license?.spdx_id && result.license.spdx_id !== 'NOASSERTION');
+    Boolean(result.license?.spdx_id && result.license.spdx_id !== 'NOASSERTION') ||
+    Boolean(result.detectedLicense?.spdxId && result.detectedLicense.spdxId !== 'NOASSERTION');
 
   const isUnrecognized =
     result.status === 'unrecognized' ||
+    result.licenseStatus === 'unrecognized' ||
     (result.hasLicense && result.license?.spdx_id === 'NOASSERTION');
 
   const detected =
@@ -40,7 +45,10 @@ export function normalizeLicensingFindings(result, repoFullName) {
 
   const findings = [];
   const licensePresent = Boolean(
+    isLicensed ||
+    isUnrecognized ||
     result.licenseFile?.present ||
+    (Array.isArray(result.rootObservations?.licenseFiles) && result.rootObservations.licenseFiles.length > 0) ||
     (Array.isArray(result.files) && result.files.some((f) => /licen[sc]e|copying/i.test(typeof f === 'string' ? f : f?.name || ''))) ||
     result.hasLicense
   );
@@ -54,23 +62,33 @@ export function normalizeLicensingFindings(result, repoFullName) {
       : 'No LICENSE or COPYING file found in repository root.'
   });
 
-  if (result.noticeFile !== undefined) {
+  const noticePresent = Boolean(
+    result.noticeFile?.present ||
+    (Array.isArray(result.rootObservations?.noticeFiles) && result.rootObservations.noticeFiles.length > 0)
+  );
+
+  if (result.noticeFile !== undefined || (result.rootObservations && Array.isArray(result.rootObservations.noticeFiles))) {
     findings.push({
       id: 'notice-file',
       title: 'Notice File',
-      status: result.noticeFile?.present ? 'present' : 'missing',
-      description: result.noticeFile?.present
-        ? `Notice file detected at "${result.noticeFile.path}".`
+      status: noticePresent ? 'present' : 'missing',
+      description: noticePresent
+        ? `Notice file detected at "${result.noticeFile?.path || result.rootObservations?.noticeFiles?.[0]?.path}".`
         : 'No NOTICE file found.'
     });
   }
 
-  if (result.readmeFile !== undefined) {
+  const readmeLicensePresent = Boolean(
+    result.readmeFile?.hasLicenseMention ||
+    (Array.isArray(result.rootObservations?.readmeFiles) && result.rootObservations.readmeFiles.length > 0)
+  );
+
+  if (result.readmeFile !== undefined || (result.rootObservations && Array.isArray(result.rootObservations.readmeFiles))) {
     findings.push({
       id: 'readme-license',
       title: 'README License Reference',
-      status: result.readmeFile?.hasLicenseMention ? 'present' : 'missing',
-      description: result.readmeFile?.hasLicenseMention
+      status: readmeLicensePresent ? 'present' : 'missing',
+      description: readmeLicensePresent
         ? 'README contains license section or badge.'
         : 'README does not mention licensing.'
     });
@@ -110,6 +128,8 @@ export function normalizeLicensingFindings(result, repoFullName) {
 
   return {
     module: 'licensing',
+    executionStatus: 'completed',
+    healthStatus: isLicensed ? 'healthy' : isUnrecognized ? 'needs_attention' : 'critical',
     status: isLicensed ? 'available' : 'warning',
     summary: isLicensed
       ? `Licensed under ${detected || 'OSI-approved license'}.`
@@ -129,6 +149,8 @@ export function normalizeCommunityFindings(result, repoFullName) {
   if (!result) {
     return {
       module: 'community',
+      executionStatus: 'failed',
+      healthStatus: 'unknown',
       status: 'failed',
       summary: 'Community standards analysis failed or was unavailable.',
       score: null,
@@ -217,6 +239,8 @@ export function normalizeCommunityFindings(result, repoFullName) {
 
   return {
     module: 'community',
+    executionStatus: 'completed',
+    healthStatus: score >= 80 ? 'healthy' : score >= 50 ? 'needs_attention' : 'critical',
     status: score >= 80 ? 'available' : 'warning',
     summary: `Community profile is ${score}% complete.`,
     score,
@@ -229,9 +253,11 @@ export function normalizeCommunityFindings(result, repoFullName) {
  * Normalize Security Configuration Audit Result
  */
 export function normalizeSecurityFindings(result, repoFullName) {
-  if (!result || (!Array.isArray(result.checks) && typeof result.score !== 'number')) {
+  if (!result || (!Array.isArray(result.checks) && typeof result.score !== 'number' && typeof result.summary?.healthScore !== 'number')) {
     return {
       module: 'security',
+      executionStatus: 'failed',
+      healthStatus: 'unknown',
       status: 'failed',
       summary: 'Security configuration analysis failed or was unavailable.',
       score: null,
@@ -292,6 +318,8 @@ export function normalizeSecurityFindings(result, repoFullName) {
 
   return {
     module: 'security',
+    executionStatus: 'completed',
+    healthStatus: score >= 80 ? 'healthy' : score >= 50 ? 'needs_attention' : 'critical',
     status: score >= 80 ? 'available' : 'warning',
     summary: `Security baseline health score is ${score}%.`,
     score,
@@ -304,9 +332,11 @@ export function normalizeSecurityFindings(result, repoFullName) {
  * Normalize Documentation Audit Result
  */
 export function normalizeDocumentationFindings(result, repoFullName) {
-  if (!result || (!Array.isArray(result.checks) && typeof result.score !== 'number')) {
+  if (!result || (!Array.isArray(result.checks) && typeof result.score !== 'number' && typeof result.summary?.completenessScore !== 'number')) {
     return {
       module: 'documentation',
+      executionStatus: 'failed',
+      healthStatus: 'unknown',
       status: 'failed',
       summary: 'Documentation analysis failed or was unavailable.',
       score: null,
@@ -355,6 +385,8 @@ export function normalizeDocumentationFindings(result, repoFullName) {
 
   return {
     module: 'documentation',
+    executionStatus: 'completed',
+    healthStatus: score >= 80 ? 'healthy' : score >= 50 ? 'needs_attention' : 'critical',
     status: score >= 80 ? 'available' : 'warning',
     summary: `Documentation completeness score is ${score}%.`,
     score,
@@ -367,10 +399,44 @@ export function normalizeDocumentationFindings(result, repoFullName) {
  * Normalize PR & Issue Health Inspection Result
  */
 export function normalizeIssuesFindings(staleResult, repoData, repoFullName) {
+  if (!staleResult && !repoData) {
+    return {
+      module: 'issues',
+      executionStatus: 'failed',
+      healthStatus: 'unknown',
+      status: 'failed',
+      summary: 'PR & Issue inspection failed or was unavailable.',
+      score: null,
+      findings: [],
+      recommendations: []
+    };
+  }
+
   const enc = encodeURIComponent(repoFullName);
-  const openCount = repoData?.open_issues_count ?? 0;
-  const staleCount = staleResult?.staleCount ?? 0;
+  const issuesEnabled = staleResult?.issuesEnabled ?? (repoData?.has_issues !== false);
+  const openCount = staleResult?.openCount ?? repoData?.open_issues_count ?? 0;
+  const staleCount = staleResult?.staleCount ?? (Array.isArray(staleResult?.staleIssues) ? staleResult.staleIssues.length : 0);
   const staleIssues = Array.isArray(staleResult?.staleIssues) ? staleResult.staleIssues : [];
+
+  if (!issuesEnabled) {
+    return {
+      module: 'issues',
+      executionStatus: 'not_supported',
+      healthStatus: 'healthy',
+      status: 'available',
+      summary: 'Issues are disabled for this repository.',
+      score: null,
+      findings: [
+        {
+          id: 'issues-disabled',
+          title: 'Issue Tracking Disabled',
+          status: 'info',
+          description: 'GitHub Issues are disabled in repository settings.'
+        }
+      ],
+      recommendations: []
+    };
+  }
 
   const findings = [
     {
@@ -384,7 +450,7 @@ export function normalizeIssuesFindings(staleResult, repoData, repoFullName) {
       title: 'Dormant / Stale Issues',
       status: staleCount > 0 ? 'warning' : 'passed',
       description: staleCount > 0
-        ? `${staleCount} issue(s) without activity in the past 30 days.`
+        ? `${staleCount} issue(s) without activity in the past ${staleResult?.daysInactive || 30} days.`
         : 'No dormant issues detected.'
     }
   ];
@@ -403,6 +469,8 @@ export function normalizeIssuesFindings(staleResult, repoData, repoFullName) {
 
   return {
     module: 'issues',
+    executionStatus: 'completed',
+    healthStatus: staleCount > 0 ? 'needs_attention' : 'healthy',
     status: staleCount > 0 ? 'warning' : 'available',
     summary: `${openCount} open ticket(s). ${staleCount > 0 ? `${staleCount} stale ticket(s) flagged.` : 'Collaboration triage ready.'}`,
     score: null,
@@ -415,9 +483,11 @@ export function normalizeIssuesFindings(staleResult, repoData, repoFullName) {
  * Normalize Repository Automation Audit Result
  */
 export function normalizeAutomationFindings(result, repoFullName) {
-  if (!result || (!Array.isArray(result.findings) && !Array.isArray(result.checks) && typeof result.score !== 'number')) {
+  if (!result || (!Array.isArray(result.findings) && !Array.isArray(result.checks) && typeof result.score !== 'number' && typeof result.setupScore !== 'number')) {
     return {
       module: 'automation',
+      executionStatus: 'failed',
+      healthStatus: 'unknown',
       status: 'failed',
       summary: 'Repository automation audit failed or was unavailable.',
       score: null,
@@ -470,6 +540,8 @@ export function normalizeAutomationFindings(result, repoFullName) {
 
   return {
     module: 'automation',
+    executionStatus: 'completed',
+    healthStatus: score >= 80 ? 'healthy' : score >= 50 ? 'needs_attention' : 'critical',
     status: score >= 80 ? 'available' : 'warning',
     summary: `Repository setup health score is ${score}%.`,
     score,
@@ -499,12 +571,13 @@ export function aggregateDashboardFindings(modules = {}) {
     }
   }
 
-  // Deduplicate recommendations by title
-  const seenTitles = new Set();
+  // Deduplicate recommendations by compound key (module + actionUrl/title)
+  const seenKeys = new Set();
   const uniqueRecommendations = [];
   for (const rec of allRecommendations) {
-    if (!seenTitles.has(rec.title)) {
-      seenTitles.add(rec.title);
+    const dedupeKey = `${rec.module}:${rec.actionUrl || rec.title}`.toLowerCase();
+    if (!seenKeys.has(dedupeKey)) {
+      seenKeys.add(dedupeKey);
       uniqueRecommendations.push(rec);
     }
   }
@@ -515,9 +588,21 @@ export function aggregateDashboardFindings(modules = {}) {
 
   const moduleEntries = Object.values(modules);
   const totalModules = moduleEntries.length;
-  const evaluatedCount = moduleEntries.filter((m) => m.status !== 'failed').length;
-  const completedCount = moduleEntries.filter((m) => m.status === 'available' || m.status === 'completed').length;
-  const attentionCount = moduleEntries.filter((m) => m.status === 'warning' || m.status === 'failed').length;
+  const evaluatedCount = moduleEntries.filter((m) =>
+    m.executionStatus
+      ? m.executionStatus !== 'failed' && m.executionStatus !== 'not_supported'
+      : m.status !== 'failed'
+  ).length;
+  const completedCount = moduleEntries.filter((m) =>
+    m.executionStatus === 'completed' || m.status === 'available' || m.status === 'completed'
+  ).length;
+  const partialCount = moduleEntries.filter((m) => m.executionStatus === 'partial').length;
+  const failedCount = moduleEntries.filter((m) =>
+    m.executionStatus === 'failed' || m.status === 'failed'
+  ).length;
+  const attentionCount = moduleEntries.filter((m) =>
+    m.healthStatus === 'needs_attention' || m.healthStatus === 'critical' || m.status === 'warning' || m.status === 'failed'
+  ).length;
 
   const highPriorityCount = uniqueRecommendations.filter((r) => r.priority === 'high').length;
   const mediumPriorityCount = uniqueRecommendations.filter((r) => r.priority === 'medium').length;
@@ -527,8 +612,11 @@ export function aggregateDashboardFindings(modules = {}) {
     prioritizedRecommendations: uniqueRecommendations,
     summary: {
       totalModules,
-      modulesEvaluated: totalModules,
-      modulesAnalyzed: totalModules,
+      modulesEvaluated: evaluatedCount,
+      modulesAnalyzed: evaluatedCount,
+      modulesCompleted: completedCount,
+      modulesPartial: partialCount,
+      modulesFailed: failedCount,
       modulesNeedingAttention: attentionCount,
       totalActionableFindings: uniqueRecommendations.length,
       highPriorityFindings: highPriorityCount,

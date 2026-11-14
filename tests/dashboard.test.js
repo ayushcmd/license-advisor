@@ -214,6 +214,58 @@ describe('Dashboard Findings Normalizer & Aggregator', () => {
     assert.equal(aggregate.prioritizedRecommendations[1].priority, 'medium');
     assert.equal(aggregate.prioritizedRecommendations[2].priority, 'low');
   });
+
+  it('normalizes disabled issues with not_supported execution status', () => {
+    const repoData = {
+      open_issues_count: 0,
+      has_issues: false
+    };
+
+    const norm = normalizeIssuesFindings(null, repoData, 'octocat/No-Issues');
+    assert.equal(norm.module, 'issues');
+    assert.equal(norm.executionStatus, 'not_supported');
+    assert.equal(norm.healthStatus, 'healthy');
+    assert.equal(norm.status, 'available');
+    assert.ok(norm.summary.includes('disabled'));
+    assert.equal(norm.recommendations.length, 0);
+  });
+
+  it('separates executionStatus and healthStatus across module findings', () => {
+    const licNorm = normalizeLicensingFindings({ status: 'licensed', license: { spdx_id: 'MIT' } }, 'octocat/repo');
+    assert.equal(licNorm.executionStatus, 'completed');
+    assert.equal(licNorm.healthStatus, 'healthy');
+    assert.equal(licNorm.status, 'available');
+
+    const secNorm = normalizeSecurityFindings({ checks: [], score: 40 }, 'octocat/repo');
+    assert.equal(secNorm.executionStatus, 'completed');
+    assert.equal(secNorm.healthStatus, 'critical');
+    assert.equal(secNorm.status, 'warning');
+  });
+
+  it('deduplicates recommendations by compound module and URL key', () => {
+    const modulesMap = {
+      community: {
+        module: 'community',
+        status: 'warning',
+        recommendations: [
+          { module: 'community', priority: 'medium', title: 'Add CoC', actionUrl: '/community.html?template=coc' },
+          { module: 'community', priority: 'medium', title: 'Add CoC', actionUrl: '/community.html?template=coc' }
+        ]
+      },
+      security: {
+        module: 'security',
+        status: 'warning',
+        recommendations: [
+          { module: 'security', priority: 'high', title: 'Add CoC', actionUrl: '/security.html?template=sec' }
+        ]
+      }
+    };
+
+    const aggregate = aggregateDashboardFindings(modulesMap);
+    assert.equal(aggregate.prioritizedRecommendations.length, 2);
+    assert.equal(aggregate.prioritizedRecommendations[0].module, 'security');
+    assert.equal(aggregate.prioritizedRecommendations[1].module, 'community');
+  });
 });
 
 describe('Dashboard Coordinator Orchestration', () => {
@@ -497,8 +549,12 @@ describe('Dashboard Coordinator Orchestration', () => {
     assert.equal(result.repository.fullName, 'octocat/Hello-World');
     // Licensing and Documentation handled the content gracefully or failed safely
     assert.equal(result.summary.totalModules, 6);
+    assert.equal(result.summary.modulesEvaluated, 5);
+    assert.equal(result.summary.modulesFailed, 1);
     // Issues failed but coordinator did not crash
     assert.equal(result.modules.issues.status, 'failed');
+    assert.equal(result.modules.issues.executionStatus, 'failed');
+    assert.equal(result.modules.issues.healthStatus, 'unknown');
     assert.ok(result.modules.issues.summary.includes('Simulated Issues API failure'));
   });
 });

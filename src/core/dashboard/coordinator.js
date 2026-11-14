@@ -8,6 +8,7 @@
 import { Octokit } from '@octokit/rest';
 import { parseRepoInput } from '../../../public/js/analyzer.js';
 import { ServiceError } from '../../services/licenseService.js';
+import { authorizeRepositoryRead } from '../github/authorize.js';
 import { analyzeRepositoryServer } from '../../services/licenseService.js';
 import { auditCommunityRepository } from '../../modules/community/communityService.js';
 import { auditSecurityRepository } from '../../modules/security/securityService.js';
@@ -105,21 +106,12 @@ export async function analyzeRepositoryDashboard({
 
   // 2. Privacy Guard: Private repositories require authenticated user authorization
   if (isPrivate) {
-    const match = typeof authorization === 'string' && authorization.match(/^Bearer\s+([A-Za-z0-9_.-]+)$/i);
-    if (!match) {
-      throw new ServiceError(401, 'Private repository analysis requires GitHub user authorization.', 'AUTH_REQUIRED');
-    }
-
-    try {
-      const userOctokit = createUserClient(match[1]);
-      const userCheck = await userOctokit.rest.repos.get({ owner, repo });
-      if (!userCheck?.data) {
-        throw new ServiceError(403, 'Access to private repository was denied.', 'FORBIDDEN');
-      }
-    } catch (authErr) {
-      if (authErr instanceof ServiceError) throw authErr;
-      throw new ServiceError(403, 'Access to private repository was denied.', 'FORBIDDEN');
-    }
+    await authorizeRepositoryRead({
+      authorization,
+      repoInput: fullName,
+      githubContext,
+      createUserClient
+    });
   }
 
   // 3. Run all six capability audits with isolated error boundaries using Promise.allSettled
@@ -132,34 +124,65 @@ export async function analyzeRepositoryDashboard({
     automationSettled
   ] = await Promise.allSettled([
     // 1. Licensing Module
-    analyzeRepositoryServer({ repoInput: fullName, githubContext }),
+    analyzeRepositoryServer({ repoInput: fullName, githubContext, authorization, createUserClient }),
 
     // 2. Community Module
-    auditCommunityRepository({ repoInput: fullName, githubContext }),
+    auditCommunityRepository({ repoInput: fullName, githubContext, authorization, createUserClient }),
 
     // 3. Security Module
-    auditSecurityRepository({ repoInput: fullName, githubContext }),
+    auditSecurityRepository({ repoInput: fullName, githubContext, authorization, createUserClient }),
 
     // 4. Documentation Module
-    auditDocumentationRepository({ repoInput: fullName, githubContext }),
+    auditDocumentationRepository({ repoInput: fullName, githubContext, authorization, createUserClient }),
 
     // 5. PR & Issue Management Module (Repository-level collaboration check)
     (async () => {
-      let staleIssues = [];
-      if (repoData.has_issues && repoData.open_issues_count > 0) {
-        const staleRes = await inspectStaleIssues({
-          repoInput: fullName,
+      const issuesEnabled = repoData.has_issues !== false;
+      const openCount = repoData.open_issues_count || 0;
+      if (!issuesEnabled) {
+        return {
+          issuesEnabled: false,
+          openCount: 0,
+          staleCount: 0,
+          scannedIssues: 0,
           daysInactive: 30,
-          limit: 10,
-          githubContext
-        });
-        staleIssues = staleRes.staleIssues || [];
+          staleIssues: [],
+          inspected: false,
+          reason: 'Issues are disabled for this repository.'
+        };
       }
-      return { staleIssues };
+      if (openCount === 0) {
+        return {
+          issuesEnabled: true,
+          openCount: 0,
+          staleCount: 0,
+          scannedIssues: 0,
+          daysInactive: 30,
+          staleIssues: [],
+          inspected: true
+        };
+      }
+      const staleRes = await inspectStaleIssues({
+        repoInput: fullName,
+        daysInactive: 30,
+        limit: 30,
+        githubContext,
+        authorization,
+        createUserClient
+      });
+      return {
+        issuesEnabled: true,
+        openCount,
+        staleCount: staleRes.staleCount ?? (Array.isArray(staleRes.staleIssues) ? staleRes.staleIssues.length : 0),
+        scannedIssues: staleRes.scannedIssues ?? 0,
+        daysInactive: staleRes.daysInactive ?? 30,
+        staleIssues: staleRes.staleIssues || [],
+        inspected: true
+      };
     })(),
 
     // 6. Repository Automation Module
-    auditRepositorySetup({ repoInput: fullName, githubContext })
+    auditRepositorySetup({ repoInput: fullName, githubContext, authorization, createUserClient })
   ]);
 
   // 4. Normalize findings per module with error resilience
@@ -167,6 +190,8 @@ export async function analyzeRepositoryDashboard({
     ? normalizeLicensingFindings(licensingSettled.value, fullName)
     : {
         module: 'licensing',
+        executionStatus: 'failed',
+        healthStatus: 'unknown',
         status: 'failed',
         summary: licensingSettled.reason?.message || 'Licensing analysis failed.',
         score: null,
@@ -178,6 +203,8 @@ export async function analyzeRepositoryDashboard({
     ? normalizeCommunityFindings(communitySettled.value, fullName)
     : {
         module: 'community',
+        executionStatus: 'failed',
+        healthStatus: 'unknown',
         status: 'failed',
         summary: communitySettled.reason?.message || 'Community standards audit failed.',
         score: null,
@@ -189,6 +216,8 @@ export async function analyzeRepositoryDashboard({
     ? normalizeSecurityFindings(securitySettled.value, fullName)
     : {
         module: 'security',
+        executionStatus: 'failed',
+        healthStatus: 'unknown',
         status: 'failed',
         summary: securitySettled.reason?.message || 'Security configuration audit failed.',
         score: null,
@@ -200,6 +229,8 @@ export async function analyzeRepositoryDashboard({
     ? normalizeDocumentationFindings(docSettled.value, fullName)
     : {
         module: 'documentation',
+        executionStatus: 'failed',
+        healthStatus: 'unknown',
         status: 'failed',
         summary: docSettled.reason?.message || 'Documentation analysis failed.',
         score: null,
@@ -211,6 +242,8 @@ export async function analyzeRepositoryDashboard({
     ? normalizeIssuesFindings(issuesSettled.value, repoData, fullName)
     : {
         module: 'issues',
+        executionStatus: 'failed',
+        healthStatus: 'unknown',
         status: 'failed',
         summary: issuesSettled.reason?.message || 'PR & Issue inspection failed.',
         score: null,
@@ -222,6 +255,8 @@ export async function analyzeRepositoryDashboard({
     ? normalizeAutomationFindings(automationSettled.value, fullName)
     : {
         module: 'automation',
+        executionStatus: 'failed',
+        healthStatus: 'unknown',
         status: 'failed',
         summary: automationSettled.reason?.message || 'Repository automation audit failed.',
         score: null,
