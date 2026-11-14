@@ -42,7 +42,7 @@ Open Workers is structured around **six core product modules**:
 | **3** | **Security** | Security | **Available** (Production) | `/security.html`, `/api/security/checks`, `/api/security/templates`, `/api/security/generate`, `/api/security/analyze`, `/api/security/preview-pr`, `/api/security/trigger-pr` |
 | **4** | **Documentation** | Documentation | **Available** (Production) | `/documentation.html`, `/api/documentation/checks`, `/api/documentation/templates`, `/api/documentation/generate`, `/api/documentation/analyze`, `/api/documentation/check-links`, `/api/documentation/preview-pr`, `/api/documentation/trigger-pr` |
 | **5** | **PR & Issue Management** | Workflow | **Available** (Production) | `/issues.html`, `/api/issues/*`, `/api/pulls/*` |
-| **6** | **Repository Automation** | Workflow | *Upcoming* (Planned) | `/api/automation/*` |
+| **6** | **Repository Automation** | Workflow | **Available** (Production) | `/automation.html`, `/api/automation/*` |
 
 ---
 
@@ -87,16 +87,18 @@ Open Workers is structured around **six core product modules**:
 - **Semantic Release Notes Compiler:** Groups merged pull requests into Conventional Commits categories (Breaking Changes, Features, Fixes, Maintenance, Other) with contributor shoutouts, in-browser markdown preview, copy, and download (`POST /api/pulls/release-notes`).
 - **Opt-In Webhook Automation Engine:** Verified GitHub webhook event dispatcher (`src/core/events/dispatcher.js`) routing `issues` and `pull_request` events with bot loop prevention and strict opt-in gating via repository `.github/open-workers.yml` configuration.
 
-### 6. Repository Automation — Status: Upcoming
-- GitHub Actions CI/CD starter workflow generation (build, test, lint, matrix).
-- Action Health Inspector (unpinned actions, deprecated runners, missing timeouts).
-- Code quality configuration generation (`.editorconfig`, `.prettierrc`, ESLint).
-- Opt-in scheduled repository maintenance automation.
+### 6. Repository Automation — Status: Available
+- **Repository Setup & Metadata Audit:** Non-destructive remote audit of CI workflows, code quality configurations (.editorconfig, Prettier, ESLint, .gitattributes, .gitignore), and discovery metadata with transparent 0–100% health scoring (`src/modules/automation/engine.js`, `POST /api/automation/analyze`).
+- **Tailored CI Workflow Generators:** Generates verified, valid YAML workflows for Node.js CI, Python CI, Multi-Platform Matrix CI, PR Validation, and Scheduled Maintenance using official actions (v4/v5), minimal token permissions (`contents: read`), explicit timeouts (`timeout-minutes: 15-20`), bounded matrices, and injection defenses (`POST /api/automation/generate`).
+- **Workflow Health Inspector:** Analyzes existing `.github/workflows/*.yml` files for unpinned third-party actions, deprecated action references, missing explicit permissions, broad `write-all` permissions, missing timeouts, and dangerous `pull_request_target` triggers (`POST /api/automation/inspect-workflows`).
+- **Code Quality Configuration Generators:** Generates standardized configurations for `.editorconfig`, `.prettierrc.json`, modern flat `eslint.config.js`, `.gitattributes`, and `.gitignore` with safe non-destructive merging.
+- **Cross-Module Maintenance Integration:** Seamlessly correlates setup audit findings with Security (Dependabot, CodeQL), Community (Security policy, contributing guidelines), and Documentation (README).
+- **Consolidated Automation Pull Requests:** Multi-file pre-commit preview (`POST /api/automation/preview-pr`) and automated PR creation on dedicated `ci/*` or `chore/*` branches (`POST /api/automation/trigger-pr`) with in-memory caller write PAT verification and strict enforcement of the GitHub App's `workflows: write` permission boundary.
 
 ---
 
 ## 5. Verification & Quality Control
 
 - **Test Suite:** Built-in Node.js runner (`node:test`) and strict assertions (`node:assert/strict`). Zero external test runner dependencies.
-- **Test Results:** **169 passing tests** across 34 test suites with **0 failures**.
-- **Syntax Check:** `npm run lint:syntax` validates all 46 ES module JavaScript files using `node --check`.
+- **Test Results:** **205 passing tests** across 39 test suites with **0 failures**.
+- **Syntax Check:** `npm run lint:syntax` validates all 50 ES module JavaScript files using `node --check`.

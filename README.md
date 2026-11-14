@@ -50,7 +50,7 @@ Open Workers strictly adheres to a three-stage operational model:
 
 ## Six Core Capabilities
 
-Open Workers is architected around six modular capability areas. Currently, **Licensing** and **Community** are fully implemented and available in production; remaining modules represent our verified roadmap.
+Open Workers is architected around six modular capability areas, all fully implemented and available in production:
 
 ```
                   +-----------------------------------------+
@@ -60,11 +60,10 @@ Open Workers is architected around six modular capability areas. Currently, **Li
                                        |
        +-------------------------------+-------------------------------+
        |                                                               |
-  [AVAILABLE]                                                     [UPCOMING]
-  1. Licensing                                                    3. Security
-  2. Community Standards                                          4. Documentation
-                                                                  5. PR & Issue Management
-                                                                  6. Repository Automation
+  [GOVERNANCE & COMMUNITY]                                        [WORKFLOW & QUALITY]
+  1. Licensing                                                    4. Documentation
+  2. Community Standards                                          5. PR & Issue Management
+  3. Security                                                     6. Repository Automation
 ```
 
 ### 1. Licensing &mdash; Available
@@ -138,14 +137,17 @@ Intelligent triage, quality inspection, and collaboration automation for maintai
 
 *Explore:* [`/issues.html`](https://open-workers.onrender.com/issues.html)
 
-### 6. Repository Automation &mdash; Upcoming
+### 6. Repository Automation &mdash; Available
 
 Continuous maintenance and developer workflow automation:
 
-- **GitHub Actions CI Templates:** Ready-to-use workflows for Node.js, Python, multi-platform matrix testing, and syntax linting.
-- **Action Health Inspector:** Scans `.github/workflows/` for unpinned 3rd-party actions, deprecated runners, and missing timeouts.
-- **Code Style Configs:** Standardized configurations for `.editorconfig`, `.prettierrc`, and ESLint.
-- **Scheduled Maintenance Tasks:** Opt-in automated maintenance workflows keeping repository standards fresh.
+- **Repository Setup Audit:** Non-destructive inspection of CI workflows, code quality configurations, and discovery metadata with transparent health scoring (`POST /api/automation/analyze`).
+- **GitHub Actions CI Generators:** Tailored, deterministic workflow generators with official actions (v4/v5), minimal token permissions, and bounded matrices for Node.js, Python, Multi-Platform Matrix, PR Validation, and Scheduled Maintenance (`POST /api/automation/generate`).
+- **Workflow Health Inspector:** Scans existing `.github/workflows/*.yml` files for unpinned third-party actions, deprecated action references, missing job timeouts, broad permissions (`write-all`), and dangerous triggers (`pull_request_target` with head checkout) (`POST /api/automation/inspect-workflows`).
+- **Code Quality Generators:** Generates standard `.editorconfig`, `.prettierrc.json`, modern flat `eslint.config.js`, `.gitattributes`, and starter `.gitignore` with clean non-destructive merging.
+- **Consolidated Automation PRs:** Single-PR multi-file deployment on dedicated feature branches with in-memory caller write authorization, conflict detection, and strict enforcement of the GitHub App's `workflows: write` permission boundary (`POST /api/automation/preview-pr`, `POST /api/automation/trigger-pr`).
+
+*Explore:* [`/automation.html`](https://open-workers.onrender.com/automation.html)
 
 ---
 
@@ -158,7 +160,7 @@ Continuous maintenance and developer workflow automation:
 | **Security** | **Available** | Security | Security audit, Dependabot & CodeQL generators, PR automation (`/api/security/*`) |
 | **Documentation** | **Available** | Documentation | README audits & improvements, changelog generation, badge tools, link validation, PR automation (`/api/documentation/*`) |
 | **PR & Issue Management** | **Available** | Workflow | Issue triage, PR quality & size, duplicate detection, stale inspection, release notes, opt-in webhooks (`/api/issues/*`, `/api/pulls/*`) |
-| **Repository Automation** | *Upcoming* | Workflow | GitHub Actions CI templates, Action health inspector, code quality configs |
+| **Repository Automation** | **Available** | Workflow | Setup audits, CI generators, workflow inspector, code quality configs, consolidated PRs (`/api/automation/*`) |
 
 ---
 

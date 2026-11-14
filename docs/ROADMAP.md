@@ -15,8 +15,8 @@ This document outlines the phased evolution of **Open Workers**, organized aroun
          COMPLETED                           COMPLETED                             COMPLETED
                                                                                           |
                                                                                           v
-                                                                      [Phase 7: Production Rebranding Cutover]
-                                                                                   PLANNED
+[Phase 7: Production Cutover]   <--  [Phase 6b: Repository Automation] <------------------+
+          PLANNED                                  COMPLETED
 ```
 
 ---
@@ -62,6 +62,16 @@ This document outlines the phased evolution of **Open Workers**, organized aroun
 - **Documentation PR Automation:** Pre-commit preview (`POST /api/documentation/preview-pr`) and automated PR creation on `chore/improve-docs` (`POST /api/documentation/trigger-pr`) with caller in-memory write authorization.
 - **Test Suite:** 127 passing tests across 26 test suites with zero failures.
 
+### Phase 6b: Repository Automation Module (Completed)
+- **Repository Setup & Metadata Audit:** Non-destructive remote audit of CI workflows, code quality configurations (.editorconfig, Prettier, ESLint, .gitattributes, .gitignore), and discovery metadata with transparent 0–100% health scoring (`POST /api/automation/analyze`).
+- **Tailored CI Workflow Generators:** Valid, deterministic YAML workflow generation for Node.js CI, Python CI, Multi-Platform Matrix CI, PR Validation, and Scheduled Maintenance using official actions (v4/v5), minimal token permissions (`contents: read`), explicit timeouts (`timeout-minutes: 15-20`), bounded matrices, and injection defenses (`POST /api/automation/generate`).
+- **Workflow Health Inspector:** Scans existing `.github/workflows/*.yml` files for unpinned third-party actions, deprecated action references, missing explicit permissions, broad `write-all` permissions, missing timeouts, and dangerous `pull_request_target` triggers (`POST /api/automation/inspect-workflows`).
+- **Code Quality Configuration Generators:** Standardized configurations for `.editorconfig`, `.prettierrc.json`, modern flat `eslint.config.js`, `.gitattributes`, and `.gitignore` with safe non-destructive merging.
+- **Consolidated Automation Pull Requests:** Multi-file pre-commit preview (`POST /api/automation/preview-pr`) and automated PR creation on dedicated `ci/*` or `chore/*` branches (`POST /api/automation/trigger-pr`) with in-memory caller write PAT verification and strict enforcement of the GitHub App's `workflows: write` permission boundary.
+- **Test Suite:** 205 passing tests across 39 test suites with zero failures.
+
+---
+
 ### Phase 6: PR & Issue Management Module (Completed)
 - **Deterministic Issue Categorization & Labeling:** Keyword-based classification across 8 core categories (`bug`, `feature`, `documentation`, `question`, `enhancement`, `performance`, `maintenance`, `security`) with transparent score explanations, preview labeling, and confidential security advisory routing.
 - **Pull Request Quality & Size Checks:** Comprehensive review checklist inspector (description length, open tasks, issue references, tests, breaking changes, Conventional Commits titles, draft status) and line-based size classification (`size/XS` through `size/XL`) with lockfile inflation warnings and mutual-exclusion managed size label replacement.
@@ -104,7 +114,7 @@ This document outlines the phased evolution of **Open Workers**, organized aroun
   - Release notes compilation from merged PR labels and Conventional Commits.
   - Opt-in GitHub webhook event dispatching gated by `.github/open-workers.yml`.
 
-### Phase 6b: Repository Automation (`automation`) — Upcoming
+### Phase 6b: Repository Automation (`automation`) — Completed
 - **Objective:** Automated repository health maintenance and CI/CD workflow generation.
 - **Repository Automation Deliverables:**
   - GitHub Actions CI starter workflow generator (Node.js, Python, multi-platform matrix).
