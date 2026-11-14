@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PR &amp; Issue Management — Open Workers</title>
+  <meta name="description" content="Organize issues, evaluate pull request quality and size, find duplicate candidates, inspect stale issues, draft release notes, and automate contributor greetings.">
+  <meta property="og:image" content="https://open-workers.onrender.com/assets/open-workers-social.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://open-workers.onrender.com/assets/open-workers-social.png">
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16.png">
+  <link rel="apple-touch-icon" href="assets/open-workers-icon-128.png">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css">
+</head>
+<body data-page="issues">
+  <a href="#main-content" class="skip-link">Skip to main content</a>
+
+  <header class="site-header">
+    <div class="container site-header-inner">
+      <a href="index.html" class="brand-link">
+        <img src="assets/open-workers-icon.svg" alt="Open Workers logo" class="brand-logo" width="26" height="26">
+        <span>Open Workers</span>
+      </a>
+      <nav class="site-nav" aria-label="Primary">
+        <a href="/index.html" class="nav-link">Home</a>
+        <a href="/community.html" class="nav-link">Community</a>
+        <a href="/security.html" class="nav-link">Security</a>
+        <a href="/documentation.html" class="nav-link">Documentation</a>
+        <a href="/issues.html" class="nav-link" aria-current="page">PRs &amp; Issues</a>
+        <details class="nav-dropdown">
+          <summary class="nav-link licensing-toggle" aria-controls="licensing-links" aria-expanded="false">Licensing <span class="nav-caret" aria-hidden="true">&#9662;</span></summary>
+          <div id="licensing-links" class="nav-dropdown-panel">
+            <a href="/explorer.html" class="nav-dropdown-link">Explore Licenses</a>
+            <a href="/questionnaire.html" class="nav-dropdown-link">Find a License</a>
+            <a href="/compare.html" class="nav-dropdown-link">Compare Licenses</a>
+            <a href="/app-install.html" class="nav-dropdown-link">Create License PR</a>
+          </div>
+        </details>
+        <a href="/analyzer.html" class="nav-link">Check Repository</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main-content" class="container stack-lg">
+    <section class="page-header stack-sm">
+      <h1>PR &amp; Issue Management</h1>
+      <p>Transparent, rule-based collaboration assistance for repository maintainers: triage issues, check PR quality and size, suggest duplicates, manage stale issues, and welcome contributors.</p>
+      <nav class="cluster" aria-label="Issues quick navigation" style="margin-top: var(--space-2);">
+        <a href="#section-triage" class="btn btn-secondary btn-sm">1. Issue Triage</a>
+        <a href="#section-pr-checks" class="btn btn-secondary btn-sm">2. PR Checks &amp; Size</a>
+        <a href="#section-labels" class="btn btn-secondary btn-sm">3. Label Manager</a>
+        <a href="#section-welcome" class="btn btn-secondary btn-sm">4. Contributor Automation</a>
+        <a href="#section-maintenance" class="btn btn-secondary btn-sm">5. Stale &amp; Release Notes</a>
+      </nav>
+    </section>
+
+    <!-- Section 1: Issue Triage -->
+    <section id="section-triage" class="stack-md" aria-labelledby="heading-triage">
+      <div class="box-header" style="border-radius: var(--radius-md); border: 1px solid var(--color-border-default);">
+        <div>
+          <h2 id="heading-triage" class="box-title">1. Issue Triage &amp; Categorization</h2>
+          <p class="text-small text-muted">Analyze an issue's title and description using deterministic text rules, identify suggested categories, detect sensitive vulnerability mentions, and find duplicate candidate issues.</p>
+        </div>
+      </div>
+
+      <form id="triage-form" class="cluster" style="align-items: flex-end;">
+        <div class="form-group" style="flex: 2; min-width: 260px; margin-bottom: 0;">
+          <label for="triage-repo" class="form-label">GitHub Repository</label>
+          <input
+            type="text"
+            id="triage-repo"
+            class="input"
+            placeholder="e.g. owner/repo or https://github.com/owner/repo"
+            required
+            autocomplete="off"
+            spellcheck="false"
+          >
+        </div>
+        <div class="form-group" style="flex: 1; min-width: 120px; margin-bottom: 0;">
+          <label for="triage-number" class="form-label">Issue Number</label>
+          <input
+            type="number"
+            id="triage-number"
+            class="input"
+            placeholder="e.g. 42"
+            min="1"
+            required
+          >
+        </div>
+        <button id="triage-submit" class="btn btn-primary" type="submit">Analyze Issue</button>
+      </form>
+
+      <div id="triage-error" class="flash flash-error" hidden></div>
+
+      <!-- Triage Results Mount -->
+      <div id="triage-results" class="stack-md" hidden>
+        <div class="box box-body stack-md">
+          <div class="cluster-between">
+            <div>
+              <span id="triage-issue-badge" class="badge"></span>
+              <h3 id="triage-issue-title" style="margin: var(--space-1) 0 0;"></h3>
+              <p id="triage-issue-meta" class="text-small text-muted" style="margin-top: var(--space-1);"></p>
+            </div>
+            <a id="triage-issue-link" href="#" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm">View on GitHub &nearr;</a>
+          </div>
+
+          <div id="triage-security-warning" class="flash flash-warning" hidden>
+            <strong>🔒 Security Advisory Notice:</strong>
+            <p style="margin: var(--space-1) 0 0;">This issue appears to describe a vulnerability or exploit. Maintainers should verify if coordinated private vulnerability reporting is required rather than public disclosure.</p>
+          </div>
+
+          <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--space-3);">
+            <div class="box box-body stack-sm" style="background: var(--color-canvas-subtle);">
+              <h4>Primary Suggested Category</h4>
+              <div id="triage-primary-category" style="font-size: 1.25rem; font-weight: 600;"></div>
+              <div id="triage-confidence-badge" class="badge"></div>
+              <ul id="triage-reasons-list" class="text-small text-muted stack-xs" style="margin-top: var(--space-2); padding-left: 1.25rem;"></ul>
+            </div>
+
+            <div class="box box-body stack-sm" style="background: var(--color-canvas-subtle);">
+              <h4>Suggested Labels</h4>
+              <div id="triage-suggested-labels" class="cluster" style="margin: var(--space-2) 0;"></div>
+              <p class="text-small text-muted">Labels can be previewed and applied with your authorization below in the Label Manager.</p>
+              <button id="triage-use-labels-btn" type="button" class="btn btn-secondary btn-sm" style="align-self: flex-start;">Send to Label Manager &darr;</button>
+            </div>
+          </div>
+
+          <!-- Duplicate Candidate Issues -->
+          <div class="stack-sm" style="margin-top: var(--space-3); border-top: 1px solid var(--color-border-default); padding-top: var(--space-3);">
+            <div class="cluster-between">
+              <div>
+                <h4>Duplicate / Related Issue Suggestions</h4>
+                <p class="text-small text-muted">Scanned open issues for title and vocabulary similarity (never auto-closed without maintainer action).</p>
+              </div>
+              <button id="triage-find-duplicates-btn" type="button" class="btn btn-secondary btn-sm">Scan Duplicates</button>
+            </div>
+            <div id="triage-duplicates-loading" class="text-muted text-small" hidden>Scanning candidate issues...</div>
+            <div id="triage-duplicates-list" class="stack-xs" style="margin-top: var(--space-2);"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 2: Pull Request Checks & Size -->
+    <section id="section-pr-checks" class="stack-md" aria-labelledby="heading-pr-checks">
+      <div class="box-header" style="border-radius: var(--radius-md); border: 1px solid var(--color-border-default);">
+        <div>
+          <h2 id="heading-pr-checks" class="box-title">2. Pull Request Quality Checks &amp; Size Classification</h2>
+          <p class="text-small text-muted">Evaluate whether a pull request provides clear descriptions, linked issues, test notes, checklist completeness, and calculated change size (XS to XL).</p>
+        </div>
+      </div>
+
+      <form id="pr-checks-form" class="cluster" style="align-items: flex-end;">
+        <div class="form-group" style="flex: 2; min-width: 260px; margin-bottom: 0;">
+          <label for="pr-repo" class="form-label">GitHub Repository</label>
+          <input
+            type="text"
+            id="pr-repo"
+            class="input"
+            placeholder="e.g. owner/repo or https://github.com/owner/repo"
+            required
+            autocomplete="off"
+            spellcheck="false"
+          >
+        </div>
+        <div class="form-group" style="flex: 1; min-width: 120px; margin-bottom: 0;">
+          <label for="pr-number" class="form-label">Pull Request Number</label>
+          <input
+            type="number"
+            id="pr-number"
+            class="input"
+            placeholder="e.g. 15"
+            min="1"
+            required
+          >
+        </div>
+        <button id="pr-submit" class="btn btn-primary" type="submit">Inspect Pull Request</button>
+      </form>
+
+      <div id="pr-error" class="flash flash-error" hidden></div>
+
+      <!-- PR Results Mount -->
+      <div id="pr-results" class="stack-md" hidden>
+        <div class="box box-body stack-md">
+          <div class="cluster-between">
+            <div>
+              <span id="pr-quality-badge" class="badge"></span>
+              <h3 id="pr-title" style="margin: var(--space-1) 0 0;"></h3>
+              <p id="pr-meta" class="text-small text-muted" style="margin-top: var(--space-1);"></p>
+            </div>
+            <a id="pr-link" href="#" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm">View PR on GitHub &nearr;</a>
+          </div>
+
+          <!-- Size Classification Banner -->
+          <div class="box box-body stack-xs" style="background: var(--color-canvas-subtle); border-left: 4px solid var(--color-accent);">
+            <div class="cluster-between">
+              <div>
+                <h4 style="margin: 0;">PR Size Classification: <span id="pr-size-label" class="badge badge-info"></span></h4>
+                <p id="pr-size-desc" class="text-small text-muted" style="margin: var(--space-1) 0 0;"></p>
+              </div>
+              <button id="pr-apply-size-btn" type="button" class="btn btn-secondary btn-sm">Apply Size Label &rarr;</button>
+            </div>
+            <div id="pr-size-notice" class="text-small text-muted" hidden></div>
+          </div>
+
+          <!-- Quality Checks Table -->
+          <div class="stack-sm">
+            <h4>Contribution Standards &amp; Checklist Verification</h4>
+            <div class="table-responsive">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 25%;">Check</th>
+                    <th style="width: 15%;">Status</th>
+                    <th>Evaluation &amp; Recommendation</th>
+                  </tr>
+                </thead>
+                <tbody id="pr-checks-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Recommendations Box -->
+          <div id="pr-recommendations-box" class="box box-body stack-sm" style="background: var(--color-canvas-subtle);" hidden>
+            <h4>Recommended Improvements</h4>
+            <ul id="pr-recommendations-list" class="text-small stack-xs" style="padding-left: 1.25rem;"></ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 3: Label Manager -->
+    <section id="section-labels" class="stack-md" aria-labelledby="heading-labels">
+      <div class="box-header" style="border-radius: var(--radius-md); border: 1px solid var(--color-border-default);">
+        <div>
+          <h2 id="heading-labels" class="box-title">3. Label Manager</h2>
+          <p class="text-small text-muted">Preview and apply proposed labels to issues or pull requests with caller authorization, preserving all existing unrelated labels.</p>
+        </div>
+      </div>
+
+      <div class="box box-body stack-md">
+        <form id="label-form" class="stack-sm">
+          <div class="cluster" style="align-items: flex-end;">
+            <div class="form-group" style="flex: 2; min-width: 240px; margin-bottom: 0;">
+              <label for="label-repo" class="form-label">GitHub Repository</label>
+              <input type="text" id="label-repo" class="input" placeholder="owner/repo" required>
+            </div>
+            <div class="form-group" style="flex: 1; min-width: 100px; margin-bottom: 0;">
+              <label for="label-issue-num" class="form-label">Issue / PR #</label>
+              <input type="number" id="label-issue-num" class="input" placeholder="42" min="1" required>
+            </div>
+            <div class="form-group" style="flex: 2; min-width: 240px; margin-bottom: 0;">
+              <label for="label-names" class="form-label">Labels to Add (comma-separated)</label>
+              <input type="text" id="label-names" class="input" placeholder="bug, needs-triage" required>
+            </div>
+            <button id="label-preview-btn" type="submit" class="btn btn-secondary">Preview Labels</button>
+          </div>
+        </form>
+
+        <div id="label-error" class="flash flash-error" hidden></div>
+        <div id="label-success" class="flash flash-success" hidden></div>
+
+        <!-- Label Preview Mount -->
+        <div id="label-preview-results" class="stack-sm" hidden>
+          <div class="box box-body stack-sm" style="background: var(--color-canvas-subtle);">
+            <h4>Label Modification Preview</h4>
+            <div class="cluster" style="gap: var(--space-4);">
+              <div>
+                <span class="text-small text-muted">Currently on Issue:</span>
+                <div id="label-current-list" class="cluster" style="margin-top: var(--space-1);"></div>
+              </div>
+              <div>
+                <span class="text-small text-muted">To be Added:</span>
+                <div id="label-to-add-list" class="cluster" style="margin-top: var(--space-1);"></div>
+              </div>
+              <div id="label-missing-repo-container" hidden>
+                <span class="text-small text-muted">Missing in Repo (Will be created):</span>
+                <div id="label-missing-repo-list" class="cluster" style="margin-top: var(--space-1);"></div>
+              </div>
+            </div>
+
+            <!-- Authorization Box to Apply -->
+            <div class="stack-sm" style="margin-top: var(--space-3); border-top: 1px solid var(--color-border-default); padding-top: var(--space-3);">
+              <h4>Authorize &amp; Apply Labels</h4>
+              <p class="text-small text-muted">Provide your GitHub Personal Access Token (`repo` or `write` scope) to verify write collaborator permissions. Tokens are verified in-memory and never saved.</p>
+              <div class="cluster" style="align-items: flex-end;">
+                <div class="form-group" style="flex: 1; min-width: 280px; margin-bottom: 0;">
+                  <label for="label-token" class="form-label">GitHub Token (Bearer PAT)</label>
+                  <input type="password" id="label-token" class="input" placeholder="ghp_..." autocomplete="off">
+                </div>
+                <button id="label-apply-btn" type="button" class="btn btn-primary">Apply Labels</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 4: Contributor Automation -->
+    <section id="section-welcome" class="stack-md" aria-labelledby="heading-welcome">
+      <div class="box-header" style="border-radius: var(--radius-md); border: 1px solid var(--color-border-default);">
+        <div>
+          <h2 id="heading-welcome" class="box-title">4. First-Time Contributor Automation</h2>
+          <p class="text-small text-muted">Generate friendly, informative welcome greetings for new contributors with links to community standards and idempotent comment markers (`&lt;!-- open-workers:welcome --&gt;`).</p>
+        </div>
+      </div>
+
+      <div class="box box-body stack-md">
+        <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: var(--space-3);">
+          <div class="stack-sm">
+            <h4>Welcome Message Generator</h4>
+            <div class="form-group">
+              <label for="welcome-repo" class="form-label">Repository</label>
+              <input type="text" id="welcome-repo" class="input" placeholder="owner/repo">
+            </div>
+            <div class="form-group">
+              <label for="welcome-user" class="form-label">Contributor Username</label>
+              <input type="text" id="welcome-user" class="input" placeholder="e.g. alice">
+            </div>
+            <div class="form-group">
+              <label for="welcome-custom" class="form-label">Custom Template (Optional)</label>
+              <textarea id="welcome-custom" class="input" rows="4" placeholder="Use {username}, {repo}, {contributing_url}, {code_of_conduct_url}, {support_url}"></textarea>
+            </div>
+            <button id="welcome-generate-btn" type="button" class="btn btn-secondary">Generate Welcome Preview</button>
+          </div>
+
+          <div class="stack-sm">
+            <div class="cluster-between">
+              <h4>Preview Message</h4>
+              <button id="welcome-copy-btn" type="button" class="btn btn-secondary btn-sm" disabled>Copy</button>
+            </div>
+            <pre id="welcome-preview-text" class="code-block" style="min-height: 180px; white-space: pre-wrap; font-size: 0.85rem;">Click "Generate Welcome Preview" to see formatted message.</pre>
+          </div>
+        </div>
+
+        <!-- Repository Configuration Guide -->
+        <div class="box box-body stack-xs" style="background: var(--color-canvas-subtle); margin-top: var(--space-2);">
+          <h4>Opt-In Webhook Automation via `.github/open-workers.yml`</h4>
+          <p class="text-small text-muted">To enable automatic welcomes, label assignment, and size labeling on pull request events, commit this configuration to your repository default branch:</p>
+          <pre class="code-block" style="font-size: 0.8rem;">version: 1
+enabled: true
+issues:
+  labeling:
+    enabled: true
+pullRequests:
+  sizeLabeling:
+    enabled: true
+  welcome:
+    enabled: true</pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 5: Maintenance & Release Tools -->
+    <section id="section-maintenance" class="stack-md" aria-labelledby="heading-maintenance">
+      <div class="box-header" style="border-radius: var(--radius-md); border: 1px solid var(--color-border-default);">
+        <div>
+          <h2 id="heading-maintenance" class="box-title">5. Stale Issue Inspection &amp; Release Notes Preparation</h2>
+          <p class="text-small text-muted">Inspect inactive issues without automated closures, and draft categorized release notes from merged pull requests.</p>
+        </div>
+      </div>
+
+      <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: var(--space-3);">
+        <!-- Sub-panel A: Stale Issue Inspector -->
+        <div class="box box-body stack-sm">
+          <h4>Inactive / Stale Issue Inspector</h4>
+          <p class="text-small text-muted">Inspect open issues with no recent updates. Security issues and protected labels are strictly excluded.</p>
+          <form id="stale-form" class="stack-xs">
+            <div class="form-group">
+              <label for="stale-repo" class="form-label">Repository</label>
+              <input type="text" id="stale-repo" class="input" placeholder="owner/repo" required>
+            </div>
+            <div class="form-group">
+              <label for="stale-days" class="form-label">Days Inactive Threshold</label>
+              <input type="number" id="stale-days" class="input" value="30" min="1" max="365">
+            </div>
+            <button id="stale-submit-btn" type="submit" class="btn btn-secondary btn-sm">Scan Stale Issues</button>
+          </form>
+
+          <div id="stale-error" class="flash flash-error" hidden></div>
+          <div id="stale-results" class="stack-xs" style="margin-top: var(--space-2);" hidden>
+            <div class="cluster-between">
+              <span id="stale-count-badge" class="badge"></span>
+              <span id="stale-summary-text" class="text-small text-muted"></span>
+            </div>
+            <div id="stale-issues-list" class="stack-xs" style="margin-top: var(--space-1); max-height: 250px; overflow-y: auto;"></div>
+          </div>
+        </div>
+
+        <!-- Sub-panel B: Release Notes Generator -->
+        <div class="box box-body stack-sm">
+          <h4>Release Notes Drafter</h4>
+          <p class="text-small text-muted">Compiles merged pull requests into categorized Conventional Commits release notes.</p>
+          <form id="release-notes-form" class="stack-xs">
+            <div class="form-group">
+              <label for="rn-repo" class="form-label">Repository</label>
+              <input type="text" id="rn-repo" class="input" placeholder="owner/repo" required>
+            </div>
+            <div class="form-group">
+              <label for="rn-title" class="form-label">Release Title</label>
+              <input type="text" id="rn-title" class="input" value="v1.3.0 Release Notes">
+            </div>
+            <button id="rn-submit-btn" type="submit" class="btn btn-primary btn-sm">Generate Release Notes</button>
+          </form>
+
+          <div id="rn-error" class="flash flash-error" hidden></div>
+          <div id="rn-results" class="stack-xs" style="margin-top: var(--space-2);" hidden>
+            <div class="cluster-between">
+              <span id="rn-count-badge" class="badge badge-success"></span>
+              <div class="cluster" style="gap: var(--space-1);">
+                <button id="rn-copy-btn" type="button" class="btn btn-secondary btn-sm">Copy</button>
+                <button id="rn-download-btn" type="button" class="btn btn-secondary btn-sm">Download</button>
+              </div>
+            </div>
+            <pre id="rn-markdown-preview" class="code-block" style="max-height: 250px; overflow-y: auto; font-size: 0.8rem;"></pre>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container site-footer-inner">
+      <div class="cluster" style="gap: var(--space-2); align-items: center;">
+        <img src="assets/open-workers-icon.svg" alt="Open Workers" width="20" height="20">
+        <p class="text-small text-muted" style="margin: 0;">Open Workers &mdash; Multi-purpose GitHub Automation Platform</p>
+      </div>
+      <p class="text-small text-muted">Apache-2.0 Licensed &bull; <a href="/privacy.html">Privacy</a> &bull; <a href="/support.html">Support</a></p>
+    </div>
+  </footer>
+
+  <script type="module" src="js/issues.js"></script>
+</body>
+</html>

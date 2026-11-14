@@ -16,6 +16,8 @@ import cors from 'cors';
 import { createGitHubContext } from './config/github.js';
 import { createApiRouter } from './routes/api.js';
 import { createWebhookRouter } from './routes/webhooks.js';
+import { createDispatcher } from './core/events/dispatcher.js';
+import { registerAutomationHandlers } from './modules/issues/automationService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -81,6 +83,9 @@ export function createApp(options = {}) {
     })
   );
 
+  const dispatcher = options.dispatcher || createDispatcher({ logger });
+  registerAutomationHandlers(dispatcher);
+
   // Raw unparsed body MUST run before express.json() for accurate HMAC SHA-256 verification
   app.use(
     '/api/webhooks',
@@ -89,7 +94,9 @@ export function createApp(options = {}) {
       webhookSecret: githubContext.webhookSecret,
       logger,
       maxDeliveryCache: options.maxDeliveryCache,
-      onEvent: options.onWebhookEvent
+      onEvent: options.onWebhookEvent,
+      dispatcher,
+      githubContext
     })
   );
 

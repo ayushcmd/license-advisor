@@ -26,7 +26,9 @@ export function createWebhookRouter({
   webhookSecret,
   logger = console,
   maxDeliveryCache = DEFAULT_MAX_DELIVERY_CACHE,
-  onEvent
+  onEvent,
+  dispatcher,
+  githubContext
 } = {}) {
   const router = Router();
   const seenDeliveries = new Set();
@@ -71,6 +73,40 @@ export function createWebhookRouter({
         action: payload.action,
         repository: payload.repository?.full_name || null,
         installationId: payload.installation?.id || null
+      });
+    });
+
+    webhooks.on('issues', async ({ payload }) => {
+      let dispatchResult = null;
+      if (dispatcher) {
+        dispatchResult = await dispatcher.dispatch({
+          name: 'issues',
+          payload,
+          context: { githubContext, logger }
+        });
+      }
+      await recordEvent('issues', {
+        action: payload.action,
+        issueNumber: payload.issue?.number,
+        repository: payload.repository?.full_name || null,
+        dispatchResult
+      });
+    });
+
+    webhooks.on('pull_request', async ({ payload }) => {
+      let dispatchResult = null;
+      if (dispatcher) {
+        dispatchResult = await dispatcher.dispatch({
+          name: 'pull_request',
+          payload,
+          context: { githubContext, logger }
+        });
+      }
+      await recordEvent('pull_request', {
+        action: payload.action,
+        pullNumber: payload.pull_request?.number,
+        repository: payload.repository?.full_name || null,
+        dispatchResult
       });
     });
 

@@ -34,6 +34,21 @@ import {
   previewDocumentationPr,
   createDocumentationPullRequest
 } from '../modules/documentation/documentationService.js';
+import {
+  listIssueCapabilities,
+  analyzeIssue,
+  findDuplicateIssues,
+  inspectStaleIssues,
+  previewIssueLabels,
+  applyIssueLabels
+} from '../modules/issues/issueService.js';
+import {
+  analyzePullRequest,
+  classifyPullRequest,
+  generateReleaseNotes,
+  previewPullRequestAction,
+  executePullRequestAction
+} from '../modules/issues/pullRequestService.js';
 import { authorizeRepositoryWrite } from '../core/github/authorize.js';
 import { LICENSE_CATALOG, SPDX_DATA_VERSION } from '../../public/js/catalog-data.js';
 import {
@@ -269,6 +284,150 @@ export function createApiRouter({ githubContext, env = process.env, createUserCl
         githubContext
       });
       res.status(201).json(result);
+    })
+  );
+
+  // ---------------------------------------------------------------------------
+  // PR & Issue Management Module Endpoints
+  // ---------------------------------------------------------------------------
+
+  router.get('/issues/capabilities', (_req, res) => {
+    res.json(listIssueCapabilities());
+  });
+
+  router.post(
+    '/issues/analyze',
+    withServiceErrorHandling(async (req, res) => {
+      const result = await analyzeIssue({
+        repoInput: req.body?.repo,
+        issueNumber: req.body?.issueNumber,
+        githubContext
+      });
+      res.json(result);
+    })
+  );
+
+  router.post(
+    '/issues/duplicates',
+    withServiceErrorHandling(async (req, res) => {
+      const result = await findDuplicateIssues({
+        repoInput: req.body?.repo,
+        issueNumber: req.body?.issueNumber,
+        candidateLimit: req.body?.limit,
+        githubContext
+      });
+      res.json(result);
+    })
+  );
+
+  router.post(
+    '/issues/stale',
+    withServiceErrorHandling(async (req, res) => {
+      const result = await inspectStaleIssues({
+        repoInput: req.body?.repo,
+        daysInactive: req.body?.daysInactive,
+        exemptLabels: req.body?.exemptLabels,
+        limit: req.body?.limit,
+        githubContext
+      });
+      res.json(result);
+    })
+  );
+
+  router.post(
+    '/issues/preview-labels',
+    withServiceErrorHandling(async (req, res) => {
+      const result = await previewIssueLabels({
+        repoInput: req.body?.repo,
+        issueNumber: req.body?.issueNumber,
+        labelsToAdd: req.body?.labels,
+        githubContext
+      });
+      res.json(result);
+    })
+  );
+
+  router.post(
+    '/issues/apply-labels',
+    withServiceErrorHandling(async (req, res) => {
+      const result = await applyIssueLabels({
+        repoInput: req.body?.repo,
+        issueNumber: req.body?.issueNumber,
+        labelsToAdd: req.body?.labels,
+        authorization: req.get('authorization'),
+        githubContext,
+        createUserClient
+      });
+      res.status(200).json(result);
+    })
+  );
+
+  router.post(
+    '/pulls/analyze',
+    withServiceErrorHandling(async (req, res) => {
+      const result = await analyzePullRequest({
+        repoInput: req.body?.repo,
+        pullNumber: req.body?.pullNumber,
+        githubContext
+      });
+      res.json(result);
+    })
+  );
+
+  router.post(
+    '/pulls/size',
+    withServiceErrorHandling(async (req, res) => {
+      const result = await classifyPullRequest({
+        repoInput: req.body?.repo,
+        pullNumber: req.body?.pullNumber,
+        githubContext
+      });
+      res.json(result);
+    })
+  );
+
+  router.post(
+    '/pulls/release-notes',
+    withServiceErrorHandling(async (req, res) => {
+      const result = await generateReleaseNotes({
+        repoInput: req.body?.repo,
+        releaseTitle: req.body?.releaseTitle,
+        previousTag: req.body?.previousTag,
+        currentTag: req.body?.currentTag,
+        limit: req.body?.limit,
+        githubContext
+      });
+      res.json(result);
+    })
+  );
+
+  router.post(
+    '/pulls/preview-action',
+    withServiceErrorHandling(async (req, res) => {
+      const result = await previewPullRequestAction({
+        repoInput: req.body?.repo,
+        pullNumber: req.body?.pullNumber,
+        action: req.body?.action,
+        options: req.body?.options,
+        githubContext
+      });
+      res.json(result);
+    })
+  );
+
+  router.post(
+    '/pulls/execute-action',
+    withServiceErrorHandling(async (req, res) => {
+      const result = await executePullRequestAction({
+        repoInput: req.body?.repo,
+        pullNumber: req.body?.pullNumber,
+        action: req.body?.action,
+        options: req.body?.options,
+        authorization: req.get('authorization'),
+        githubContext,
+        createUserClient
+      });
+      res.status(200).json(result);
     })
   );
 

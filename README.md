@@ -124,16 +124,19 @@ Tools to keep project documentation clear, comprehensive, and up-to-date:
 
 *Explore:* [`/documentation.html`](https://open-workers.onrender.com/documentation.html)
 
-### 5. PR & Issue Management &mdash; Upcoming
+### 5. PR & Issue Management &mdash; Available
 
-Intelligent triage and collaboration automation for maintainers:
+Intelligent triage, quality inspection, and collaboration automation for maintainers:
 
-- **Rule-Based Issue Labeling:** Automatically tags issues based on title prefixes, templates used, and affected file paths.
-- **PR Classification & Size Labeling:** Classifies PRs by size (`size/S`, `size/M`, `size/L`) and component impact.
-- **Contributor Welcome Bot:** Welcomes first-time contributors with project guidelines and links to contribution docs.
-- **Checklist Enforcement:** Alerts reviewers when required pull request checklist items remain incomplete.
-- **Stale Triage:** Gentle reminders for inactive PRs and abandoned issues.
-- **Release Notes Drafter:** Aggregates merged PR descriptions and labels into GitHub Release drafts.
+- **Rule-Based Issue Categorization:** Deterministic classification of incoming issues across 8 standard categories (Bug, Feature, Documentation, Question, Enhancement, Performance, Maintenance, Security) with explainable reasoning and private disclosure warnings for sensitive security reports (`POST /api/issues/analyze`).
+- **Pull Request Quality Checker & Size Classification:** Evaluates PRs against contribution standards (meaningful description, linked issue references, testing instructions, breaking changes, checklist completeness, Conventional Commit titles, draft status) and automatically classifies size from `size/XS` to `size/XL` (`POST /api/pulls/analyze`, `POST /api/pulls/size`).
+- **Duplicate Issue Suggestions:** Fast, explainable text similarity analysis across open issues with matching keyword summaries, strictly preventing automated or speculative closures (`POST /api/issues/duplicates`).
+- **Stale Issue Inspector:** On-demand detection of inactive issues based on configurable day thresholds, with strict exemption protections for security issues, pinned topics, and protected labels (`POST /api/issues/stale`).
+- **First-Time Contributor Welcome:** Formats customizable greetings linking to community standards with idempotent comment markers (`<!-- open-workers:welcome -->`) preventing duplicate messages.
+- **Release Notes Drafter:** Automatically compiles merged pull requests into organized Conventional Commits release notes drafts with interactive markdown preview, copy, and download (`POST /api/pulls/release-notes`).
+- **Opt-In Webhook Automation:** Event dispatcher routing verified `issues` and `pull_request` deliveries to automated handlers strictly when opted in via `.github/open-workers.yml`, with built-in bot loop guards and least-privilege permission enforcement.
+
+*Explore:* [`/issues.html`](https://open-workers.onrender.com/issues.html)
 
 ### 6. Repository Automation &mdash; Upcoming
 
@@ -154,7 +157,7 @@ Continuous maintenance and developer workflow automation:
 | **Community** | **Available** | Community | Guidelines, conduct, security, support, issue & PR templates, audit, consolidated PRs (`/api/community/*`) |
 | **Security** | **Available** | Security | Security audit, Dependabot & CodeQL generators, PR automation (`/api/security/*`) |
 | **Documentation** | **Available** | Documentation | README audits & improvements, changelog generation, badge tools, link validation, PR automation (`/api/documentation/*`) |
-| **PR & Issue Management** | *Upcoming* | Workflow | Auto-labeling, contributor welcome, PR checklists, stale triage |
+| **PR & Issue Management** | **Available** | Workflow | Issue triage, PR quality & size, duplicate detection, stale inspection, release notes, opt-in webhooks (`/api/issues/*`, `/api/pulls/*`) |
 | **Repository Automation** | *Upcoming* | Workflow | GitHub Actions CI templates, Action health inspector, code quality configs |
 
 ---
