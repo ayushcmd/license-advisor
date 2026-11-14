@@ -175,3 +175,236 @@ export async function classifyPullRequest({ repoInput, pullNumber, githubContext
  * @param {object} params.githubContext
  * @returns {Promise<object>}
  */
+export async function previewPullRequestAction({ repoInput, pullNumber, action, options = {}, githubContext }) {
+  let parsed;
+  try {
+    parsed = parseRepoInput(repoInput);
+  } catch (error) {
+    throw new ServiceError(400, error.message, 'INVALID_INPUT');
+  }
+  const { owner, repo, fullName } = parsed;
+
+  const num = parseInt(pullNumber, 10);
+  if (isNaN(num) || num <= 0) {
+    throw new ServiceError(400, 'A valid positive numeric pull request number is required.', 'INVALID_INPUT');
+  }
+
+  const { octokit, installed } = await resolveClient(owner, repo, githubContext);
+
+  let prRes;
+  try {
+    prRes = await octokit.rest.pulls.get({ owner, repo, pull_number: num });
+  } catch (err) {
+    throw mapGitHubError(err, `Failed to load pull request #${num} for "${fullName}".`);
+  }
+
+  const prData = prRes.data;
+  const currentLabels = (prData.labels || []).map((l) => (typeof l === 'string' ? l : l.name));
+
+  if (action === 'apply_size_label') {
+    const size = classifyPullRequestSize({
+      additions: prData.additions,
+      deletions: prData.deletions,
+      changedFiles: prData.changed_files
+    });
+
+    if (!size.label) {
+      return {
+        action,
+        canProceed: false,
+        message: 'Pull request has 0 changed lines; no size label applicable.'
+      };
+    }
+
+    const allSizeLabels = PR_SIZE_THRESHOLDS.map((t) => t.label);
+    const existingSizeLabels = currentLabels.filter((l) => allSizeLabels.includes(l));
+    const labelsToRemove = existingSizeLabels.filter((l) => l !== size.label);
+    const alreadyApplied = existingSizeLabels.includes(size.label);
+
+    return {
+      action,
+      pullNumber: num,
+      size,
+      targetLabel: size.label,
+      currentLabels,
+      existingSizeLabels,
+      labelsToRemove,
+      alreadyApplied,
+      canProceed: !alreadyApplied || labelsToRemove.length > 0,
+      appInstalled: installed,
+      description: `Apply managed size label "${size.label}"${labelsToRemove.length > 0 ? ` (replaces ${labelsToRemove.join(', ')})` : ''}.`
+    };
+  }
+
+  if (action === 'post_welcome') {
+    const username = prData.user?.login || 'contributor';
+    const isBot = prData.user?.type === 'Bot' || username.endsWith('[bot]');
+    const authorAssociation = prData.author_association || 'NONE';
+    const isFirstTimer = authorAssociation === 'FIRST_TIME_CONTRIBUTOR' || authorAssociation === 'FIRST_TIMER' || authorAssociation === 'NONE';
+
+    // Inspect existing comments for welcome marker
+    let alreadyWelcomed = false;
+    try {
+      const commentsRes = await octokit.rest.issues.listComments({ owner, repo, issue_number: num, per_page: 50 });
+      for (const comment of (commentsRes.data || [])) {
+        if (hasMarker(comment.body, MARKERS.WELCOME)) {
+          alreadyWelcomed = true;
+          break;
+        }
+      }
+    } catch {
+      // Proceed if comment list fails
+    }
+
+    const welcomeBody = formatWelcomeMessage({
+      username,
+      repo: fullName,
+      customMessage: options.customMessage
+    });
+
+    return {
+      action,
+      pullNumber: num,
+      username,
+      isBot,
+      authorAssociation,
+      isFirstTimer,
+      alreadyWelcomed,
+      welcomeBody,
+      appInstalled: installed,
+      canProceed: !isBot && !alreadyWelcomed,
+      notice: alreadyWelcomed
+        ? 'A welcome comment containing the Open Workers marker has already been posted to this pull request.'
+        : isBot
+          ? 'Bot accounts are excluded from automatic welcome messages.'
+          : null
+    };
+  }
+
+  throw new ServiceError(400, `Unsupported action "${action}". Supported actions: apply_size_label, post_welcome.`, 'INVALID_ACTION');
+}
+
+/**
+ * Execute an authorized pull request action
+ *
+ * @param {object} params
+ * @param {string} params.repoInput
+ * @param {number|string} params.pullNumber
+ * @param {string} params.action
+ * @param {object} [params.options]
+ * @param {string} params.authorization
+ * @param {object} params.githubContext
+ * @param {Function} [params.createUserClient]
+ * @returns {Promise<object>}
+ */
+export async function executePullRequestAction({
+  repoInput,
+  pullNumber,
+  action,
+  options = {},
+  authorization,
+  githubContext,
+  createUserClient
+}) {
+  const auth = await authorizeRepositoryWrite({
+    authorization,
+    repoInput,
+    githubContext,
+    createUserClient
+  });
+
+  let parsed;
+  try {
+    parsed = parseRepoInput(repoInput);
+  } catch (error) {
+    throw new ServiceError(400, error.message, 'INVALID_INPUT');
+  }
+  const { owner, repo, fullName } = parsed;
+
+  const num = parseInt(pullNumber, 10);
+  if (isNaN(num) || num <= 0) {
+    throw new ServiceError(400, 'A valid positive numeric pull request number is required.', 'INVALID_INPUT');
+  }
+
+  const { octokit, installed } = await resolveClient(owner, repo, githubContext);
+  if (!installed) {
+    throw new ServiceError(403, `GitHub App is not installed on repository "${fullName}".`, 'APP_NOT_INSTALLED');
+  }
+
+  if (action === 'apply_size_label') {
+    const preview = await previewPullRequestAction({ repoInput, pullNumber: num, action, options, githubContext });
+    if (!preview.canProceed && preview.alreadyApplied) {
+      return {
+        success: true,
+        action,
+        pullNumber: num,
+        message: `Label "${preview.targetLabel}" is already applied.`,
+        currentLabels: preview.currentLabels
+      };
+    }
+
+    try {
+      // 1. Remove outdated size labels
+      for (const oldLabel of preview.labelsToRemove) {
+        try {
+          await octokit.rest.issues.removeLabel({ owner, repo, issue_number: num, name: oldLabel });
+        } catch {
+          // Ignore if label could not be removed
+        }
+      }
+
+      // 2. Add the new size label
+      const addRes = await octokit.rest.issues.addLabels({
+        owner,
+        repo,
+        issue_number: num,
+        labels: [preview.targetLabel]
+      });
+
+      const updatedLabels = (addRes.data || []).map((l) => (typeof l === 'string' ? l : l.name));
+      return {
+        success: true,
+        action,
+        pullNumber: num,
+        executedBy: auth.login,
+        appliedLabel: preview.targetLabel,
+        removedLabels: preview.labelsToRemove,
+        currentLabels: updatedLabels
+      };
+    } catch (err) {
+      throw mapGitHubError(err, `Failed to update size labels on PR #${num}.`);
+    }
+  }
+
+  if (action === 'post_welcome') {
+    const preview = await previewPullRequestAction({ repoInput, pullNumber: num, action, options, githubContext });
+    if (preview.alreadyWelcomed) {
+      throw new ServiceError(409, 'Welcome comment has already been posted to this pull request.', 'ALREADY_WELCOMED');
+    }
+    if (preview.isBot) {
+      throw new ServiceError(400, 'Welcome comments cannot be posted to bot accounts.', 'BOT_ACCOUNT');
+    }
+
+    try {
+      const commentRes = await octokit.rest.issues.createComment({
+        owner,
+        repo,
+        issue_number: num,
+        body: preview.welcomeBody
+      });
+
+      return {
+        success: true,
+        action,
+        pullNumber: num,
+        executedBy: auth.login,
+        commentId: commentRes.data.id,
+        commentUrl: commentRes.data.html_url
+      };
+    } catch (err) {
+      throw mapGitHubError(err, `Failed to post welcome comment on PR #${num}.`);
+    }
+  }
+
+  throw new ServiceError(400, `Unsupported action "${action}".`, 'INVALID_ACTION');
+}

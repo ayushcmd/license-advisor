@@ -404,3 +404,41 @@ export function classifyPullRequestSize({ additions = 0, deletions = 0, changedF
  * @param {object} [params.links]
  * @returns {string}
  */
+export function formatWelcomeMessage({ username, repo, customMessage, links = {} } = {}) {
+  const user = sanitizeText(username || 'contributor', 100);
+  const repository = sanitizeText(repo || 'repository', 150);
+
+  const contributingUrl = links.contributingUrl || `https://github.com/${repository}/blob/main/CONTRIBUTING.md`;
+  const conductUrl = links.conductUrl || `https://github.com/${repository}/blob/main/CODE_OF_CONDUCT.md`;
+  const supportUrl = links.supportUrl || `https://github.com/${repository}/blob/main/SUPPORT.md`;
+  const docsUrl = links.docsUrl || `https://github.com/${repository}#documentation`;
+
+  let message = customMessage;
+  if (!message) {
+    message = [
+      `👋 Welcome to **${repository}**, @${user}! Thank you for opening your first contribution.`,
+      '',
+      'Before proceeding with review, please make sure you have checked our community guides:',
+      `- 📖 [Contribution Guidelines](${contributingUrl})`,
+      `- 🤝 [Code of Conduct](${conductUrl})`,
+      `- 💬 [Support Channels](${supportUrl})`,
+      '',
+      'A maintainer will review your contribution shortly. Feel free to add any additional context or testing instructions in the description!'
+    ].join('\n');
+  } else {
+    // Variable substitution
+    message = message
+      .replace(/\{username\}/g, user)
+      .replace(/\{repo\}/g, repository)
+      .replace(/\{contributing_url\}/g, contributingUrl)
+      .replace(/\{code_of_conduct_url\}/g, conductUrl)
+      .replace(/\{support_url\}/g, supportUrl)
+      .replace(/\{docs_url\}/g, docsUrl);
+  }
+
+  return appendMarker(message, MARKERS.WELCOME);
+}
+
+/**
+ * Tokenize text into normalized significant words
+ */
