@@ -706,3 +706,18 @@ renderStagedFiles();
 triggerGenerateWorkflow();
 // Generate default EditorConfig preview on initial load
 triggerGenerateQuality();
+
+// Check URL query param e.g. /automation.html?repo=owner/repo
+const params = new URLSearchParams(window.location.search);
+const initialRepo = params.get('repo');
+if (initialRepo) {
+  const auditRepo = document.getElementById('audit-repo');
+  if (auditRepo) {
+    auditRepo.value = initialRepo;
+    if (auditForm && typeof auditForm.requestSubmit === 'function') {
+      auditForm.requestSubmit();
+    } else if (auditForm) {
+      auditForm.dispatchEvent(new Event('submit', { cancelable: true }));
+    }
+  }
+}
