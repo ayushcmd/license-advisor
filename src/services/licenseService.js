@@ -9,6 +9,7 @@ import { getLicenseById } from '../../public/js/catalog-data.js';
 import { explainLicense, recommendLicenses, resolveLicense } from '../../public/js/engine.js';
 import { generateLicensePackage } from '../../public/js/generator.js';
 import { buildAuditReport, parseRepoInput } from '../../public/js/analyzer.js';
+import { authorizeRepositoryRead } from '../core/github/authorize.js';
 
 /**
  * Structured service error carrying an explicit HTTP status code and machine code.
@@ -132,7 +133,7 @@ export function validatePrRequest(body) {
  * @param {object} params.githubContext
  * @returns {Promise<object>}
  */
-export async function analyzeRepositoryServer({ repoInput, githubContext }) {
+export async function analyzeRepositoryServer({ repoInput, githubContext, authorization, createUserClient, enforceAuthorization = false }) {
   let parsedRepo;
   try {
     parsedRepo = parseRepoInput(repoInput);
@@ -169,11 +170,22 @@ export async function analyzeRepositoryServer({ repoInput, githubContext }) {
     throw mapGitHubError(err, `Failed to inspect "${owner}/${repo}".`);
   }
 
+  if (repoRes.data?.private && (enforceAuthorization || authorization !== undefined)) {
+    await authorizeRepositoryRead({
+      authorization,
+      repoInput: `${owner}/${repo}`,
+      githubContext,
+      createUserClient
+    });
+  }
+
   const [licenseRes, contentsRes] = await Promise.all([
-    octokit.rest.licenses.getForRepo({ owner, repo }).catch((err) => {
-      if (err?.status === 404) return null;
-      throw mapGitHubError(err, 'Failed to read repository license metadata.');
-    }),
+    octokit.rest?.licenses?.getForRepo
+      ? octokit.rest.licenses.getForRepo({ owner, repo }).catch((err) => {
+          if (err?.status === 404) return null;
+          throw mapGitHubError(err, 'Failed to read repository license metadata.');
+        })
+      : Promise.resolve(null),
     octokit.rest.repos.getContent({ owner, repo, path: '' }).catch((err) => {
       if (err?.status === 404) return { data: [], headers: err?.response?.headers };
       throw mapGitHubError(err, 'Failed to inspect repository root directory.');

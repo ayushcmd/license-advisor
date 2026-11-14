@@ -62,7 +62,7 @@ open-workers/
 │   ├── routes/                 # Express route handlers (api.js, webhooks.js)
 │   ├── services/               # Licensing services (licenseService.js, prService.js, readmeService.js)
 │   └── server.js               # Express application bootstrap and server
-├── tests/                      # Native node:test suite (220 tests across 42 suites)
+├── tests/                      # Native node:test suite (235 tests across 45 suites)
 └── docs/                       # Architecture, development, and operational guides
 ```
 

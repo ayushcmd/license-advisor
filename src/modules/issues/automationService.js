@@ -97,12 +97,22 @@ export async function handleIssueEvent(payload = {}, context = {}) {
     if (config.issues.labeling.enabled) {
       const categorization = categorizeIssue(issue);
       if (categorization.confidence === 'high' && categorization.suggestedLabels.length > 0) {
+        const existingLabels = new Set((issue.labels || []).map((l) => (typeof l === 'string' ? l : l?.name || '')));
+        const labelsToApply = categorization.suggestedLabels.filter((label) => !existingLabels.has(label));
+        if (labelsToApply.length === 0) {
+          return {
+            skipped: true,
+            reason: 'LABELS_ALREADY_PRESENT',
+            issueNumber: issue.number,
+            labels: categorization.suggestedLabels
+          };
+        }
         try {
           const addRes = await octokit.rest.issues.addLabels({
             owner,
             repo,
             issue_number: issue.number,
-            labels: categorization.suggestedLabels
+            labels: labelsToApply
           });
           return {
             success: true,

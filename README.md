@@ -10,7 +10,7 @@
   [![GitHub App](https://img.shields.io/badge/GitHub%20App-open--license--advisor-0969DA?style=flat-square&logo=github&logoColor=white)](https://github.com/apps/open-license-advisor)
   [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg?style=flat-square)](./LICENSE)
   [![Node.js](https://img.shields.io/badge/Node.js-%3E%3D20.0.0-339933.svg?style=flat-square&logo=nodedotjs&logoColor=white)](https://nodejs.org)
-  [![Tests](https://img.shields.io/badge/Tests-220%20Passing-2DA44E.svg?style=flat-square&logo=githubactions&logoColor=white)](./tests)
+  [![Tests](https://img.shields.io/badge/Tests-235%20Passing-2DA44E.svg?style=flat-square&logo=githubactions&logoColor=white)](./tests)
 
   <p align="center">
     <a href="https://open-workers.onrender.com"><strong>Launch Web App</strong></a> &bull;
@@ -161,7 +161,7 @@ Instead of jumping between disconnected tools, developers can enter a repository
 
 - **Cross-Module Health Overview:** Parallel execution of Licensing, Community, Security, Documentation, PR & Issues, and Automation audits using bounded concurrency with strict per-module error isolation (`Promise.allSettled`).
 - **Prioritized Action Items:** Findings from all modules are normalized, ranked by impact (High, Medium, Low), and presented with one-click fix buttons that link directly to the relevant tool with the repository pre-filled.
-- **Privacy & Authorization Guard:** Public repositories can be audited immediately. Private repositories require user authorization (`Authorization: Bearer <token>`) and verify collaborator write access in memory before exposing findings.
+- **Privacy & Authorization Guard:** Public repositories can be audited immediately. Private repositories require user authorization (`Authorization: Bearer <token>`) and verify collaborator read/write access in memory across all module audit endpoints before exposing findings.
 - **Stateless & Database-Free:** Zero repository code, tokens, or audit records are cached or stored on disk.
 
 *Explore:* [`/dashboard.html`](https://open-workers.onrender.com/dashboard.html) &bull; `POST /api/dashboard/analyze`

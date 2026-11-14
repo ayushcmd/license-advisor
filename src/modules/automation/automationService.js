@@ -9,6 +9,7 @@ import { parseRepoInput } from '../../../public/js/analyzer.js';
 import { ServiceError } from '../../services/licenseService.js';
 import { createFeatureBranch } from '../../core/pullRequests/branches.js';
 import { commitFiles } from '../../core/pullRequests/files.js';
+import { authorizeRepositoryRead } from '../../core/github/authorize.js';
 import {
   AUTOMATION_CHECKS,
   AUTOMATION_TEMPLATES,
@@ -43,7 +44,7 @@ export function listAutomationTemplates() {
 /**
  * Non-destructive repository setup audit
  */
-export async function auditRepositorySetup({ repoInput, githubContext }) {
+export async function auditRepositorySetup({ repoInput, githubContext, authorization, createUserClient }) {
   let parsed;
   try {
     parsed = parseRepoInput(repoInput);
@@ -82,6 +83,15 @@ export async function auditRepositorySetup({ repoInput, githubContext }) {
     repoRes = await octokit.rest.repos.get({ owner, repo });
   } catch (err) {
     throw mapGitHubError(err, `Failed to inspect "${fullName}".`);
+  }
+
+  if (repoRes.data?.private) {
+    await authorizeRepositoryRead({
+      authorization,
+      repoInput: fullName,
+      githubContext,
+      createUserClient
+    });
   }
 
   const defaultBranch = repoRes.data.default_branch || 'main';

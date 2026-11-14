@@ -10,6 +10,7 @@ import { ServiceError } from '../../services/licenseService.js';
 import { createFeatureBranch } from '../../core/pullRequests/branches.js';
 import { commitFiles } from '../../core/pullRequests/files.js';
 import { repositoryService } from '../../core/repository/service.js';
+import { authorizeRepositoryRead } from '../../core/github/authorize.js';
 import { generateSecurityConfig, SECURITY_CHECKS } from './engine.js';
 
 function mapGitHubError(err, fallbackMessage) {
@@ -29,7 +30,7 @@ function mapGitHubError(err, fallbackMessage) {
  * @param {object} params.githubContext
  * @returns {Promise<object>}
  */
-export async function auditSecurityRepository({ repoInput, githubContext }) {
+export async function auditSecurityRepository({ repoInput, githubContext, authorization, createUserClient }) {
   let parsed;
   try {
     parsed = parseRepoInput(repoInput);
@@ -68,6 +69,15 @@ export async function auditSecurityRepository({ repoInput, githubContext }) {
     repoRes = await octokit.rest.repos.get({ owner, repo });
   } catch (err) {
     throw mapGitHubError(err, `Failed to inspect "${fullName}".`);
+  }
+
+  if (repoRes.data?.private) {
+    await authorizeRepositoryRead({
+      authorization,
+      repoInput: fullName,
+      githubContext,
+      createUserClient
+    });
   }
 
   const defaultBranch = repoRes.data.default_branch || 'main';

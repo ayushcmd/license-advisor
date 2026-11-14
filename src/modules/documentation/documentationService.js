@@ -12,6 +12,7 @@ import { ServiceError } from '../../services/licenseService.js';
 import { createFeatureBranch } from '../../core/pullRequests/branches.js';
 import { commitFiles } from '../../core/pullRequests/files.js';
 import { repositoryService } from '../../core/repository/service.js';
+import { authorizeRepositoryRead } from '../../core/github/authorize.js';
 import {
   parseReadmeContent,
   extractMarkdownLinks,
@@ -67,7 +68,7 @@ async function resolveClient(owner, repo, githubContext) {
  * @param {object} params.githubContext
  * @returns {Promise<object>}
  */
-export async function auditDocumentationRepository({ repoInput, githubContext }) {
+export async function auditDocumentationRepository({ repoInput, githubContext, authorization, createUserClient }) {
   let parsed;
   try {
     parsed = parseRepoInput(repoInput);
@@ -83,6 +84,15 @@ export async function auditDocumentationRepository({ repoInput, githubContext })
     repoRes = await octokit.rest.repos.get({ owner, repo });
   } catch (err) {
     throw mapGitHubError(err, `Failed to load details for "${fullName}".`);
+  }
+
+  if (repoRes.data?.private) {
+    await authorizeRepositoryRead({
+      authorization,
+      repoInput: fullName,
+      githubContext,
+      createUserClient
+    });
   }
 
   const defaultBranch = repoRes.data.default_branch || 'main';

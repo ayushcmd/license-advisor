@@ -62,7 +62,7 @@ import {
 } from '../modules/automation/automationService.js';
 import { analyzeRepositoryDashboard } from '../core/dashboard/coordinator.js';
 import { authorizeRepositoryWrite } from '../core/github/authorize.js';
-import { LICENSE_CATALOG, SPDX_DATA_VERSION } from '../../public/js/catalog-data.js';
+import { LICENSE_CATALOG, SPDX_DATA_VERSION, getLicenseById } from '../../public/js/catalog-data.js';
 import {
   ServiceError,
   analyzeRepositoryServer,
@@ -109,14 +109,18 @@ export function createApiRouter({ githubContext, env = process.env, createUserCl
     res.json({ templates: listTemplates(category ? { category } : {}) });
   });
   router.post('/community/generate', withServiceErrorHandling(async (req, res) => res.json(generateDocument(req.body))));
-  router.post(
-    '/community/analyze',
-    withServiceErrorHandling(async (req, res) => {
-      const repoInput = req.body?.repo;
-      const report = await auditCommunityRepository({ repoInput, githubContext });
-      res.json(report);
-    })
-  );
+  const handleCommunityAnalyze = withServiceErrorHandling(async (req, res) => {
+    const repoInput = req.body?.repo;
+    const report = await auditCommunityRepository({
+      repoInput,
+      githubContext,
+      authorization: req.get('authorization'),
+      createUserClient
+    });
+    res.json(report);
+  });
+  router.post('/community/analyze', handleCommunityAnalyze);
+  router.post('/community/audit', handleCommunityAnalyze);
   router.post(
     '/community/preview-pr',
     withServiceErrorHandling(async (req, res) => {
@@ -165,14 +169,18 @@ export function createApiRouter({ githubContext, env = process.env, createUserCl
     })
   );
 
-  router.post(
-    '/security/analyze',
-    withServiceErrorHandling(async (req, res) => {
-      const repoInput = req.body?.repo;
-      const report = await auditSecurityRepository({ repoInput, githubContext });
-      res.json(report);
-    })
-  );
+  const handleSecurityAnalyze = withServiceErrorHandling(async (req, res) => {
+    const repoInput = req.body?.repo;
+    const report = await auditSecurityRepository({
+      repoInput,
+      githubContext,
+      authorization: req.get('authorization'),
+      createUserClient
+    });
+    res.json(report);
+  });
+  router.post('/security/analyze', handleSecurityAnalyze);
+  router.post('/security/audit', handleSecurityAnalyze);
 
   router.post(
     '/security/preview-pr',
@@ -247,14 +255,18 @@ export function createApiRouter({ githubContext, env = process.env, createUserCl
     })
   );
 
-  router.post(
-    '/documentation/analyze',
-    withServiceErrorHandling(async (req, res) => {
-      const repoInput = req.body?.repo;
-      const report = await auditDocumentationRepository({ repoInput, githubContext });
-      res.json(report);
-    })
-  );
+  const handleDocumentationAnalyze = withServiceErrorHandling(async (req, res) => {
+    const repoInput = req.body?.repo;
+    const report = await auditDocumentationRepository({
+      repoInput,
+      githubContext,
+      authorization: req.get('authorization'),
+      createUserClient
+    });
+    res.json(report);
+  });
+  router.post('/documentation/analyze', handleDocumentationAnalyze);
+  router.post('/documentation/audit', handleDocumentationAnalyze);
 
   router.post(
     '/documentation/check-links',
@@ -340,7 +352,9 @@ export function createApiRouter({ githubContext, env = process.env, createUserCl
         daysInactive: req.body?.daysInactive,
         exemptLabels: req.body?.exemptLabels,
         limit: req.body?.limit,
-        githubContext
+        githubContext,
+        authorization: req.get('authorization'),
+        createUserClient
       });
       res.json(result);
     })
@@ -464,16 +478,17 @@ export function createApiRouter({ githubContext, env = process.env, createUserCl
     })
   );
 
-  router.post(
-    '/automation/analyze',
-    withServiceErrorHandling(async (req, res) => {
-      const result = await auditRepositorySetup({
-        repoInput: req.body?.repo,
-        githubContext
-      });
-      res.json(result);
-    })
-  );
+  const handleAutomationAnalyze = withServiceErrorHandling(async (req, res) => {
+    const result = await auditRepositorySetup({
+      repoInput: req.body?.repo,
+      githubContext,
+      authorization: req.get('authorization'),
+      createUserClient
+    });
+    res.json(result);
+  });
+  router.post('/automation/analyze', handleAutomationAnalyze);
+  router.post('/automation/audit', handleAutomationAnalyze);
 
   router.post(
     '/automation/inspect-workflows',
@@ -551,6 +566,18 @@ export function createApiRouter({ githubContext, env = process.env, createUserCl
     });
   });
 
+  router.get('/licenses', (_req, res) => {
+    res.json({ licenses: LICENSE_CATALOG, total: LICENSE_CATALOG.length });
+  });
+
+  router.get('/licenses/:id', (req, res) => {
+    const license = getLicenseById(req.params.id);
+    if (!license) {
+      return res.status(404).json({ error: 'License not found in catalog.', code: 'LICENSE_NOT_FOUND' });
+    }
+    return res.json(license);
+  });
+
   router.get('/config', (_req, res) => {
     res.json({
       appName: 'Open Workers',
@@ -584,7 +611,13 @@ export function createApiRouter({ githubContext, env = process.env, createUserCl
     '/analyze',
     withServiceErrorHandling(async (req, res) => {
       const repoInput = req.body?.repo;
-      const report = await analyzeRepositoryServer({ repoInput, githubContext });
+      const report = await analyzeRepositoryServer({
+        repoInput,
+        githubContext,
+        authorization: req.get('authorization'),
+        createUserClient,
+        enforceAuthorization: true
+      });
       res.json(report);
     })
   );

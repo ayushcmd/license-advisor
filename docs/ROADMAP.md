@@ -77,6 +77,16 @@ This document outlines the phased evolution of **Open Workers**, organized aroun
 - **Privacy & Authorization Enforcement:** Strict privacy boundary requiring `Authorization: Bearer <token>` and collaborator write verification before inspecting private repositories.
 - **Test Suite:** 220 passing tests across 42 test suites with zero failures.
 
+### Platform Integration Testing, Dashboard Fixes & Navigation Cleanup (Completed)
+- **Navigation Cleanup:** Retired "Check Repository" from primary top-level navigation across all 14 HTML pages in favor of the Unified Repository Dashboard (`/dashboard.html`). Preserved deep license auditing under the Licensing dropdown (`/analyzer.html`) with an informative referral banner.
+- **Dashboard Accuracy Fixes:** Synchronized stale issue inspection passing `staleCount`, `scannedIssues`, and `has_issues` status through coordinator and findings normalizers.
+- **Dynamic Module Counters:** Replaced hardcoded module evaluation counters with dynamic calculation reflecting actual module completion and failure states.
+- **Status Separation:** Decoupled `executionStatus` (`completed`, `partial`, `failed`, `not_supported`) from repository `healthStatus` (`healthy`, `needs_attention`, `critical`, `unknown`) across all 6 modules.
+- **Private Repository Read Authorization:** Enforced caller verification via `authorizeRepositoryRead()` across all module audit endpoints (`POST /api/analyze`, `POST /api/community/audit`, `POST /api/security/audit`, `POST /api/documentation/audit`, `POST /api/issues/stale`, `POST /api/automation/audit`, `POST /api/dashboard/analyze`).
+- **Webhook Delivery Idempotency:** Hardened webhook delivery across process restarts by verifying label presence before mutation.
+- **Catalog License Endpoints:** Mounted missing `GET /api/licenses` and `GET /api/licenses/:id`.
+- **Test Suite Expansion:** 235 passing tests across 45 test suites with 0 failures.
+
 ---
 
 ### Phase 6: PR & Issue Management Module (Completed)

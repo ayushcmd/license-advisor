@@ -297,18 +297,27 @@ function renderDashboard(data) {
 
     // Badge styling and text
     if (cfg.badge) {
-      if (typeof mod.score === 'number') {
-        cfg.badge.textContent = `${mod.score}%`;
-        cfg.badge.className = `badge ${getScoreBadgeClass(mod.score)}`;
-      } else if (mod.status === 'available') {
-        cfg.badge.textContent = key === 'licensing' ? 'Audited' : 'Configured';
-        cfg.badge.className = 'badge badge-success';
-      } else if (mod.status === 'warning') {
-        cfg.badge.textContent = 'Attention';
-        cfg.badge.className = 'badge badge-warning';
-      } else {
+      if (mod.executionStatus === 'failed' || mod.status === 'failed') {
         cfg.badge.textContent = 'Failed';
         cfg.badge.className = 'badge badge-danger';
+      } else if (mod.executionStatus === 'not_supported') {
+        cfg.badge.textContent = 'Disabled';
+        cfg.badge.className = 'badge badge-neutral';
+      } else if (typeof mod.score === 'number') {
+        cfg.badge.textContent = `${mod.score}%`;
+        cfg.badge.className = `badge ${getScoreBadgeClass(mod.score)}`;
+      } else if (mod.healthStatus === 'healthy' || mod.status === 'available') {
+        cfg.badge.textContent = key === 'licensing' ? 'Audited' : 'Configured';
+        cfg.badge.className = 'badge badge-success';
+      } else if (mod.healthStatus === 'needs_attention' || mod.status === 'warning') {
+        cfg.badge.textContent = 'Attention';
+        cfg.badge.className = 'badge badge-warning';
+      } else if (mod.healthStatus === 'critical') {
+        cfg.badge.textContent = 'Critical';
+        cfg.badge.className = 'badge badge-danger';
+      } else {
+        cfg.badge.textContent = 'Unknown';
+        cfg.badge.className = 'badge badge-neutral';
       }
     }
 
