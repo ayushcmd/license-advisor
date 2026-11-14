@@ -49,6 +49,17 @@ import {
   previewPullRequestAction,
   executePullRequestAction
 } from '../modules/issues/pullRequestService.js';
+import {
+  listAutomationChecks,
+  listAutomationTemplates,
+  generateAutomationFile
+} from '../modules/automation/engine.js';
+import {
+  auditRepositorySetup,
+  inspectRepositoryWorkflows,
+  previewAutomationPr,
+  createAutomationPullRequest
+} from '../modules/automation/automationService.js';
 import { authorizeRepositoryWrite } from '../core/github/authorize.js';
 import { LICENSE_CATALOG, SPDX_DATA_VERSION } from '../../public/js/catalog-data.js';
 import {
@@ -431,7 +442,156 @@ export function createApiRouter({ githubContext, env = process.env, createUserCl
     })
   );
 
+  // Repository Automation routes
+  router.get('/automation/checks', (_req, res) => {
+    res.json({ checks: listAutomationChecks() });
+  });
+
+  router.get('/automation/templates', (_req, res) => {
+    res.json({ templates: listAutomationTemplates() });
+  });
+
+  router.post(
+    '/automation/generate',
+    withServiceErrorHandling(async (req, res) => {
+      const { templateId, options, existingContent } = req.body || {};
+      if (!templateId) {
+        throw new ServiceError(400, 'A "templateId" is required to generate an automation file.', 'INVALID_INPUT');
+      }
+      const generated = generateAutomationFile({ templateId, options, existingContent });
+      res.json(generated);
+    })
+  );
+
+  router.post(
+    '/automation/analyze',
+    withServiceErrorHandling(async (req, res) => {
+      const result = await auditRepositorySetup({
+        repoInput: req.body?.repo,
+        githubContext
+      });
+      res.json(result);
+    })
+  );
+
+  router.post(
+    '/automation/inspect-workflows',
+    withServiceErrorHandling(async (req, res) => {
+      const result = await inspectRepositoryWorkflows({
+        repoInput: req.body?.repo,
+        githubContext
+      });
+      res.json(result);
+    })
+  );
+
+  router.post(
+    '/automation/preview-pr',
+    withServiceErrorHandling(async (req, res) => {
+      const result = await previewAutomationPr({
+        repoInput: req.body?.repo,
+        files: req.body?.files,
+        replaceExisting: Boolean(req.body?.replaceExisting),
+        githubContext
+      });
+      res.json(result);
+    })
+  );
+
+  router.post(
+    '/automation/trigger-pr',
+    withServiceErrorHandling(async (req, res) => {
+      const auth = await authorizeRepositoryWrite({
+        authorization: req.get('authorization'),
+        repoInput: req.body?.repo,
+        githubContext,
+        createUserClient
+      });
+      const result = await createAutomationPullRequest({
+        repoInput: req.body?.repo,
+        files: req.body?.files,
+        replaceExisting: Boolean(req.body?.replaceExisting),
+        customBranch: req.body?.branch,
+        customPrTitle: req.body?.prTitle,
+        customPrBody: req.body?.prBody,
+        githubContext
+      });
+      res.status(201).json({
+        ...result,
+        caller: auth.login
+      });
+    })
+  );
+
   router.get('/health', (_req, res) => {
+    res.json({
+      status: 'ok',
+      service: 'open-workers',
+      mode: 'database-free',
+      timestamp: new Date().toISOString(),
+      githubAppConfigured: Boolean(githubContext?.isAppConfigured),
+      webhookConfigured: Boolean(githubContext?.isWebhookConfigured),
+      catalogCount: LICENSE_CATALOG.length
+    });
+  });
+
+  router.get('/config', (_req, res) => {
+    res.json({
+      appName: 'Open Workers',
+      appSlug: githubContext?.appSlug || 'open-license-advisor',
+      appUrl,
+      installUrl: githubContext?.getInstallationUrl
+        ? githubContext.getInstallationUrl()
+        : 'https://github.com/apps/open-license-advisor/installations/new',
+      githubAppConfigured: Boolean(githubContext?.isAppConfigured),
+      webhookConfigured: Boolean(githubContext?.isWebhookConfigured),
+      planTier: 'free',
+      supportedPermissions: {
+        metadata: 'read',
+        contents: 'write',
+        pull_requests: 'write'
+      },
+      spdxCatalogVersion: SPDX_DATA_VERSION,
+      licenseCount: LICENSE_CATALOG.length
+    });
+  });
+
+  router.post(
+    '/recommend',
+    withServiceErrorHandling(async (req, res) => {
+      const recommendation = validateRecommendationRequest(req.body);
+      res.json(recommendation);
+    })
+  );
+
+  router.post(
+    '/analyze',
+    withServiceErrorHandling(async (req, res) => {
+      const repoInput = req.body?.repo;
+      const report = await analyzeRepositoryServer({ repoInput, githubContext });
+      res.json(report);
+    })
+  );
+
+  router.post(
+    '/trigger-pr',
+    withServiceErrorHandling(async (req, res) => {
+      await authorizeRepositoryWrite({ authorization: req.get('authorization'), repoInput: req.body?.repo, githubContext, createUserClient });
+      const result = await createLicensePullRequest({
+        repo: req.body?.repo,
+        licenseId: req.body?.licenseId,
+        year: req.body?.year,
+        holder: req.body?.holder,
+        replaceExisting: req.body?.replaceExisting,
+        readmePlacement: req.body?.readmePlacement,
+        githubContext
+      });
+      res.status(201).json(result);
+    })
+  );
+
+  return router;
+}router.get('/health', (_req, res) => {
     res.json({
       status: 'ok',
       service: 'open-workers',
