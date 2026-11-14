@@ -33,7 +33,7 @@
         <a href="/issues.html" class="nav-link">PRs &amp; Issues</a>
         <a href="/automation.html" class="nav-link">Automation</a>
         <details class="nav-dropdown">
-          <summary class="nav-link licensing-toggle" aria-controls="licensing-links" aria-expanded="false">Licensing <span class="nav-caret" aria-hidden="true">&#9662;</span></summary>
+          <summary class="nav-link licensing-toggle" aria-controls="licensing-links" aria-expanded="false" aria-haspopup="true">Licensing <span class="nav-caret" aria-hidden="true">&#9662;</span></summary>
           <div id="licensing-links" class="nav-dropdown-panel">
             <a href="/explorer.html" class="nav-dropdown-link">Explore Licenses</a>
             <a href="/questionnaire.html" class="nav-dropdown-link">Find a License</a>
@@ -74,7 +74,7 @@
         <div class="form-group">
           <label for="dashboard-repo">GitHub Repository</label>
           <div class="cluster">
-            <input type="text" id="dashboard-repo" name="repo" placeholder="owner/repository or https://github.com/owner/repository" required class="form-input" style="flex: 1; min-width: 260px;">
+            <input type="text" id="dashboard-repo" name="repo" placeholder="owner/repository or https://github.com/owner/repository" required class="form-input" style="flex: 1 1 200px; min-width: 0;">
             <button type="submit" class="btn btn-primary" id="dashboard-submit-btn">
               <span id="btn-text">Analyze Repository</span>
               <span id="btn-spinner" class="spinner" style="display: none;" aria-hidden="true"></span>
@@ -166,7 +166,7 @@
           <p class="text-muted text-sm">Detailed findings across each of Open Workers' six core capabilities.</p>
         </div>
 
-        <div class="grid-2" id="modules-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: var(--space-4);">
+        <div class="grid-2" id="modules-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: var(--space-4);">
           <!-- 1. Licensing Card -->
           <article class="card stack-sm" id="card-licensing">
             <div class="cluster-between">
@@ -263,7 +263,7 @@
     </div>
   </footer>
 
-  <script type="module" src="js/dashboard.js"></script>
-  <script type="module" src="js/navigation.js"></script>
+  <script type="module" src="/js/dashboard.js"></script>
+  <script type="module" src="/js/navigation.js"></script>
 </body>
 </html>

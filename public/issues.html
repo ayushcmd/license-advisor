@@ -33,7 +33,7 @@
         <a href="/issues.html" class="nav-link" aria-current="page">PRs &amp; Issues</a>
         <a href="/automation.html" class="nav-link">Automation</a>
         <details class="nav-dropdown">
-          <summary class="nav-link licensing-toggle" aria-controls="licensing-links" aria-expanded="false">Licensing <span class="nav-caret" aria-hidden="true">&#9662;</span></summary>
+          <summary class="nav-link licensing-toggle" aria-controls="licensing-links" aria-expanded="false" aria-haspopup="true">Licensing <span class="nav-caret" aria-hidden="true">&#9662;</span></summary>
           <div id="licensing-links" class="nav-dropdown-panel">
             <a href="/explorer.html" class="nav-dropdown-link">Explore Licenses</a>
             <a href="/questionnaire.html" class="nav-dropdown-link">Find a License</a>
@@ -311,7 +311,7 @@
       </div>
 
       <div class="box box-body stack-md">
-        <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: var(--space-3);">
+        <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: var(--space-3);">
           <div class="stack-sm">
             <h4>Welcome Message Generator</h4>
             <div class="form-group">
@@ -365,7 +365,7 @@ pullRequests:
         </div>
       </div>
 
-      <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: var(--space-3);">
+      <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: var(--space-3);">
         <!-- Sub-panel A: Stale Issue Inspector -->
         <div class="box box-body stack-sm">
           <h4>Inactive / Stale Issue Inspector</h4>
@@ -434,6 +434,7 @@ pullRequests:
     </div>
   </footer>
 
-  <script type="module" src="js/issues.js"></script>
+  <script type="module" src="/js/issues.js"></script>
+  <script type="module" src="/js/navigation.js"></script>
 </body>
 </html>
