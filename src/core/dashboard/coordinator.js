@@ -9,6 +9,8 @@ import { Octokit } from '@octokit/rest';
 import { parseRepoInput } from '../../../public/js/analyzer.js';
 import { ServiceError } from '../../services/licenseService.js';
 import { authorizeRepositoryRead } from '../github/authorize.js';
+import { mapGitHubError } from '../github/errors.js';
+import { AnalysisContext } from '../github/context.js';
 import { analyzeRepositoryServer } from '../../services/licenseService.js';
 import { auditCommunityRepository } from '../../modules/community/communityService.js';
 import { auditSecurityRepository } from '../../modules/security/securityService.js';
@@ -25,20 +27,7 @@ import {
   aggregateDashboardFindings
 } from './findings.js';
 
-function mapGitHubError(err, fallbackMessage) {
-  if (err instanceof ServiceError) return err;
-  const status = err?.status || 500;
-  if (status === 404) return new ServiceError(404, 'Repository not found or access denied.', 'NOT_FOUND');
-  if (status === 403) {
-    const msg = err?.message || '';
-    if (msg.includes('rate limit')) {
-      return new ServiceError(403, 'GitHub API rate limit exceeded.', 'RATE_LIMITED');
-    }
-    return new ServiceError(403, 'GitHub API access denied or insufficient permissions.', 'INSUFFICIENT_PERMISSIONS');
-  }
-  if (status === 401) return new ServiceError(401, 'GitHub authentication failed or credentials expired.', 'AUTH_REQUIRED');
-  return new ServiceError(502, `${fallbackMessage}: ${err?.message || 'Upstream error'}`, 'GITHUB_API_ERROR');
-}
+export { mapGitHubError };
 
 /**
  * Perform unified cross-module analysis of a repository
@@ -64,54 +53,25 @@ export async function analyzeRepositoryDashboard({
   }
   const { owner, repo, fullName } = parsed;
 
-  let octokit = null;
-  let installed = false;
-  let installationId = null;
+  // Initialize request-scoped analysis context for bounded metadata and tree reuse
+  const context = new AnalysisContext({
+    owner,
+    repo,
+    fullName,
+    githubContext,
+    authorization,
+    createUserClient
+  });
 
-  if (githubContext?.isAppConfigured && typeof githubContext.resolveRepoInstallation === 'function') {
-    try {
-      const resolution = await githubContext.resolveRepoInstallation(owner, repo);
-      if (resolution?.installed && resolution.octokit) {
-        octokit = resolution.octokit;
-        installed = true;
-        installationId = resolution.installation?.id || null;
-      }
-    } catch {
-      // Continue to public client
-    }
-  }
+  const { installed, installationId } = await context.resolveClient();
 
-  if (!octokit) {
-    if (typeof githubContext?.createPublicOctokit === 'function') {
-      octokit = githubContext.createPublicOctokit();
-    } else if (typeof githubContext?.getPublicOctokit === 'function') {
-      octokit = githubContext.getPublicOctokit();
-    }
-  }
-
-  if (!octokit) {
-    throw new ServiceError(503, 'GitHub client is unavailable.', 'CLIENT_UNAVAILABLE');
-  }
-
-  // 1. Initial repository metadata inspection
-  let repoRes;
-  try {
-    repoRes = await octokit.rest.repos.get({ owner, repo });
-  } catch (err) {
-    throw mapGitHubError(err, `Failed to inspect repository "${fullName}".`);
-  }
-
-  const repoData = repoRes.data;
+  // 1. Initial repository metadata inspection via request context
+  const repoData = await context.getRepoData();
   const isPrivate = Boolean(repoData.private);
 
   // 2. Privacy Guard: Private repositories require authenticated user authorization
   if (isPrivate) {
-    await authorizeRepositoryRead({
-      authorization,
-      repoInput: fullName,
-      githubContext,
-      createUserClient
-    });
+    await context.authorizeRead();
   }
 
   // 3. Run all six capability audits with isolated error boundaries using Promise.allSettled
@@ -124,16 +84,16 @@ export async function analyzeRepositoryDashboard({
     automationSettled
   ] = await Promise.allSettled([
     // 1. Licensing Module
-    analyzeRepositoryServer({ repoInput: fullName, githubContext, authorization, createUserClient }),
+    analyzeRepositoryServer({ repoInput: fullName, githubContext, authorization, createUserClient, context }),
 
     // 2. Community Module
-    auditCommunityRepository({ repoInput: fullName, githubContext, authorization, createUserClient }),
+    auditCommunityRepository({ repoInput: fullName, githubContext, authorization, createUserClient, context }),
 
     // 3. Security Module
-    auditSecurityRepository({ repoInput: fullName, githubContext, authorization, createUserClient }),
+    auditSecurityRepository({ repoInput: fullName, githubContext, authorization, createUserClient, context }),
 
     // 4. Documentation Module
-    auditDocumentationRepository({ repoInput: fullName, githubContext, authorization, createUserClient }),
+    auditDocumentationRepository({ repoInput: fullName, githubContext, authorization, createUserClient, context }),
 
     // 5. PR & Issue Management Module (Repository-level collaboration check)
     (async () => {
@@ -168,7 +128,8 @@ export async function analyzeRepositoryDashboard({
         limit: 30,
         githubContext,
         authorization,
-        createUserClient
+        createUserClient,
+        context
       });
       return {
         issuesEnabled: true,
@@ -182,7 +143,7 @@ export async function analyzeRepositoryDashboard({
     })(),
 
     // 6. Repository Automation Module
-    auditRepositorySetup({ repoInput: fullName, githubContext, authorization, createUserClient })
+    auditRepositorySetup({ repoInput: fullName, githubContext, authorization, createUserClient, context })
   ]);
 
   // 4. Normalize findings per module with error resilience
