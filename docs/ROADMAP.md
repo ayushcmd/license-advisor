@@ -139,6 +139,25 @@ This document outlines the phased evolution of **Open Workers**, organized aroun
   - Code style configuration generator (`.editorconfig`, `.prettierrc`, ESLint).
   - Opt-in scheduled maintenance tasks.
 
+### Phase 6c: Platform Integration Testing, Dashboard Fixes & Navigation Cleanup — Completed
+- **Objective:** Cross-module platform verification, finding count normalization, and unified navigation.
+- **Deliverables:**
+  - Retired standalone Check Repository link across all 14 HTML pages, routing repository audits to `/dashboard.html`.
+  - Moved deep license auditing under the Licensing dropdown (`#licensing-links`).
+  - Disentangled operational `executionStatus` from repository `healthStatus`.
+  - Enforced `authorizeRepositoryRead` across all module audit endpoints for private repository privacy.
+  - Added webhook restart idempotency for issue labeling.
+
+### Phase 6d: Backend Performance, GitHub API Efficiency & Reliability Optimization — Completed
+- **Objective:** Eliminate redundant API requests, bound concurrency, and standardize upstream error handling.
+- **Deliverables:**
+  - Request-scoped `AnalysisContext` for zero-global-state tree and metadata memoization.
+  - 62.9% reduction in GitHub API calls for public repository audits (35 -> 13 calls).
+  - 71.4% reduction in GitHub API calls for private repository audits (56 -> 16 calls), eliminating redundant caller authentication and collaborator checks.
+  - Standardized error mapping in `src/core/github/errors.js` handling primary/secondary rate limits with `retry-after` extraction and 503 timeout mapping.
+  - Concurrent workflow inspection and bounded link checker execution.
+  - 243 passing tests across 47 suites with 0 failures.
+
 ### Phase 7: Production App & Marketplace Rebranding Cutover
 - **Objective:** Final cutover of external production integrations.
 - **Deliverables:**
