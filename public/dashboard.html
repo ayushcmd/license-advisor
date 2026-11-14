@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Unified Repository Dashboard — Open Workers</title>
+  <meta name="description" content="One repository, six capabilities, one actionable report. Inspect licensing, community standards, security policies, documentation, PR and issue health, and repository automation.">
+  <meta property="og:image" content="https://open-workers.onrender.com/assets/open-workers-social.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://open-workers.onrender.com/assets/open-workers-social.png">
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16.png">
+  <link rel="apple-touch-icon" href="assets/open-workers-icon-128.png">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css">
+</head>
+<body data-page="dashboard">
+  <a href="#main-content" class="skip-link">Skip to main content</a>
+
+  <header class="site-header">
+    <div class="container site-header-inner">
+      <a href="index.html" class="brand-link">
+        <img src="assets/open-workers-icon.svg" alt="Open Workers logo" class="brand-logo" width="26" height="26">
+        <span>Open Workers</span>
+      </a>
+      <nav class="site-nav" aria-label="Primary">
+        <a href="/index.html" class="nav-link">Home</a>
+        <a href="/dashboard.html" class="nav-link" aria-current="page">Dashboard</a>
+        <a href="/community.html" class="nav-link">Community</a>
+        <a href="/security.html" class="nav-link">Security</a>
+        <a href="/documentation.html" class="nav-link">Documentation</a>
+        <a href="/issues.html" class="nav-link">PRs &amp; Issues</a>
+        <a href="/automation.html" class="nav-link">Automation</a>
+        <details class="nav-dropdown">
+          <summary class="nav-link licensing-toggle" aria-controls="licensing-links" aria-expanded="false">Licensing <span class="nav-caret" aria-hidden="true">&#9662;</span></summary>
+          <div id="licensing-links" class="nav-dropdown-panel">
+            <a href="/explorer.html" class="nav-dropdown-link">Explore Licenses</a>
+            <a href="/questionnaire.html" class="nav-dropdown-link">Find a License</a>
+            <a href="/compare.html" class="nav-dropdown-link">Compare Licenses</a>
+            <a href="/app-install.html" class="nav-dropdown-link">Create License PR</a>
+          </div>
+        </details>
+        <a href="/analyzer.html" class="nav-link">Check Repository</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main-content" class="container stack-lg">
+    <!-- Hero Header -->
+    <section class="page-header stack-sm">
+      <div class="stack-xs">
+        <span class="eyebrow">Platform Overview</span>
+        <h1>Unified Repository Dashboard</h1>
+      </div>
+      <p>Analyze any GitHub repository once to evaluate health across all six capabilities: licensing, community standards, security policies, documentation quality, PR and issue management, and CI automation.</p>
+      <div class="cluster" style="font-size: 0.85rem; color: var(--color-fg-muted);">
+        <span>✓ 6 Integrated capabilities</span>
+        <span>•</span>
+        <span>✓ Zero database or persistent storage</span>
+        <span>•</span>
+        <span>✓ Stateless on-demand audit</span>
+      </div>
+    </section>
+
+    <!-- Repository Input Form -->
+    <section class="card stack-md" aria-labelledby="heading-dashboard-input">
+      <div class="stack-xs">
+        <h2 id="heading-dashboard-input" style="margin: 0; font-size: 1.15rem;">Enter Repository to Analyze</h2>
+        <p class="text-muted text-sm">Provide an owner/repository or GitHub URL. Public repositories are inspected immediately; private repositories require authorization.</p>
+      </div>
+
+      <form id="dashboard-form" class="stack-sm">
+        <div class="form-group">
+          <label for="dashboard-repo">GitHub Repository</label>
+          <div class="cluster">
+            <input type="text" id="dashboard-repo" name="repo" placeholder="owner/repository or https://github.com/owner/repository" required class="form-input" style="flex: 1; min-width: 260px;">
+            <button type="submit" class="btn btn-primary" id="dashboard-submit-btn">
+              <span id="btn-text">Analyze Repository</span>
+              <span id="btn-spinner" class="spinner" style="display: none;" aria-hidden="true"></span>
+            </button>
+          </div>
+        </div>
+
+        <details class="disclosure" id="auth-disclosure" style="margin-top: var(--space-2);">
+          <summary class="text-sm">Private Repository or GitHub Token (Optional)</summary>
+          <div class="disclosure-body stack-xs">
+            <label for="dashboard-token" class="text-xs">GitHub Personal Access Token (PAT)</label>
+            <input type="password" id="dashboard-token" name="token" placeholder="ghp_... or github_pat_..." class="form-input" autocomplete="off">
+            <span class="form-hint text-xs">Used solely in memory for this request to authorize private repository access or prevent rate limits. Never stored or logged.</span>
+          </div>
+        </details>
+      </form>
+
+      <div id="dashboard-feedback" aria-live="polite"></div>
+    </section>
+
+    <!-- Dashboard Content Area (hidden until analysis runs) -->
+    <div id="dashboard-results" class="stack-lg" style="display: none;">
+      <!-- Repository Metadata Card -->
+      <section class="box stack-sm" aria-labelledby="repo-heading">
+        <div class="box-header">
+          <div class="cluster" style="gap: var(--space-2); align-items: center;">
+            <h2 id="repo-heading" class="box-title" style="font-size: 1.25rem;">
+              <a id="repo-link" href="#" target="_blank" rel="noopener noreferrer" style="color: var(--color-accent-fg); text-decoration: none;"></a>
+            </h2>
+            <span id="badge-visibility" class="badge"></span>
+            <span id="badge-archived" class="badge badge-warning" style="display: none;">Archived</span>
+          </div>
+          <div id="repo-app-status"></div>
+        </div>
+        <div class="box-body stack-sm">
+          <p id="repo-description" class="text-muted" style="margin: 0;"></p>
+          <div class="cluster" style="gap: var(--space-4); font-size: 0.85rem; color: var(--color-fg-muted); flex-wrap: wrap;">
+            <span>Default branch: <strong id="repo-branch" style="color: var(--color-fg-default);"></strong></span>
+            <span>Primary language: <strong id="repo-language" style="color: var(--color-fg-default);"></strong></span>
+            <span>Stars: <strong id="repo-stars" style="color: var(--color-fg-default);">0</strong></span>
+            <span>Forks: <strong id="repo-forks" style="color: var(--color-fg-default);">0</strong></span>
+            <span>Open Issues: <strong id="repo-issues" style="color: var(--color-fg-default);">0</strong></span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Overall Health Summary Stats -->
+      <section aria-labelledby="heading-summary">
+        <h3 id="heading-summary" class="sr-only">Repository Health Summary</h3>
+        <div class="stat-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+          <div class="stat-card">
+            <div id="stat-high-priority" class="stat-value" style="color: var(--color-danger-fg);">0</div>
+            <div class="stat-label">High Priority Findings</div>
+          </div>
+          <div class="stat-card">
+            <div id="stat-actionable" class="stat-value">0</div>
+            <div class="stat-label">Total Actionable Items</div>
+          </div>
+          <div class="stat-card">
+            <div id="stat-evaluated" class="stat-value">6 / 6</div>
+            <div class="stat-label">Capabilities Evaluated</div>
+          </div>
+          <div class="stat-card">
+            <div id="stat-attention" class="stat-value" style="color: var(--color-attention-fg);">0</div>
+            <div class="stat-label">Modules Needing Attention</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Prioritized Recommendations List -->
+      <section class="card stack-md" id="section-recommendations" aria-labelledby="heading-recommendations">
+        <div class="cluster-between">
+          <div class="stack-xs">
+            <h3 id="heading-recommendations" style="margin: 0; font-size: 1.15rem;">Prioritized Action Items</h3>
+            <p class="text-muted text-sm">Recommended improvements ranked by impact. Click any action to open the dedicated module with repository pre-loaded.</p>
+          </div>
+          <span id="badge-rec-count" class="badge"></span>
+        </div>
+
+        <div id="recommendations-list" class="stack-sm">
+          <!-- Populated by JavaScript -->
+        </div>
+      </section>
+
+      <!-- Six Capabilities Overview Cards -->
+      <section class="stack-md" aria-labelledby="heading-modules">
+        <div class="stack-xs">
+          <h3 id="heading-modules" style="margin: 0; font-size: 1.15rem;">Capability Health Breakdown</h3>
+          <p class="text-muted text-sm">Detailed findings across each of Open Workers' six core capabilities.</p>
+        </div>
+
+        <div class="grid-2" id="modules-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: var(--space-4);">
+          <!-- 1. Licensing Card -->
+          <article class="card stack-sm" id="card-licensing">
+            <div class="cluster-between">
+              <h4 style="margin: 0; font-size: 1rem;">Licensing</h4>
+              <span id="badge-licensing" class="badge"></span>
+            </div>
+            <p id="summary-licensing" class="text-sm text-muted" style="margin: 0;"></p>
+            <ul id="findings-licensing" class="text-xs stack-xs" style="padding-left: 18px; margin: var(--space-2) 0; flex: 1;"></ul>
+            <div style="margin-top: auto; padding-top: var(--space-2);">
+              <a id="btn-action-licensing" href="/analyzer.html" class="btn btn-secondary btn-sm" style="width: 100%; justify-content: center;">Check Licensing &rarr;</a>
+            </div>
+          </article>
+
+          <!-- 2. Community Standards Card -->
+          <article class="card stack-sm" id="card-community">
+            <div class="cluster-between">
+              <h4 style="margin: 0; font-size: 1rem;">Community Standards</h4>
+              <span id="badge-community" class="badge"></span>
+            </div>
+            <p id="summary-community" class="text-sm text-muted" style="margin: 0;"></p>
+            <ul id="findings-community" class="text-xs stack-xs" style="padding-left: 18px; margin: var(--space-2) 0; flex: 1;"></ul>
+            <div style="margin-top: auto; padding-top: var(--space-2);">
+              <a id="btn-action-community" href="/community.html" class="btn btn-secondary btn-sm" style="width: 100%; justify-content: center;">Manage Community Files &rarr;</a>
+            </div>
+          </article>
+
+          <!-- 3. Security Policies Card -->
+          <article class="card stack-sm" id="card-security">
+            <div class="cluster-between">
+              <h4 style="margin: 0; font-size: 1rem;">Security Policies</h4>
+              <span id="badge-security" class="badge"></span>
+            </div>
+            <p id="summary-security" class="text-sm text-muted" style="margin: 0;"></p>
+            <ul id="findings-security" class="text-xs stack-xs" style="padding-left: 18px; margin: var(--space-2) 0; flex: 1;"></ul>
+            <div style="margin-top: auto; padding-top: var(--space-2);">
+              <a id="btn-action-security" href="/security.html" class="btn btn-secondary btn-sm" style="width: 100%; justify-content: center;">Improve Security &rarr;</a>
+            </div>
+          </article>
+
+          <!-- 4. Documentation Quality Card -->
+          <article class="card stack-sm" id="card-documentation">
+            <div class="cluster-between">
+              <h4 style="margin: 0; font-size: 1rem;">Documentation</h4>
+              <span id="badge-documentation" class="badge"></span>
+            </div>
+            <p id="summary-documentation" class="text-sm text-muted" style="margin: 0;"></p>
+            <ul id="findings-documentation" class="text-xs stack-xs" style="padding-left: 18px; margin: var(--space-2) 0; flex: 1;"></ul>
+            <div style="margin-top: auto; padding-top: var(--space-2);">
+              <a id="btn-action-documentation" href="/documentation.html" class="btn btn-secondary btn-sm" style="width: 100%; justify-content: center;">Enhance Documentation &rarr;</a>
+            </div>
+          </article>
+
+          <!-- 5. PR & Issue Management Card -->
+          <article class="card stack-sm" id="card-issues">
+            <div class="cluster-between">
+              <h4 style="margin: 0; font-size: 1rem;">PR &amp; Issue Health</h4>
+              <span id="badge-issues" class="badge"></span>
+            </div>
+            <p id="summary-issues" class="text-sm text-muted" style="margin: 0;"></p>
+            <ul id="findings-issues" class="text-xs stack-xs" style="padding-left: 18px; margin: var(--space-2) 0; flex: 1;"></ul>
+            <div style="margin-top: auto; padding-top: var(--space-2);">
+              <a id="btn-action-issues" href="/issues.html" class="btn btn-secondary btn-sm" style="width: 100%; justify-content: center;">Triage &amp; Manage Issues &rarr;</a>
+            </div>
+          </article>
+
+          <!-- 6. Repository Automation Card -->
+          <article class="card stack-sm" id="card-automation">
+            <div class="cluster-between">
+              <h4 style="margin: 0; font-size: 1rem;">Repository Automation</h4>
+              <span id="badge-automation" class="badge"></span>
+            </div>
+            <p id="summary-automation" class="text-sm text-muted" style="margin: 0;"></p>
+            <ul id="findings-automation" class="text-xs stack-xs" style="padding-left: 18px; margin: var(--space-2) 0; flex: 1;"></ul>
+            <div style="margin-top: auto; padding-top: var(--space-2);">
+              <a id="btn-action-automation" href="/automation.html" class="btn btn-secondary btn-sm" style="width: 100%; justify-content: center;">Manage Automation &rarr;</a>
+            </div>
+          </article>
+        </div>
+      </section>
+    </div>
+
+    <p class="text-small text-muted" style="margin-top: var(--space-4);">Open Workers runs stateless repository checks on demand without caching, storing, or publishing code. Educational and maintenance guidance; not legal advice.</p>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container cluster-between">
+      <span>Open Workers &middot; Apache-2.0 Licensed &middot; Informational only, not legal advice.</span>
+      <nav class="footer-links" aria-label="Footer">
+        <a href="app-install.html">Create PR</a>
+        <a href="privacy.html">Privacy Policy</a>
+        <a href="support.html">Support</a>
+        <a href="https://github.com/ayushcmd/open-workers" target="_blank" rel="noopener noreferrer">GitHub Repo</a>
+      </nav>
+    </div>
+  </footer>
+
+  <script type="module" src="js/dashboard.js"></script>
+  <script type="module" src="js/navigation.js"></script>
+</body>
+</html>
