@@ -397,3 +397,186 @@ export async function previewAutomationPr({ repoInput, files = [], replaceExisti
 /**
  * Create an authorized repository automation pull request
  */
+export async function createAutomationPullRequest({
+  repoInput,
+  files = [],
+  replaceExisting = false,
+  customBranch,
+  customPrTitle,
+  customPrBody,
+  githubContext
+}) {
+  let parsed;
+  try {
+    parsed = parseRepoInput(repoInput);
+  } catch (error) {
+    throw new ServiceError(400, error.message, 'INVALID_INPUT');
+  }
+  const { owner, repo, fullName } = parsed;
+
+  if (!Array.isArray(files) || files.length === 0) {
+    throw new ServiceError(400, 'At least one file is required to create a pull request.', 'INVALID_FILES');
+  }
+
+  // Resolve GitHub App installation
+  let octokit;
+  let installation;
+  try {
+    const resolution = await githubContext.resolveRepoInstallation(owner, repo);
+    if (!resolution?.installed || !resolution.octokit) {
+      throw new ServiceError(403, 'GitHub App is not installed on this repository.', 'APP_NOT_INSTALLED');
+    }
+    octokit = resolution.octokit;
+    installation = resolution.installation;
+  } catch (err) {
+    throw mapGitHubError(err, 'Failed to resolve GitHub App installation.');
+  }
+
+  // Check repository status
+  let repoRes;
+  try {
+    repoRes = await octokit.rest.repos.get({ owner, repo });
+  } catch (err) {
+    throw mapGitHubError(err, `Failed to inspect "${fullName}".`);
+  }
+
+  if (repoRes.data.archived) {
+    throw new ServiceError(400, 'Cannot open pull requests on archived repositories.', 'REPOSITORY_ARCHIVED');
+  }
+
+  const defaultBranch = repoRes.data.default_branch || 'main';
+
+  // Permission safety check for GitHub Actions workflow files (.github/workflows/*)
+  const perms = installation?.permissions || {};
+  const hasWorkflowFiles = files.some((f) => String(f.path || f.filename).startsWith('.github/workflows/'));
+  if (hasWorkflowFiles && perms.workflows !== 'write') {
+    throw new ServiceError(
+      403,
+      'GitHub App requires "Workflows (Read & write)" permission to commit files under .github/workflows/. You can copy or download workflow files to commit manually, or update GitHub App permissions in GitHub settings.',
+      'WORKFLOW_PERMISSION_REQUIRED'
+    );
+  }
+
+  // Prepare and validate files to commit
+  const filesToCommit = [];
+  for (const item of files) {
+    const filePath = item.path || item.filename;
+    let content = item.content;
+
+    if (!filePath || typeof filePath !== 'string') {
+      throw new ServiceError(400, 'Invalid file specification: missing path.', 'INVALID_FILES');
+    }
+
+    if (filePath.startsWith('/') || filePath.includes('\\') || filePath.split('/').some((p) => !p || p === '..' || p === '.')) {
+      throw new ServiceError(400, `Unsafe or invalid file path: "${filePath}".`, 'INVALID_PATH');
+    }
+
+    if (typeof content !== 'string') {
+      if (item.templateId) {
+        const generated = generateAutomationFile({ templateId: item.templateId, options: item.options || {} });
+        content = generated.content;
+      } else {
+        throw new ServiceError(400, `Missing content for file "${filePath}".`, 'INVALID_CONTENT');
+      }
+    }
+
+    // Check if file exists on default branch
+    let existingSha = null;
+    try {
+      const existingRes = await octokit.rest.repos.getContent({ owner, repo, path: filePath, ref: defaultBranch });
+      existingSha = existingRes.data?.sha || null;
+    } catch (err) {
+      if (err?.status !== 404) throw mapGitHubError(err, `Failed to check "${filePath}".`);
+    }
+
+    if (existingSha && !replaceExisting) {
+      throw new ServiceError(409, `File "${filePath}" already exists on default branch "${defaultBranch}". Enable replaceExisting to overwrite.`, 'CONFLICT');
+    }
+
+    filesToCommit.push({
+      path: filePath,
+      content,
+      sha: existingSha,
+      message: existingSha ? `chore: update ${filePath}` : `chore: add ${filePath}`
+    });
+  }
+
+  // Get base branch SHA
+  let baseSha;
+  try {
+    const branchRes = await octokit.rest.repos.getBranch({ owner, repo, branch: defaultBranch });
+    baseSha = branchRes.data.commit.sha;
+  } catch (err) {
+    throw mapGitHubError(err, `Failed to get default branch "${defaultBranch}".`);
+  }
+
+  // Determine branch name
+  const isWorkflowPr = filesToCommit.some((f) => f.path.startsWith('.github/workflows/'));
+  const baseBranchName = customBranch || (isWorkflowPr ? 'ci/configure-automation' : 'chore/setup-repository');
+
+  let featureBranch;
+  try {
+    featureBranch = await createFeatureBranch(octokit, {
+      owner,
+      repo,
+      defaultBranch,
+      baseSha,
+      baseBranchName
+    });
+  } catch (err) {
+    throw mapGitHubError(err, 'Failed to create feature branch.');
+  }
+
+  // Commit files sequentially
+  try {
+    await commitFiles(octokit, {
+      owner,
+      repo,
+      branch: featureBranch,
+      defaultBranch,
+      files: filesToCommit
+    });
+  } catch (err) {
+    throw mapGitHubError(err, 'Failed to commit files to feature branch.');
+  }
+
+  // Generate pull request title and body
+  const defaultTitle = isWorkflowPr
+    ? 'ci: add workflows and repository automation configuration'
+    : 'chore: establish repository standards and code quality configuration';
+  const prTitle = customPrTitle || defaultTitle;
+
+  const fileListMd = filesToCommit.map((f) => `- \`${f.path}\` (${f.sha ? 'updated' : 'created'})`).join('\n');
+  const defaultBody = `## Open Workers — Repository Automation
+
+This pull request configures recommended repository infrastructure and development standards.
+
+### Proposed Changes
+${fileListMd}
+
+---
+*Generated automatically by [Open Workers](https://open-workers.onrender.com/automation.html).*`;
+
+  const prBody = customPrBody || defaultBody;
+
+  let prRes;
+  try {
+    prRes = await octokit.rest.pulls.create({
+      owner,
+      repo,
+      title: prTitle,
+      body: prBody,
+      head: featureBranch,
+      base: defaultBranch
+    });
+  } catch (err) {
+    throw mapGitHubError(err, 'Failed to open pull request.');
+  }
+
+  return {
+    pullNumber: prRes.data.number,
+    pullUrl: prRes.data.html_url,
+    branch: featureBranch,
+    createdFiles: filesToCommit.map((f) => f.path)
+  };
+}
