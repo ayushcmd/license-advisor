@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Security Configuration &amp; Automation — Open Workers</title>
+  <meta name="description" content="Inspect repository security configurations, generate Dependabot and CodeQL configs, preview proposed improvements, and open automated security pull requests.">
+  <meta property="og:image" content="https://open-workers.onrender.com/assets/open-workers-social.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://open-workers.onrender.com/assets/open-workers-social.png">
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16.png">
+  <link rel="apple-touch-icon" href="assets/open-workers-icon-128.png">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css">
+</head>
+<body data-page="security">
+  <a href="#main-content" class="skip-link">Skip to main content</a>
+
+  <header class="site-header">
+    <div class="container site-header-inner">
+      <a href="index.html" class="brand-link">
+        <img src="assets/open-workers-icon.svg" alt="Open Workers logo" class="brand-logo" width="26" height="26">
+        <span>Open Workers</span>
+      </a>
+      <nav class="site-nav" aria-label="Primary">
+        <a href="/index.html" class="nav-link">Home</a>
+        <a href="/community.html" class="nav-link">Community</a>
+        <a href="/security.html" class="nav-link" aria-current="page">Security</a>
+        <details class="nav-dropdown">
+          <summary class="nav-link licensing-toggle" aria-controls="licensing-links" aria-expanded="false">Licensing <span class="nav-caret" aria-hidden="true">&#9662;</span></summary>
+          <div id="licensing-links" class="nav-dropdown-panel">
+            <a href="/explorer.html" class="nav-dropdown-link">Explore Licenses</a>
+            <a href="/questionnaire.html" class="nav-dropdown-link">Find a License</a>
+            <a href="/compare.html" class="nav-dropdown-link">Compare Licenses</a>
+            <a href="/app-install.html" class="nav-dropdown-link">Create License PR</a>
+          </div>
+        </details>
+        <a href="/analyzer.html" class="nav-link">Check Repository</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main-content" class="container stack-lg">
+    <section class="page-header stack-sm">
+      <h1>Security Configuration &amp; Automation</h1>
+      <p>Audit repository configuration hygiene, generate Dependabot and CodeQL configs, and open security pull requests.</p>
+      <nav class="cluster" aria-label="Security quick navigation" style="margin-top: var(--space-2);">
+        <a href="#section-audit" class="btn btn-secondary btn-sm">1. Security Audit</a>
+        <a href="#section-dependabot" class="btn btn-secondary btn-sm">2. Dependabot Generator</a>
+        <a href="#section-codeql" class="btn btn-secondary btn-sm">3. CodeQL Workflow</a>
+        <a href="#section-pr" class="btn btn-primary btn-sm">4. Create Security PR</a>
+      </nav>
+    </section>
+
+    <!-- Section 1: Security Audit -->
+    <section id="section-audit" class="stack-md" aria-labelledby="heading-audit">
+      <div class="box-header" style="border-radius: var(--radius-md); border: 1px solid var(--color-border-default);">
+        <div>
+          <h2 id="heading-audit" class="box-title">1. Repository Security Audit</h2>
+          <p class="text-small text-muted">Inspect security policy, Dependabot updates, CodeQL workflows, branch protection, and security features.</p>
+        </div>
+      </div>
+
+      <form id="audit-form" class="cluster" style="align-items: flex-end;">
+        <div class="form-group" style="flex: 1; min-width: 280px; margin-bottom: 0;">
+          <label for="audit-repo" class="form-label">GitHub Repository</label>
+          <input
+            type="text"
+            id="audit-repo"
+            class="input"
+            placeholder="e.g. owner/repo or https://github.com/owner/repo"
+            required
+            autocomplete="off"
+            spellcheck="false"
+          >
+        </div>
+        <button id="audit-submit" class="btn btn-primary" type="submit">Audit Security</button>
+      </form>
+
+      <div class="cluster text-small" style="gap: var(--space-2);">
+        <span class="text-muted">Try sample:</span>
+        <button type="button" class="btn btn-secondary btn-sm sample-repo" data-repo="expressjs/express">expressjs/express</button>
+        <button type="button" class="btn btn-secondary btn-sm sample-repo" data-repo="ayushcmd/open-workers">ayushcmd/open-workers</button>
+      </div>
+
+      <div id="audit-error" class="flash flash-error" hidden></div>
+
+      <!-- Audit Results Mount -->
+      <div id="audit-results" class="stack-md" hidden>
+        <div class="box box-body stack-md">
+          <div class="cluster-between">
+            <div>
+              <h3 id="audit-repo-name" style="margin: 0;"></h3>
+              <p id="audit-repo-desc" class="text-small text-muted" style="margin-top: var(--space-1);"></p>
+            </div>
+            <div id="audit-score-container" class="cluster" style="align-items: center;"></div>
+          </div>
+
+          <div id="audit-stats" class="cluster text-small" style="gap: var(--space-3); padding-top: var(--space-2); border-top: 1px solid var(--color-border-muted);"></div>
+
+          <p id="audit-notice" class="text-small text-muted" style="margin: 0;"></p>
+        </div>
+
+        <div class="box">
+          <div class="box-header">
+            <h3 class="box-title">Security Configuration Checks</h3>
+          </div>
+          <div id="audit-checks-list" class="stack-sm" style="padding: var(--space-3);"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 2: Dependabot Generator -->
+    <section id="section-dependabot" class="stack-md" aria-labelledby="heading-dependabot">
+      <div class="box-header" style="border-radius: var(--radius-md); border: 1px solid var(--color-border-default);">
+        <div>
+          <h2 id="heading-dependabot" class="box-title">2. Dependabot Configuration Generator</h2>
+          <p class="text-small text-muted">Generate a valid <code>.github/dependabot.yml</code> for package managers and GitHub Actions.</p>
+        </div>
+      </div>
+
+      <div class="grid-2" style="align-items: start;">
+        <form id="dependabot-form" class="box box-body stack-md">
+          <div class="form-group">
+            <label class="form-label">Package Ecosystems to Update</label>
+            <div id="dependabot-ecosystems" class="stack-sm">
+              <label class="cluster" style="align-items: center;">
+                <input type="checkbox" name="ecosystem" value="npm" checked>
+                <span><strong>npm</strong> (JavaScript / TypeScript)</span>
+              </label>
+              <label class="cluster" style="align-items: center;">
+                <input type="checkbox" name="ecosystem" value="github-actions" checked>
+                <span><strong>GitHub Actions</strong> (Workflows)</span>
+              </label>
+              <label class="cluster" style="align-items: center;">
+                <input type="checkbox" name="ecosystem" value="pip">
+                <span><strong>pip</strong> (Python)</span>
+              </label>
+              <label class="cluster" style="align-items: center;">
+                <input type="checkbox" name="ecosystem" value="docker">
+                <span><strong>Docker</strong></span>
+              </label>
+              <label class="cluster" style="align-items: center;">
+                <input type="checkbox" name="ecosystem" value="maven">
+                <span><strong>Maven</strong> (Java)</span>
+              </label>
+              <label class="cluster" style="align-items: center;">
+                <input type="checkbox" name="ecosystem" value="gradle">
+                <span><strong>Gradle</strong> (Java / Kotlin)</span>
+              </label>
+              <label class="cluster" style="align-items: center;">
+                <input type="checkbox" name="ecosystem" value="bundler">
+                <span><strong>Bundler</strong> (Ruby)</span>
+              </label>
+              <label class="cluster" style="align-items: center;">
+                <input type="checkbox" name="ecosystem" value="cargo">
+                <span><strong>Cargo</strong> (Rust)</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="dependabot-interval" class="form-label">Update Schedule</label>
+            <select id="dependabot-interval" class="select">
+              <option value="weekly" selected>Weekly (Monday)</option>
+              <option value="daily">Daily</option>
+              <option value="monthly">Monthly</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="dependabot-limit" class="form-label">Open Pull Request Limit</label>
+            <input type="number" id="dependabot-limit" class="input" value="10" min="1" max="50">
+            <span class="text-small text-muted">Maximum number of automated version update PRs open concurrently.</span>
+          </div>
+
+          <div class="form-group">
+            <label for="dependabot-labels" class="form-label">Pull Request Labels</label>
+            <input type="text" id="dependabot-labels" class="input" value="dependencies">
+            <span class="text-small text-muted">Comma-separated labels to attach to Dependabot pull requests.</span>
+          </div>
+
+          <button type="submit" class="btn btn-primary">Generate Dependabot Config</button>
+        </form>
+
+        <div class="box box-body stack-md">
+          <div class="cluster-between">
+            <span class="text-muted text-small">Target: <code>.github/dependabot.yml</code></span>
+            <div class="cluster" style="gap: var(--space-2);">
+              <button type="button" id="copy-dependabot" class="btn btn-secondary btn-sm">Copy YAML</button>
+              <button type="button" id="download-dependabot" class="btn btn-secondary btn-sm">Download</button>
+            </div>
+          </div>
+          <pre style="margin: 0; max-height: 400px; overflow: auto; background: var(--color-canvas-subtle); padding: var(--space-3); border-radius: var(--radius-sm); font-size: 13px;"><code id="dependabot-preview"># Click Generate Dependabot Config to preview...</code></pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 3: CodeQL Workflow Generator -->
+    <section id="section-codeql" class="stack-md" aria-labelledby="heading-codeql">
+      <div class="box-header" style="border-radius: var(--radius-md); border: 1px solid var(--color-border-default);">
+        <div>
+          <h2 id="heading-codeql" class="box-title">3. CodeQL Static Analysis Workflow</h2>
+          <p class="text-small text-muted">Generate a GitHub Actions workflow (<code>.github/workflows/codeql.yml</code>) powered by GitHub CodeQL Action v3.</p>
+        </div>
+      </div>
+
+      <div class="grid-2" style="align-items: start;">
+        <form id="codeql-form" class="box box-body stack-md">
+          <div class="form-group">
+            <label class="form-label">Languages to Analyze</label>
+            <div id="codeql-languages" class="stack-sm">
+              <label class="cluster" style="align-items: center;">
+                <input type="checkbox" name="language" value="javascript-typescript" checked>
+                <span><strong>JavaScript / TypeScript</strong> (build-mode: none)</span>
+              </label>
+              <label class="cluster" style="align-items: center;">
+                <input type="checkbox" name="language" value="python">
+                <span><strong>Python</strong> (build-mode: none)</span>
+              </label>
+              <label class="cluster" style="align-items: center;">
+                <input type="checkbox" name="language" value="go">
+                <span><strong>Go</strong> (build-mode: autobuild)</span>
+              </label>
+              <label class="cluster" style="align-items: center;">
+                <input type="checkbox" name="language" value="java-kotlin">
+                <span><strong>Java / Kotlin</strong> (build-mode: autobuild)</span>
+              </label>
+              <label class="cluster" style="align-items: center;">
+                <input type="checkbox" name="language" value="c-cpp">
+                <span><strong>C / C++</strong> (build-mode: autobuild)</span>
+              </label>
+              <label class="cluster" style="align-items: center;">
+                <input type="checkbox" name="language" value="csharp">
+                <span><strong>C#</strong> (build-mode: autobuild)</span>
+              </label>
+              <label class="cluster" style="align-items: center;">
+                <input type="checkbox" name="language" value="ruby">
+                <span><strong>Ruby</strong> (build-mode: none)</span>
+              </label>
+              <label class="cluster" style="align-items: center;">
+                <input type="checkbox" name="language" value="rust">
+                <span><strong>Rust</strong> (build-mode: autobuild)</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="codeql-branch" class="form-label">Target Default Branch</label>
+            <input type="text" id="codeql-branch" class="input" value="main">
+          </div>
+
+          <div class="form-group">
+            <label for="codeql-cron" class="form-label">Weekly Schedule (Cron)</label>
+            <input type="text" id="codeql-cron" class="input" value="30 6 * * 1">
+            <span class="text-small text-muted">Default: Monday at 06:30 UTC.</span>
+          </div>
+
+          <button type="submit" class="btn btn-primary">Generate CodeQL Workflow</button>
+        </form>
+
+        <div class="box box-body stack-md">
+          <div class="cluster-between">
+            <span class="text-muted text-small">Target: <code>.github/workflows/codeql.yml</code></span>
+            <div class="cluster" style="gap: var(--space-2);">
+              <button type="button" id="copy-codeql" class="btn btn-secondary btn-sm">Copy YAML</button>
+              <button type="button" id="download-codeql" class="btn btn-secondary btn-sm">Download</button>
+            </div>
+          </div>
+          <pre style="margin: 0; max-height: 400px; overflow: auto; background: var(--color-canvas-subtle); padding: var(--space-3); border-radius: var(--radius-sm); font-size: 13px;"><code id="codeql-preview"># Click Generate CodeQL Workflow to preview...</code></pre>
+          <div class="flash flash-info text-small" style="margin-top: var(--space-2);">
+            <strong>Notice:</strong> Analysis begins only after this workflow is merged and runs in GitHub Actions. Results appear under the repository <strong>Security > Code scanning</strong> tab.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 4: Create Security PR -->
+    <section id="section-pr" class="stack-md" aria-labelledby="heading-pr">
+      <div class="box-header" style="border-radius: var(--radius-md); border: 1px solid var(--color-border-default);">
+        <div>
+          <h2 id="heading-pr" class="box-title">4. Create Security Pull Request</h2>
+          <p class="text-small text-muted">Select generated configuration files and deploy them to your repository on an isolated feature branch.</p>
+        </div>
+      </div>
+
+      <form id="pr-form" class="box box-body stack-md">
+        <div class="form-group">
+          <label class="form-label">Select Configurations to Include</label>
+          <div class="stack-sm">
+            <label class="cluster" style="align-items: center;">
+              <input type="checkbox" id="pr-include-dependabot" checked>
+              <span><strong>Dependabot configuration</strong> (<code>.github/dependabot.yml</code>)</span>
+            </label>
+            <label class="cluster" style="align-items: center;">
+              <input type="checkbox" id="pr-include-codeql">
+              <span><strong>CodeQL static analysis workflow</strong> (<code>.github/workflows/codeql.yml</code>)</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="pr-repo" class="form-label">Target GitHub Repository</label>
+          <input
+            type="text"
+            id="pr-repo"
+            class="input"
+            placeholder="e.g. owner/repo"
+            required
+            autocomplete="off"
+            spellcheck="false"
+          >
+        </div>
+
+        <div class="form-group">
+          <label for="pr-token" class="form-label">GitHub Personal Access Token</label>
+          <input
+            type="password"
+            id="pr-token"
+            class="input"
+            placeholder="ghp_... (requires repo write access to authorize PR creation)"
+            required
+            autocomplete="off"
+          >
+          <span class="text-small text-muted">Used solely in-memory to verify caller write permission. Never stored.</span>
+        </div>
+
+        <div class="form-group">
+          <label class="cluster" style="align-items: center;">
+            <input type="checkbox" id="pr-replace-existing">
+            <span>Overwrite existing configuration files if already present</span>
+          </label>
+        </div>
+
+        <div id="pr-preview-box" class="flash flash-info" hidden></div>
+        <div id="pr-error-box" class="flash flash-error" hidden></div>
+        <div id="pr-success-box" class="flash flash-success" hidden></div>
+
+        <div class="cluster" style="gap: var(--space-2);">
+          <button type="button" id="pr-preview-btn" class="btn btn-secondary">Preview Pull Request</button>
+          <button type="submit" id="pr-submit-btn" class="btn btn-primary" disabled>Open Security PR</button>
+        </div>
+      </form>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container cluster-between">
+      <span>Open Workers &middot; Apache-2.0 Licensed &middot; Informational only, not legal advice.</span>
+      <nav class="footer-links" aria-label="Footer">
+        <a href="app-install.html">Create PR</a>
+        <a href="privacy.html">Privacy Policy</a>
+        <a href="support.html">Support</a>
+        <a href="https://github.com/ayushcmd/open-workers" target="_blank" rel="noopener noreferrer">GitHub Repo</a>
+      </nav>
+    </div>
+  </footer>
+
+  <script type="module" src="js/security.js"></script>
+  <script type="module" src="js/navigation.js"></script>
+</body>
+</html>
