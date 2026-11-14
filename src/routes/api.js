@@ -60,6 +60,7 @@ import {
   previewAutomationPr,
   createAutomationPullRequest
 } from '../modules/automation/automationService.js';
+import { analyzeRepositoryDashboard } from '../core/dashboard/coordinator.js';
 import { authorizeRepositoryWrite } from '../core/github/authorize.js';
 import { LICENSE_CATALOG, SPDX_DATA_VERSION } from '../../public/js/catalog-data.js';
 import {
@@ -520,6 +521,21 @@ export function createApiRouter({ githubContext, env = process.env, createUserCl
         ...result,
         caller: auth.login
       });
+    })
+  );
+
+  router.post(
+    '/dashboard/analyze',
+    withServiceErrorHandling(async (req, res) => {
+      const repoInput = req.body?.repo || req.body?.repository;
+      const authorization = req.get('authorization');
+      const result = await analyzeRepositoryDashboard({
+        repoInput,
+        authorization,
+        githubContext,
+        createUserClient
+      });
+      res.json(result);
     })
   );
 
