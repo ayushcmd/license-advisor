@@ -10,7 +10,7 @@ This matrix documents the capability status, API endpoints, user interfaces, req
 | :--- | :--- | :--- | :---: | :--- | :--- |
 | `licensing` | **Licensing** | Governance | **Available** | `/api/*` | `/explorer.html`, `/questionnaire.html`, `/compare.html`, `/analyzer.html`, `/app-install.html` |
 | `community` | **Community** | Community | **Available** | `/api/community/*` | `/community.html` |
-| `security` | **Security** | Security | *Upcoming* | `/api/security/*` | *(Planned)* |
+| `security` | **Security** | Security | **Available** | `/api/security/*` | `/security.html` |
 | `documentation` | **Documentation** | Documentation | *Upcoming* | `/api/documentation/*` | *(Planned)* |
 | `issues` | **PR & Issue Management** | Workflow | *Upcoming* | `/api/issues/*` | *(Planned)* |
 | `automation` | **Repository Automation** | Workflow | *Upcoming* | `/api/automation/*` | *(Planned)* |
@@ -42,11 +42,21 @@ This matrix documents the capability status, API endpoints, user interfaces, req
 | **PR Conflict Preview** | Preview multi-file PR, branch name, and check existing file conflicts | `POST /api/community/preview-pr` | None (Public / App token) | Production | `tests/community.test.js` |
 | **Consolidated Community PR** | Commit multi-file changes and open single PR via GitHub App | `POST /api/community/trigger-pr` | User PAT (write) + App (`contents: write`, `pull_requests: write`) | Production | `tests/community.test.js` |
 
-### C. Upcoming Modules (Roadmap)
+### C. Security Module (`security`) — Status: Available
+
+| Feature | Description | Endpoints | Permissions | Status | Test Coverage |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **Security Checks & Discovery** | List supported security checks and configuration templates | `GET /api/security/checks`, `GET /api/security/templates` | None (Public) | Production | `tests/security.test.js` |
+| **Security Configuration Audit** | Non-destructive inspection of policy, Dependabot, CodeQL, branch protection, secret scanning | `POST /api/security/analyze` | None (Public / App token) | Production | `tests/security.test.js` |
+| **Dependabot Generator** | Valid YAML generator supporting npm, pip, actions, docker, maven, gradle, bundler, cargo | `POST /api/security/generate` | None (Public) | Production | `tests/security.test.js` |
+| **CodeQL Workflow Generator** | GitHub Actions CodeQL Action v3 workflow generator with multi-language matrix and build modes | `POST /api/security/generate` | None (Public) | Production | `tests/security.test.js` |
+| **PR Preview & Conflict Check** | Check existing file conflicts and verify workflow permission requirements | `POST /api/security/preview-pr` | None (Public / App token) | Production | `tests/security.test.js` |
+| **Consolidated Security PR** | Deploy configurations on dedicated branch via GitHub App with safety checks | `POST /api/security/trigger-pr` | User PAT (write) + App (`contents: write`, `pull_requests: write`, plus `workflows: write` for workflows) | Production | `tests/security.test.js` |
+
+### D. Upcoming Modules (Roadmap)
 
 | Module | Planned Capabilities & Subfeatures | Target Scope |
 | :--- | :--- | :--- |
-| **`security`** | &bull; Dependabot configuration generator (`.github/dependabot.yml`)<br>&bull; CodeQL analysis workflow setup<br>&bull; Branch protection rule recommendations<br>&bull; Repository security configuration health scoring<br>&bull; Dependency vulnerability advisory guidance | Upcoming |
 | **`documentation`** | &bull; README completeness audit & structure recommendations<br>&bull; Automated `CHANGELOG.md` generation from commit history<br>&bull; Status and coverage badge generator<br>&bull; Markdown broken-link checking<br>&bull; Documentation health scoring | Upcoming |
 | **`issues`** | &bull; Rule-based issue and pull request automated labeling<br>&bull; PR classification and contributor welcome automation<br>&bull; PR checklist completeness enforcement<br>&bull; Inactive issue and pull request triage<br>&bull; Release notes compilation from merged pull requests | Upcoming |
 | **`automation`** | &bull; GitHub Actions CI/CD starter workflow generation (build, test, lint, matrix)<br>&bull; Workflow Health Inspector (unpinned actions, deprecated runners, missing timeouts)<br>&bull; Code style config generation (`.editorconfig`, `.prettierrc`, ESLint configs)<br>&bull; Scheduled repository maintenance tasks | Upcoming |

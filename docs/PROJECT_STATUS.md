@@ -39,7 +39,7 @@ Open Workers is structured around **six core product modules**:
 | :-: | :--- | :--- | :-: | :--- |
 | **1** | **Licensing** | Governance | **Available** (Production) | `/explorer.html`, `/questionnaire.html`, `/compare.html`, `/app-install.html`, `/analyzer.html`, `/api/recommend`, `/api/trigger-pr` |
 | **2** | **Community** | Community | **Available** (Production) | `/community.html`, `/api/community/templates`, `/api/community/generate`, `/api/community/analyze`, `/api/community/preview-pr`, `/api/community/trigger-pr` |
-| **3** | **Security** | Security | *Upcoming* (Planned) | `/api/security/*` |
+| **3** | **Security** | Security | **Available** (Production) | `/security.html`, `/api/security/checks`, `/api/security/templates`, `/api/security/generate`, `/api/security/analyze`, `/api/security/preview-pr`, `/api/security/trigger-pr` |
 | **4** | **Documentation** | Documentation | *Upcoming* (Planned) | `/api/documentation/*` |
 | **5** | **PR & Issue Management** | Workflow | *Upcoming* (Planned) | `/api/issues/*` |
 | **6** | **Repository Automation** | Workflow | *Upcoming* (Planned) | `/api/automation/*` |
@@ -62,13 +62,13 @@ Open Workers is structured around **six core product modules**:
 - **Community Health Audit:** Deep inspection across root, `.github/`, and `docs/` directories for 6 standard community files, providing a 0–100% health score and actionable recommendations (`POST /api/community/analyze`).
 - **Consolidated Community PRs:** Pre-commit conflict preview (`POST /api/community/preview-pr`) and multi-file commit & PR creation (`POST /api/community/trigger-pr`) with caller in-memory write authorization and `replaceExisting` conflict guards.
 
-### 3. Security — Status: Upcoming
-- Repository security configuration inspection.
-- Dependabot configuration generation (`.github/dependabot.yml`).
-- CodeQL workflow guidance.
-- Branch protection configuration audit.
-- Dependency vulnerability advisory guidance.
-*(Note: Security Policy document generation is currently provided via the Community module).*
+### 3. Security — Status: Available
+- **Repository Security Configuration Audit:** Non-destructive inspection of `SECURITY.md`, `.github/dependabot.yml`, `.github/workflows/codeql.yml`, default branch protection, and secret scanning settings (`POST /api/security/analyze`).
+- **Dependabot Configuration Generator:** Schema-compliant, deterministic `.github/dependabot.yml` generator supporting npm, pip, github-actions, docker, maven, gradle, bundler, and cargo with customizable update schedules, directories, PR limits, and labels (`src/modules/security/engine.js`).
+- **CodeQL Workflow Generator:** Modern GitHub Actions CodeQL Action v3 workflow generator (`.github/workflows/codeql.yml`) supporting multi-language matrix builds (`javascript-typescript`, `python`, `go`, `java-kotlin`, `c-cpp`, `csharp`, `ruby`, `rust`), push/PR triggers, and scheduled cron jobs.
+- **Transparent Security Configuration Health Score:** Calculates percentage purely over verified checks (excluding unverified administrative checks from failure penalty) with clear configuration hygiene disclaimers.
+- **Consolidated Security PRs:** Pre-commit preview (`POST /api/security/preview-pr`) and automated PR creation (`POST /api/security/trigger-pr`) with dedicated branch isolation, conflict guards, and explicit `workflows: write` permission safety enforcement.
+
 
 ### 4. Documentation — Status: Upcoming
 - Comprehensive README analysis and completeness scores.
@@ -95,5 +95,5 @@ Open Workers is structured around **six core product modules**:
 ## 5. Verification & Quality Control
 
 - **Test Suite:** Built-in Node.js runner (`node:test`) and strict assertions (`node:assert/strict`). Zero external test runner dependencies.
-- **Test Results:** **77 passing tests** across 14 test suites with **0 failures**.
-- **Syntax Check:** `npm run lint:syntax` validates all 30 ES module JavaScript files using `node --check`.
+- **Test Results:** **103 passing tests** across 19 test suites with **0 failures**.
+- **Syntax Check:** `npm run lint:syntax` validates all 34 ES module JavaScript files using `node --check`.

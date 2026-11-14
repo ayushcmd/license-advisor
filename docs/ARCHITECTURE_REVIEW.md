@@ -34,6 +34,7 @@ open-workers/
 │   ├── js/                     # Client ES6 modules (community.js, analyzer.js, etc.)
 │   ├── index.html              # Home page
 │   ├── community.html          # Community standards, audit, and PR workflow
+│   ├── security.html           # Security configuration audit, generators, and PR workflow
 │   ├── analyzer.html           # Repository license inspector
 │   ├── explorer.html           # SPDX license catalog explorer
 │   ├── questionnaire.html      # Deterministic licensing recommendation engine
@@ -48,11 +49,12 @@ open-workers/
 │   │   └── repository/         # Repository specifier parsing and tree inspection
 │   ├── data/                   # SPDX license database (licenses.json)
 │   ├── modules/                # Feature modules
-│   │   └── community/          # Community module (engine.js, communityService.js, templates/)
+│   │   ├── community/          # Community module (engine.js, communityService.js, templates/)
+│   │   └── security/           # Security module (engine.js, securityService.js)
 │   ├── routes/                 # Express route handlers (api.js, webhooks.js)
 │   ├── services/               # Licensing services (licenseService.js, prService.js, readmeService.js)
 │   └── server.js               # Express application bootstrap and server
-├── tests/                      # Native node:test suite (77 tests)
+├── tests/                      # Native node:test suite (103 tests across 19 suites)
 └── docs/                       # Architecture, development, and operational guides
 ```
 
