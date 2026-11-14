@@ -103,11 +103,13 @@ Open Workers is structured around **six core product modules**:
 - **Private Repository Privacy Guard:** Rejects unauthenticated inspections of private repositories with `HTTP 401 AUTH_REQUIRED` and verifies caller collaborator access (`HTTP 403 FORBIDDEN`) across all module audit endpoints before exposing any metadata or findings.
 - **Top Navigation Architecture:** "Check Repository" retired from primary top navigation across all 14 HTML pages in favor of the Unified Dashboard, while preserving deep license auditing under the Licensing dropdown.
 - **Stateless Zero-Persistence Execution:** Preserves Open Workers' core design constraint by caching and persisting zero tokens, source code, or audit findings.
+- **Request-Scoped API Efficiency & Concurrency:** Employs `AnalysisContext` (`src/core/github/context.js`) to deduplicate upstream GitHub REST API calls across parallel audits, cutting public repository inspection calls from 35 to 13 (62.9% reduction) and private inspections from 56 to 16 (71.4% reduction), with primary/secondary rate-limit detection in `src/core/github/errors.js`.
 
 ---
 
 ## 5. Verification & Quality Control
 
 - **Test Suite:** Built-in Node.js runner (`node:test`) and strict assertions (`node:assert/strict`). Zero external test runner dependencies.
-- **Test Results:** **235 passing tests** across 45 test suites with **0 failures**.
-- **Syntax Check:** `npm run lint:syntax` validates all 55 ES module JavaScript files using `node --check`.
+- **Test Results:** **243 passing tests** across 47 test suites with **0 failures**.
+- **Syntax Check:** `npm run lint:syntax` validates all 57 ES module JavaScript files using `node --check`.
+- **Performance Benchmarks:** Repeatable benchmarks in `tests/perf.test.js` verify bounded concurrency (<= 6 peak operations), request-scoped tree memoization, and rate-limit diagnostics.

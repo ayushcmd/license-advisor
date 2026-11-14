@@ -11,16 +11,10 @@ import { createFeatureBranch } from '../../core/pullRequests/branches.js';
 import { commitFiles } from '../../core/pullRequests/files.js';
 import { repositoryService } from '../../core/repository/service.js';
 import { authorizeRepositoryRead } from '../../core/github/authorize.js';
+import { mapGitHubError } from '../../core/github/errors.js';
 import { generateDocument } from './engine.js';
 
-function mapGitHubError(err, fallbackMessage) {
-  if (err instanceof ServiceError) return err;
-  const status = err?.status || 500;
-  if (status === 404) return new ServiceError(404, 'Repository not found or access denied.', 'NOT_FOUND');
-  if (status === 403) return new ServiceError(403, 'GitHub API access denied or rate limit exceeded.', 'INSUFFICIENT_PERMISSIONS');
-  if (status === 401) return new ServiceError(401, 'GitHub authentication failed or credentials expired.', 'AUTH_REQUIRED');
-  return new ServiceError(502, `${fallbackMessage}: ${err?.message || 'Upstream error'}`, 'GITHUB_API_ERROR');
-}
+export { mapGitHubError };
 
 /**
  * Audit standard community files in a repository across root, .github/, and docs/
@@ -28,9 +22,12 @@ function mapGitHubError(err, fallbackMessage) {
  * @param {object} params
  * @param {string} params.repoInput
  * @param {object} params.githubContext
+ * @param {string} [params.authorization]
+ * @param {Function} [params.createUserClient]
+ * @param {object} [params.context]
  * @returns {Promise<object>}
  */
-export async function auditCommunityRepository({ repoInput, githubContext, authorization, createUserClient }) {
+export async function auditCommunityRepository({ repoInput, githubContext, authorization, createUserClient, context = null }) {
   let parsed;
   try {
     parsed = parseRepoInput(repoInput);
@@ -38,56 +35,73 @@ export async function auditCommunityRepository({ repoInput, githubContext, autho
     throw new ServiceError(400, error.message, 'INVALID_INPUT');
   }
   const { owner, repo, fullName } = parsed;
+  const isContextValid = Boolean(context && context.fullName === fullName);
 
   let octokit = null;
   let installed = false;
   let installationId = null;
+  let repoData = null;
 
-  if (githubContext?.isAppConfigured && typeof githubContext.resolveRepoInstallation === 'function') {
-    try {
-      const resolution = await githubContext.resolveRepoInstallation(owner, repo);
-      if (resolution?.installed && resolution.octokit) {
-        octokit = resolution.octokit;
-        installed = true;
-        installationId = resolution.installation?.id || null;
+  if (isContextValid) {
+    const clientRes = await context.resolveClient();
+    octokit = clientRes.octokit;
+    installed = clientRes.installed;
+    installationId = clientRes.installationId;
+    repoData = await context.getRepoData();
+
+    if (repoData?.private) {
+      await context.authorizeRead();
+    }
+  } else {
+    if (githubContext?.isAppConfigured && typeof githubContext.resolveRepoInstallation === 'function') {
+      try {
+        const resolution = await githubContext.resolveRepoInstallation(owner, repo);
+        if (resolution?.installed && resolution.octokit) {
+          octokit = resolution.octokit;
+          installed = true;
+          installationId = resolution.installation?.id || null;
+        }
+      } catch (err) {
+        throw mapGitHubError(err, 'Unable to verify GitHub App installation.');
       }
+    }
+
+    if (!octokit) {
+      octokit = githubContext?.createPublicOctokit
+        ? githubContext.createPublicOctokit()
+        : null;
+    }
+
+    if (!octokit) {
+      throw new ServiceError(503, 'GitHub client is unavailable.', 'CLIENT_UNAVAILABLE');
+    }
+
+    let repoRes;
+    try {
+      repoRes = await octokit.rest.repos.get({ owner, repo });
+      repoData = repoRes.data;
     } catch (err) {
-      throw mapGitHubError(err, 'Unable to verify GitHub App installation.');
+      throw mapGitHubError(err, `Failed to inspect "${fullName}".`);
+    }
+
+    if (repoData?.private) {
+      await authorizeRepositoryRead({
+        authorization,
+        repoInput: fullName,
+        githubContext,
+        createUserClient
+      });
     }
   }
 
-  if (!octokit) {
-    octokit = githubContext?.createPublicOctokit
-      ? githubContext.createPublicOctokit()
-      : null;
-  }
-
-  if (!octokit) {
-    throw new ServiceError(503, 'GitHub client is unavailable.', 'CLIENT_UNAVAILABLE');
-  }
-
-  let repoRes;
-  try {
-    repoRes = await octokit.rest.repos.get({ owner, repo });
-  } catch (err) {
-    throw mapGitHubError(err, `Failed to inspect "${fullName}".`);
-  }
-
-  if (repoRes.data?.private) {
-    await authorizeRepositoryRead({
-      authorization,
-      repoInput: fullName,
-      githubContext,
-      createUserClient
-    });
-  }
-
-  const defaultBranch = repoRes.data.default_branch || 'main';
+  const defaultBranch = repoData.default_branch || 'main';
 
   // Read root entries
   let rootEntries = [];
   try {
-    const rootRes = await octokit.rest.repos.getContent({ owner, repo, path: '', ref: defaultBranch });
+    const rootRes = isContextValid
+      ? await context.getContent('', defaultBranch)
+      : await octokit.rest.repos.getContent({ owner, repo, path: '', ref: defaultBranch });
     rootEntries = Array.isArray(rootRes.data) ? rootRes.data : [];
   } catch (err) {
     if (err?.status !== 404) throw mapGitHubError(err, 'Failed to inspect repository root directory.');
@@ -100,7 +114,9 @@ export async function auditCommunityRepository({ repoInput, githubContext, autho
   let dotGithubEntries = [];
   if (hasDotGithub) {
     try {
-      const ghRes = await octokit.rest.repos.getContent({ owner, repo, path: '.github', ref: defaultBranch });
+      const ghRes = isContextValid
+        ? await context.getContent('.github', defaultBranch)
+        : await octokit.rest.repos.getContent({ owner, repo, path: '.github', ref: defaultBranch });
       dotGithubEntries = Array.isArray(ghRes.data) ? ghRes.data : [];
     } catch {
       dotGithubEntries = [];
@@ -111,7 +127,9 @@ export async function auditCommunityRepository({ repoInput, githubContext, autho
   const hasIssueTemplateDir = dotGithubEntries.some((e) => e.name.toLowerCase() === 'issue_template' && e.type === 'dir');
   if (hasIssueTemplateDir) {
     try {
-      const itRes = await octokit.rest.repos.getContent({ owner, repo, path: '.github/ISSUE_TEMPLATE', ref: defaultBranch });
+      const itRes = isContextValid
+        ? await context.getContent('.github/ISSUE_TEMPLATE', defaultBranch)
+        : await octokit.rest.repos.getContent({ owner, repo, path: '.github/ISSUE_TEMPLATE', ref: defaultBranch });
       issueTemplateEntries = Array.isArray(itRes.data) ? itRes.data : [];
     } catch {
       issueTemplateEntries = [];
@@ -122,7 +140,9 @@ export async function auditCommunityRepository({ repoInput, githubContext, autho
   const hasPrTemplateDir = dotGithubEntries.some((e) => e.name.toLowerCase() === 'pull_request_template' && e.type === 'dir');
   if (hasPrTemplateDir) {
     try {
-      const prtRes = await octokit.rest.repos.getContent({ owner, repo, path: '.github/PULL_REQUEST_TEMPLATE', ref: defaultBranch });
+      const prtRes = isContextValid
+        ? await context.getContent('.github/PULL_REQUEST_TEMPLATE', defaultBranch)
+        : await octokit.rest.repos.getContent({ owner, repo, path: '.github/PULL_REQUEST_TEMPLATE', ref: defaultBranch });
       prTemplateDirEntries = Array.isArray(prtRes.data) ? prtRes.data : [];
     } catch {
       prTemplateDirEntries = [];
@@ -132,7 +152,9 @@ export async function auditCommunityRepository({ repoInput, githubContext, autho
   let docsEntries = [];
   if (hasDocs) {
     try {
-      const dRes = await octokit.rest.repos.getContent({ owner, repo, path: 'docs', ref: defaultBranch });
+      const dRes = isContextValid
+        ? await context.getContent('docs', defaultBranch)
+        : await octokit.rest.repos.getContent({ owner, repo, path: 'docs', ref: defaultBranch });
       docsEntries = Array.isArray(dRes.data) ? dRes.data : [];
     } catch {
       docsEntries = [];
@@ -251,14 +273,14 @@ export async function auditCommunityRepository({ repoInput, githubContext, autho
 
   return {
     repository: {
-      fullName: repoRes.data.full_name,
-      owner: repoRes.data.owner?.login || owner,
-      repo: repoRes.data.name || repo,
-      description: repoRes.data.description || '',
-      htmlUrl: repoRes.data.html_url,
+      fullName: repoData.full_name,
+      owner: repoData.owner?.login || owner,
+      repo: repoData.name || repo,
+      description: repoData.description || '',
+      htmlUrl: repoData.html_url,
       defaultBranch,
-      private: Boolean(repoRes.data.private),
-      archived: Boolean(repoRes.data.archived),
+      private: Boolean(repoData.private),
+      archived: Boolean(repoData.archived),
       installed,
       installationId
     },

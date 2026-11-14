@@ -10,6 +10,9 @@ import { explainLicense, recommendLicenses, resolveLicense } from '../../public/
 import { generateLicensePackage } from '../../public/js/generator.js';
 import { buildAuditReport, parseRepoInput } from '../../public/js/analyzer.js';
 import { authorizeRepositoryRead } from '../core/github/authorize.js';
+import { mapGitHubError, extractOctokitRateLimit } from '../core/github/errors.js';
+
+export { mapGitHubError, extractOctokitRateLimit };
 
 /**
  * Structured service error carrying an explicit HTTP status code and machine code.
@@ -22,39 +25,6 @@ export class ServiceError extends Error {
     this.code = code;
     this.details = details;
   }
-}
-
-function extractOctokitRateLimit(headers) {
-  if (!headers || typeof headers !== 'object') return null;
-  const limit = headers['x-ratelimit-limit'];
-  const remaining = headers['x-ratelimit-remaining'];
-  const reset = headers['x-ratelimit-reset'];
-  if (limit === undefined && remaining === undefined) return null;
-
-  const resetEpoch = reset ? Number(reset) * 1000 : null;
-  return {
-    limit: limit !== undefined ? Number(limit) : null,
-    remaining: remaining !== undefined ? Number(remaining) : null,
-    resetAt: resetEpoch && Number.isFinite(resetEpoch) ? new Date(resetEpoch).toISOString() : null
-  };
-}
-
-function mapGitHubError(err, contextMessage) {
-  const status = err?.status || err?.response?.status;
-  if (status === 404) {
-    return new ServiceError(404, `${contextMessage} Repository was not found or is private without App access.`, 'NOT_FOUND');
-  }
-  if (status === 401 || status === 403) {
-    const rateLimit = extractOctokitRateLimit(err?.response?.headers);
-    if (rateLimit && rateLimit.remaining === 0) {
-      return new ServiceError(429, 'GitHub API rate limit exceeded. Configure GitHub App credentials or retry after reset.', 'RATE_LIMITED');
-    }
-    return new ServiceError(403, `${contextMessage} Insufficient GitHub permissions.`, 'FORBIDDEN');
-  }
-  if (status === 429) {
-    return new ServiceError(429, 'GitHub API rate limit exceeded. Try again shortly.', 'RATE_LIMITED');
-  }
-  return new ServiceError(502, `${contextMessage} ${err?.message || 'Unexpected GitHub API failure.'}`, 'GITHUB_API_ERROR');
 }
 
 /**
@@ -133,7 +103,7 @@ export function validatePrRequest(body) {
  * @param {object} params.githubContext
  * @returns {Promise<object>}
  */
-export async function analyzeRepositoryServer({ repoInput, githubContext, authorization, createUserClient, enforceAuthorization = false }) {
+export async function analyzeRepositoryServer({ repoInput, githubContext, authorization, createUserClient, enforceAuthorization = false, context = null }) {
   let parsedRepo;
   try {
     parsedRepo = parseRepoInput(repoInput);
@@ -141,63 +111,84 @@ export async function analyzeRepositoryServer({ repoInput, githubContext, author
     throw new ServiceError(400, err.message, 'INVALID_REPO');
   }
 
-  const { owner, repo } = parsedRepo;
+  const { owner, repo, fullName } = parsedRepo;
+  const isContextValid = Boolean(context && context.fullName === fullName);
+
   let octokit = null;
   let installed = false;
   let installationId = null;
+  let repoData = null;
+  let contentsRes = null;
 
-  if (githubContext?.isAppConfigured && typeof githubContext.resolveRepoInstallation === 'function') {
-    try {
-      const resolution = await githubContext.resolveRepoInstallation(owner, repo);
-      if (resolution?.installed && resolution.octokit) {
-        octokit = resolution.octokit;
-        installed = true;
-        installationId = resolution.installation?.id || null;
-      }
-    } catch (err) {
-      throw mapGitHubError(err, 'Unable to verify GitHub App installation.');
+  if (isContextValid) {
+    const clientRes = await context.resolveClient();
+    octokit = clientRes.octokit;
+    installed = clientRes.installed;
+    installationId = clientRes.installationId;
+    repoData = await context.getRepoData();
+
+    if (repoData?.private && (enforceAuthorization || authorization !== undefined)) {
+      await context.authorizeRead();
     }
-  }
 
-  if (!octokit) {
-    octokit = githubContext.createPublicOctokit();
-  }
+    contentsRes = await context.getContent('').catch((err) => {
+      if (err?.status === 404) return { data: [], headers: err?.response?.headers };
+      throw mapGitHubError(err, 'Failed to inspect repository root directory.');
+    });
+  } else {
+    if (githubContext?.isAppConfigured && typeof githubContext.resolveRepoInstallation === 'function') {
+      try {
+        const resolution = await githubContext.resolveRepoInstallation(owner, repo);
+        if (resolution?.installed && resolution.octokit) {
+          octokit = resolution.octokit;
+          installed = true;
+          installationId = resolution.installation?.id || null;
+        }
+      } catch (err) {
+        throw mapGitHubError(err, 'Unable to verify GitHub App installation.');
+      }
+    }
 
-  let repoRes;
-  try {
-    repoRes = await octokit.rest.repos.get({ owner, repo });
-  } catch (err) {
-    throw mapGitHubError(err, `Failed to inspect "${owner}/${repo}".`);
-  }
+    if (!octokit) {
+      octokit = githubContext.createPublicOctokit();
+    }
 
-  if (repoRes.data?.private && (enforceAuthorization || authorization !== undefined)) {
-    await authorizeRepositoryRead({
-      authorization,
-      repoInput: `${owner}/${repo}`,
-      githubContext,
-      createUserClient
+    let repoRes;
+    try {
+      repoRes = await octokit.rest.repos.get({ owner, repo });
+      repoData = repoRes.data;
+    } catch (err) {
+      throw mapGitHubError(err, `Failed to inspect "${owner}/${repo}".`);
+    }
+
+    if (repoData?.private && (enforceAuthorization || authorization !== undefined)) {
+      await authorizeRepositoryRead({
+        authorization,
+        repoInput: `${owner}/${repo}`,
+        githubContext,
+        createUserClient
+      });
+    }
+
+    contentsRes = await octokit.rest.repos.getContent({ owner, repo, path: '' }).catch((err) => {
+      if (err?.status === 404) return { data: [], headers: err?.response?.headers };
+      throw mapGitHubError(err, 'Failed to inspect repository root directory.');
     });
   }
 
-  const [licenseRes, contentsRes] = await Promise.all([
-    octokit.rest?.licenses?.getForRepo
-      ? octokit.rest.licenses.getForRepo({ owner, repo }).catch((err) => {
-          if (err?.status === 404) return null;
-          throw mapGitHubError(err, 'Failed to read repository license metadata.');
-        })
-      : Promise.resolve(null),
-    octokit.rest.repos.getContent({ owner, repo, path: '' }).catch((err) => {
-      if (err?.status === 404) return { data: [], headers: err?.response?.headers };
-      throw mapGitHubError(err, 'Failed to inspect repository root directory.');
-    })
-  ]);
+  const licenseRes = octokit.rest?.licenses?.getForRepo
+    ? await octokit.rest.licenses.getForRepo({ owner, repo }).catch((err) => {
+        if (err?.status === 404) return null;
+        throw mapGitHubError(err, 'Failed to read repository license metadata.');
+      })
+    : null;
 
   const rateLimit = extractOctokitRateLimit(
-    contentsRes?.headers || licenseRes?.headers || repoRes?.headers
+    contentsRes?.headers || licenseRes?.headers
   );
   const rootEntries = Array.isArray(contentsRes?.data) ? contentsRes.data : [];
 
-  const report = buildAuditReport(repoRes.data, licenseRes?.data || null, rootEntries, rateLimit);
+  const report = buildAuditReport(repoData, licenseRes?.data || null, rootEntries, rateLimit);
   return {
     ...report,
     analysisSource: installed ? 'github-app-installation' : 'public-api',

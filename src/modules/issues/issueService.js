@@ -225,7 +225,7 @@ export async function findDuplicateIssues({ repoInput, issueNumber, candidateLim
  * @param {object} params.githubContext
  * @returns {Promise<object>}
  */
-export async function inspectStaleIssues({ repoInput, daysInactive = 30, exemptLabels, limit = 30, githubContext, authorization, createUserClient }) {
+export async function inspectStaleIssues({ repoInput, daysInactive = 30, exemptLabels, limit = 30, githubContext, authorization, createUserClient, context = null }) {
   let parsed;
   try {
     parsed = parseRepoInput(repoInput);
@@ -233,25 +233,41 @@ export async function inspectStaleIssues({ repoInput, daysInactive = 30, exemptL
     throw new ServiceError(400, error.message, 'INVALID_INPUT');
   }
   const { owner, repo, fullName } = parsed;
+  const isContextValid = Boolean(context && context.fullName === fullName);
 
   const days = Math.max(1, parseInt(daysInactive, 10) || 30);
   const scanLimit = Math.min(Math.max(1, parseInt(limit, 10) || 30), 50);
   const exempt = Array.isArray(exemptLabels) && exemptLabels.length > 0 ? exemptLabels : DEFAULT_EXEMPT_STALE_LABELS;
 
-  const { octokit } = await resolveClient(owner, repo, githubContext);
+  let octokit = null;
+  if (isContextValid) {
+    const clientRes = await context.resolveClient();
+    octokit = clientRes.octokit;
+    const repoData = await context.getRepoData();
+    if (repoData?.private) {
+      await context.authorizeRead();
+    }
+  } else {
+    const clientRes = await resolveClient(owner, repo, githubContext);
+    octokit = clientRes.octokit;
+
+    if (!octokit) {
+      throw new ServiceError(503, 'GitHub client is unavailable.', 'CLIENT_UNAVAILABLE');
+    }
+
+    const repoRes = await octokit.rest.repos.get({ owner, repo }).catch(() => null);
+    if (repoRes?.data?.private) {
+      await authorizeRepositoryRead({
+        authorization,
+        repoInput: fullName,
+        githubContext,
+        createUserClient
+      });
+    }
+  }
 
   if (!octokit) {
     throw new ServiceError(503, 'GitHub client is unavailable.', 'CLIENT_UNAVAILABLE');
-  }
-
-  const repoRes = await octokit.rest.repos.get({ owner, repo }).catch(() => null);
-  if (repoRes?.data?.private) {
-    await authorizeRepositoryRead({
-      authorization,
-      repoInput: fullName,
-      githubContext,
-      createUserClient
-    });
   }
 
   let issuesRes;

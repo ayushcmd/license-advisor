@@ -11,16 +11,10 @@ import { createFeatureBranch } from '../../core/pullRequests/branches.js';
 import { commitFiles } from '../../core/pullRequests/files.js';
 import { repositoryService } from '../../core/repository/service.js';
 import { authorizeRepositoryRead } from '../../core/github/authorize.js';
+import { mapGitHubError } from '../../core/github/errors.js';
 import { generateSecurityConfig, SECURITY_CHECKS } from './engine.js';
 
-function mapGitHubError(err, fallbackMessage) {
-  if (err instanceof ServiceError) return err;
-  const status = err?.status || 500;
-  if (status === 404) return new ServiceError(404, 'Repository not found or access denied.', 'NOT_FOUND');
-  if (status === 403) return new ServiceError(403, 'GitHub API access denied or rate limit exceeded.', 'INSUFFICIENT_PERMISSIONS');
-  if (status === 401) return new ServiceError(401, 'GitHub authentication failed or credentials expired.', 'AUTH_REQUIRED');
-  return new ServiceError(502, `${fallbackMessage}: ${err?.message || 'Upstream error'}`, 'GITHUB_API_ERROR');
-}
+export { mapGitHubError };
 
 /**
  * Perform a non-destructive security configuration inspection on a GitHub repository
@@ -28,9 +22,12 @@ function mapGitHubError(err, fallbackMessage) {
  * @param {object} params
  * @param {string} params.repoInput
  * @param {object} params.githubContext
+ * @param {string} [params.authorization]
+ * @param {Function} [params.createUserClient]
+ * @param {object} [params.context]
  * @returns {Promise<object>}
  */
-export async function auditSecurityRepository({ repoInput, githubContext, authorization, createUserClient }) {
+export async function auditSecurityRepository({ repoInput, githubContext, authorization, createUserClient, context = null }) {
   let parsed;
   try {
     parsed = parseRepoInput(repoInput);
@@ -38,54 +35,71 @@ export async function auditSecurityRepository({ repoInput, githubContext, author
     throw new ServiceError(400, error.message, 'INVALID_INPUT');
   }
   const { owner, repo, fullName } = parsed;
+  const isContextValid = Boolean(context && context.fullName === fullName);
 
   let octokit = null;
   let installed = false;
   let installationId = null;
+  let repoData = null;
 
-  if (githubContext?.isAppConfigured && typeof githubContext.resolveRepoInstallation === 'function') {
-    try {
-      const resolution = await githubContext.resolveRepoInstallation(owner, repo);
-      if (resolution?.installed && resolution.octokit) {
-        octokit = resolution.octokit;
-        installed = true;
-        installationId = resolution.installation?.id || null;
+  if (isContextValid) {
+    const clientRes = await context.resolveClient();
+    octokit = clientRes.octokit;
+    installed = clientRes.installed;
+    installationId = clientRes.installationId;
+    repoData = await context.getRepoData();
+
+    if (repoData?.private) {
+      await context.authorizeRead();
+    }
+  } else {
+    if (githubContext?.isAppConfigured && typeof githubContext.resolveRepoInstallation === 'function') {
+      try {
+        const resolution = await githubContext.resolveRepoInstallation(owner, repo);
+        if (resolution?.installed && resolution.octokit) {
+          octokit = resolution.octokit;
+          installed = true;
+          installationId = resolution.installation?.id || null;
+        }
+      } catch (err) {
+        throw mapGitHubError(err, 'Unable to verify GitHub App installation.');
       }
+    }
+
+    if (!octokit) {
+      octokit = githubContext?.createPublicOctokit ? githubContext.createPublicOctokit() : null;
+    }
+
+    if (!octokit) {
+      throw new ServiceError(503, 'GitHub client is unavailable.', 'CLIENT_UNAVAILABLE');
+    }
+
+    let repoRes;
+    try {
+      repoRes = await octokit.rest.repos.get({ owner, repo });
+      repoData = repoRes.data;
     } catch (err) {
-      throw mapGitHubError(err, 'Unable to verify GitHub App installation.');
+      throw mapGitHubError(err, `Failed to inspect "${fullName}".`);
+    }
+
+    if (repoData?.private) {
+      await authorizeRepositoryRead({
+        authorization,
+        repoInput: fullName,
+        githubContext,
+        createUserClient
+      });
     }
   }
 
-  if (!octokit) {
-    octokit = githubContext?.createPublicOctokit ? githubContext.createPublicOctokit() : null;
-  }
-
-  if (!octokit) {
-    throw new ServiceError(503, 'GitHub client is unavailable.', 'CLIENT_UNAVAILABLE');
-  }
-
-  let repoRes;
-  try {
-    repoRes = await octokit.rest.repos.get({ owner, repo });
-  } catch (err) {
-    throw mapGitHubError(err, `Failed to inspect "${fullName}".`);
-  }
-
-  if (repoRes.data?.private) {
-    await authorizeRepositoryRead({
-      authorization,
-      repoInput: fullName,
-      githubContext,
-      createUserClient
-    });
-  }
-
-  const defaultBranch = repoRes.data.default_branch || 'main';
+  const defaultBranch = repoData.default_branch || 'main';
 
   // Read root directory entries
   let rootEntries = [];
   try {
-    const rootRes = await octokit.rest.repos.getContent({ owner, repo, path: '', ref: defaultBranch });
+    const rootRes = isContextValid
+      ? await context.getContent('', defaultBranch)
+      : await octokit.rest.repos.getContent({ owner, repo, path: '', ref: defaultBranch });
     rootEntries = Array.isArray(rootRes.data) ? rootRes.data : [];
   } catch (err) {
     if (err?.status !== 404) throw mapGitHubError(err, 'Failed to inspect repository root directory.');
@@ -96,7 +110,9 @@ export async function auditSecurityRepository({ repoInput, githubContext, author
   let dotGithubEntries = [];
   if (hasDotGithub) {
     try {
-      const ghRes = await octokit.rest.repos.getContent({ owner, repo, path: '.github', ref: defaultBranch });
+      const ghRes = isContextValid
+        ? await context.getContent('.github', defaultBranch)
+        : await octokit.rest.repos.getContent({ owner, repo, path: '.github', ref: defaultBranch });
       dotGithubEntries = Array.isArray(ghRes.data) ? ghRes.data : [];
     } catch {
       dotGithubEntries = [];
@@ -108,7 +124,9 @@ export async function auditSecurityRepository({ repoInput, githubContext, author
   let docsEntries = [];
   if (hasDocs) {
     try {
-      const docsRes = await octokit.rest.repos.getContent({ owner, repo, path: 'docs', ref: defaultBranch });
+      const docsRes = isContextValid
+        ? await context.getContent('docs', defaultBranch)
+        : await octokit.rest.repos.getContent({ owner, repo, path: 'docs', ref: defaultBranch });
       docsEntries = Array.isArray(docsRes.data) ? docsRes.data : [];
     } catch {
       docsEntries = [];
@@ -120,7 +138,9 @@ export async function auditSecurityRepository({ repoInput, githubContext, author
   const hasWorkflows = dotGithubEntries.some((e) => e.name === 'workflows' && e.type === 'dir');
   if (hasWorkflows) {
     try {
-      const wfRes = await octokit.rest.repos.getContent({ owner, repo, path: '.github/workflows', ref: defaultBranch });
+      const wfRes = isContextValid
+        ? await context.getContent('.github/workflows', defaultBranch)
+        : await octokit.rest.repos.getContent({ owner, repo, path: '.github/workflows', ref: defaultBranch });
       workflowEntries = Array.isArray(wfRes.data) ? wfRes.data : [];
     } catch {
       workflowEntries = [];
@@ -155,7 +175,9 @@ export async function auditSecurityRepository({ repoInput, githubContext, author
     for (const wf of workflowEntries.slice(0, 5)) {
       if (wf.type === 'file' && /\.(ya?ml)$/i.test(wf.name)) {
         try {
-          const wfContentRes = await octokit.rest.repos.getContent({ owner, repo, path: wf.path, ref: defaultBranch });
+          const wfContentRes = isContextValid
+            ? await context.getContent(wf.path, defaultBranch)
+            : await octokit.rest.repos.getContent({ owner, repo, path: wf.path, ref: defaultBranch });
           if (wfContentRes?.data?.content) {
             const decoded = Buffer.from(wfContentRes.data.content, 'base64').toString('utf8');
             if (decoded.includes('github/codeql-action') || decoded.includes('actions/setup-codeql')) {
@@ -210,7 +232,7 @@ export async function auditSecurityRepository({ repoInput, githubContext, author
   let secretScanningDescription = 'Secret scanning status is not accessible in public repository metadata without admin privileges.';
   let secretScanningRecommendation = 'Verify that Secret Scanning and Push Protection are enabled in repository Security settings.';
 
-  const secAnalysis = repoRes.data.security_and_analysis;
+  const secAnalysis = repoData.security_and_analysis;
   if (secAnalysis) {
     const ss = secAnalysis.secret_scanning?.status;
     const pp = secAnalysis.secret_scanning_push_protection?.status;
@@ -227,7 +249,7 @@ export async function auditSecurityRepository({ repoInput, githubContext, author
       secretScanningDescription = 'Secret scanning is disabled in repository settings.';
       secretScanningRecommendation = 'Enable Secret Scanning in repository Security settings to detect exposed credentials.';
     }
-  } else if (!repoRes.data.private) {
+  } else if (!repoData.private) {
     // For public repositories, Secret Scanning is free on GitHub. Without admin token, note verification status cleanly.
     secretScanningStatus = 'not_verified';
     secretScanningDescription = 'Secret scanning configuration could not be verified without administrative repository permissions.';
@@ -364,15 +386,15 @@ export async function auditSecurityRepository({ repoInput, githubContext, author
 
   return {
     repository: {
-      fullName: repoRes.data.full_name,
-      owner: repoRes.data.owner?.login || owner,
-      repo: repoRes.data.name || repo,
-      description: repoRes.data.description || '',
-      htmlUrl: repoRes.data.html_url,
+      fullName: repoData.full_name,
+      owner: repoData.owner?.login || owner,
+      repo: repoData.name || repo,
+      description: repoData.description || '',
+      htmlUrl: repoData.html_url,
       defaultBranch,
-      private: Boolean(repoRes.data.private),
-      archived: Boolean(repoRes.data.archived),
-      fork: Boolean(repoRes.data.fork),
+      private: Boolean(repoData.private),
+      archived: Boolean(repoData.archived),
+      fork: Boolean(repoData.fork),
       installed,
       installationId
     },
