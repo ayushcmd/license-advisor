@@ -9,6 +9,9 @@
 import path from 'node:path';
 import { parseRepoInput } from '../../../public/js/analyzer.js';
 import { ServiceError } from '../../services/licenseService.js';
+import { createFeatureBranch } from '../../core/pullRequests/branches.js';
+import { commitFiles } from '../../core/pullRequests/files.js';
+import { repositoryService } from '../../core/repository/service.js';
 import {
   parseReadmeContent,
   extractMarkdownLinks,
@@ -95,33 +98,31 @@ export async function auditDocumentationRepository({ repoInput, githubContext })
 
   // 1. Detect README file in root or standard subdirectories
   let readmePath = null;
-  let readmeFormat = 'none';
+  let readmeFormat = 'markdown';
+  const rootReadme = rootEntries.find((e) => e.type === 'file' && /^readme(\.(md|markdown|rst|txt))?$/i.test(e.name));
 
-  const rootReadme = rootEntries.find((e) => e.type === 'file' && /^readme(\..+)?$/i.test(e.name));
   if (rootReadme) {
     readmePath = rootReadme.path;
-    const ext = rootReadme.name.split('.').pop().toLowerCase();
-    if (ext === 'md' || ext === 'markdown') readmeFormat = 'markdown';
-    else if (ext === 'rst') readmeFormat = 'restructuredtext';
-    else if (ext === 'txt') readmeFormat = 'text';
-    else readmeFormat = 'other';
+    if (/\.rst$/i.test(rootReadme.name)) readmeFormat = 'rst';
+    else if (/\.txt$/i.test(rootReadme.name) || !rootReadme.name.includes('.')) readmeFormat = 'text';
   } else {
-    // Check .github/ or docs/
-    for (const folder of ['.github', 'docs']) {
-      try {
-        const subRes = await octokit.rest.repos.getContent({ owner, repo, path: folder, ref: defaultBranch });
-        if (Array.isArray(subRes.data)) {
-          const subReadme = subRes.data.find((e) => e.type === 'file' && /^readme(\..+)?$/i.test(e.name));
+    // Check .github/ and docs/ for fallback README
+    for (const subDir of ['.github', 'docs']) {
+      const hasSubDir = rootEntries.some((e) => e.name === subDir && e.type === 'dir');
+      if (hasSubDir) {
+        try {
+          const subRes = await octokit.rest.repos.getContent({ owner, repo, path: subDir, ref: defaultBranch });
+          const entries = Array.isArray(subRes.data) ? subRes.data : [];
+          const subReadme = entries.find((e) => e.type === 'file' && /^readme(\.(md|markdown|rst|txt))?$/i.test(e.name));
           if (subReadme) {
             readmePath = subReadme.path;
-            const ext = subReadme.name.split('.').pop().toLowerCase();
-            if (ext === 'md' || ext === 'markdown') readmeFormat = 'markdown';
-            else readmeFormat = 'other';
+            if (/\.rst$/i.test(subReadme.name)) readmeFormat = 'rst';
+            else if (/\.txt$/i.test(subReadme.name) || !subReadme.name.includes('.')) readmeFormat = 'text';
             break;
           }
+        } catch {
+          // ignore subdirectory read error
         }
-      } catch {
-        // Folder does not exist
       }
     }
   }
@@ -257,10 +258,10 @@ export async function auditDocumentationRepository({ repoInput, githubContext })
           : 'missing',
     message: hasLicense
       ? 'License section or badge detected in README.'
-      : 'No license notice, link, or badge found in README.',
+      : 'No license reference or badge detected in the README.',
     recommendation: hasLicense
-      ? 'License is documented in README.'
-      : 'Add a License section or badge referencing your open source license.',
+      ? 'License is documented in the README.'
+      : 'Add a License section or badge referencing the repository license and linking to LICENSE.',
     canGenerateFix: true,
     fixTemplateId: 'readme'
   });
@@ -268,83 +269,83 @@ export async function auditDocumentationRepository({ repoInput, githubContext })
   // Check 6: Docs Directory
   checks.push({
     id: 'docs-directory',
-    name: 'Dedicated Docs Directory',
+    name: 'Extended Documentation Directory',
     category: 'structure',
     status: hasDocsDirectory ? 'passed' : 'needs_attention',
     message: hasDocsDirectory
-      ? 'Dedicated docs/ directory detected.'
-      : 'No docs/ directory found in repository root.',
+      ? 'Found "docs/" directory for extended guides and architecture notes.'
+      : 'No "docs/" directory found. For growing projects, a dedicated docs/ folder helps organize in-depth guides.',
     recommendation: hasDocsDirectory
-      ? 'Dedicated documentation directory is available.'
-      : 'Consider adding a docs/ directory for in-depth architecture and design documents as the project grows.',
+      ? 'Documentation directory is established.'
+      : 'Consider adding a docs/ directory for architectural guides, API documentation, and security disclosures.',
     canGenerateFix: false
   });
 
-  // Check 7: Changelog
+  // Check 7: Changelog Presence
   checks.push({
     id: 'changelog-present',
-    name: 'Changelog Presence',
+    name: 'Changelog Presence (CHANGELOG.md)',
     category: 'history',
     status: changelogPath ? 'passed' : 'missing',
     path: changelogPath,
     message: changelogPath
       ? `Found changelog file at "${changelogPath}".`
-      : 'No CHANGELOG file found in repository root.',
+      : 'No CHANGELOG.md file found in the repository.',
     recommendation: changelogPath
-      ? 'Changelog is maintained.'
-      : 'Add a CHANGELOG.md file to document notable changes across releases.',
+      ? 'Changelog is actively tracking releases.'
+      : 'Generate a CHANGELOG.md file based on Conventional Commits to inform contributors of version updates.',
     canGenerateFix: !changelogPath,
     fixTemplateId: 'changelog'
   });
 
-  // Calculate completeness score (transparent 0-100%)
+  // Calculate Documentation Completeness Score
+  // Checks evaluated: readme-present, readme-title-desc, readme-installation, readme-usage, readme-license, changelog-present
+  const coreChecks = checks.filter((c) => c.status === 'passed' || c.status === 'missing' || c.status === 'needs_attention');
   const passedCount = checks.filter((c) => c.status === 'passed').length;
   const missingCount = checks.filter((c) => c.status === 'missing').length;
   const needsAttentionCount = checks.filter((c) => c.status === 'needs_attention').length;
   const notVerifiedCount = checks.filter((c) => c.status === 'not_verified').length;
 
-  const completenessScore = Math.round((passedCount / checks.length) * 100);
+  const completenessScore = coreChecks.length > 0
+    ? Math.round((passedCount / coreChecks.length) * 100)
+    : 0;
 
-  // Recommendations
-  const recommendations = [];
-  for (const c of checks) {
-    if (c.status === 'missing' || c.status === 'needs_attention') {
-      recommendations.push({
-        id: c.id,
-        severity: c.status === 'missing' ? 'high' : 'medium',
-        title: c.name,
-        message: c.message,
-        action: c.recommendation,
-        canGenerateFix: Boolean(c.canGenerateFix),
-        fixTemplateId: c.fixTemplateId || null
-      });
-    }
-  }
+  // Extract recommendations
+  const recommendations = checks
+    .filter((c) => c.status === 'missing' || c.status === 'needs_attention')
+    .map((c) => ({
+      checkId: c.id,
+      name: c.name,
+      message: c.recommendation,
+      canGenerateFix: Boolean(c.canGenerateFix),
+      fixTemplateId: c.fixTemplateId || null
+    }));
 
   return {
     repository: {
       fullName: repoRes.data.full_name,
       owner: repoRes.data.owner?.login || owner,
       repo: repoRes.data.name || repo,
+      description: repoRes.data.description || '',
+      htmlUrl: repoRes.data.html_url,
       defaultBranch,
       private: Boolean(repoRes.data.private),
       archived: Boolean(repoRes.data.archived),
       installed,
       installationId: installation?.id || null
     },
-    appInstalled: installed,
     readme: {
       path: readmePath,
-      format: readmeFormat,
       sha: readmeSha,
-      lineCount: parsedReadme.lineCount || 0,
-      hasBadges: parsedReadme.hasBadges || false,
+      format: readmeFormat,
+      exists: Boolean(readmePath),
       sections: parsedReadme.detected,
-      headings: parsedReadme.rawHeadings || []
+      headings: parsedReadme.rawHeadings,
+      hasBadges: parsedReadme.hasBadges
     },
     changelog: {
       path: changelogPath,
-      present: Boolean(changelogPath)
+      exists: Boolean(changelogPath)
     },
     hasDocsDirectory,
     summary: {
@@ -538,5 +539,319 @@ export async function checkDocumentationLinks({ repoInput, path: filePath = 'REA
       external: externalCount
     },
     links: results
+  };
+}
+
+/**
+ * Preview proposed documentation changes and detect conflicts against the default branch
+ *
+ * @param {object} params
+ * @param {string} params.repoInput
+ * @param {Array<object>} params.changes e.g. [{ path: 'README.md', content: '...' }]
+ * @param {boolean} [params.replaceExisting=false]
+ * @param {object} params.githubContext
+ * @returns {Promise<object>}
+ */
+export async function previewDocumentationPr({ repoInput, changes, replaceExisting = false, githubContext }) {
+  let parsed;
+  try {
+    parsed = parseRepoInput(repoInput);
+  } catch (error) {
+    throw new ServiceError(400, error.message, 'INVALID_INPUT');
+  }
+  const { owner, repo, fullName } = parsed;
+
+  if (!Array.isArray(changes) || changes.length === 0) {
+    throw new ServiceError(400, 'Select at least one documentation file or change to preview.', 'INVALID_INPUT');
+  }
+
+  const { octokit, installed, installation } = await resolveClient(owner, repo, githubContext);
+
+  let repoRes;
+  try {
+    repoRes = await octokit.rest.repos.get({ owner, repo });
+  } catch (err) {
+    throw mapGitHubError(err, `Failed to load details for "${fullName}".`);
+  }
+
+  const defaultBranch = repoRes.data.default_branch || 'main';
+
+  const fileStatuses = [];
+  const conflicts = [];
+  const targetPaths = new Set();
+
+  for (const change of changes) {
+    if (!change || typeof change !== 'object' || !change.path) {
+      throw new ServiceError(400, 'Each change entry must include a valid file path.', 'INVALID_INPUT');
+    }
+    const filePath = String(change.path).trim().replace(/^\/+/, '');
+    if (targetPaths.has(filePath)) {
+      throw new ServiceError(400, `Duplicate file path "${filePath}" in documentation changes.`, 'INVALID_INPUT');
+    }
+    targetPaths.add(filePath);
+
+    let exists = false;
+    let existingSha = null;
+
+    try {
+      const existingRes = await octokit.rest.repos.getContent({ owner, repo, path: filePath, ref: defaultBranch });
+      if (existingRes?.data?.type === 'file' && existingRes.data.sha) {
+        exists = true;
+        existingSha = existingRes.data.sha;
+      }
+    } catch (err) {
+      if (err?.status !== 404) {
+        throw mapGitHubError(err, `Failed to check existing file "${filePath}".`);
+      }
+    }
+
+    if (exists && !replaceExisting) {
+      conflicts.push(filePath);
+    }
+
+    fileStatuses.push({
+      path: filePath,
+      action: exists ? 'update' : 'add',
+      exists,
+      sha: existingSha,
+      content: change.content || ''
+    });
+  }
+
+  return {
+    repository: {
+      fullName: repoRes.data.full_name,
+      owner: repoRes.data.owner?.login || owner,
+      repo: repoRes.data.name || repo,
+      defaultBranch,
+      private: Boolean(repoRes.data.private),
+      archived: Boolean(repoRes.data.archived),
+      installed
+    },
+    appInstalled: installed,
+    replaceExisting: Boolean(replaceExisting),
+    hasConflicts: conflicts.length > 0,
+    conflicts,
+    canProceed: conflicts.length === 0,
+    files: fileStatuses
+  };
+}
+
+/**
+ * Open a consolidated documentation pull request via the GitHub App
+ *
+ * @param {object} params
+ * @param {string} params.repoInput
+ * @param {Array<object>} params.changes
+ * @param {boolean} [params.replaceExisting=false]
+ * @param {string} [params.customBranch]
+ * @param {object} params.githubContext
+ * @returns {Promise<object>}
+ */
+export async function createDocumentationPullRequest({
+  repoInput,
+  changes,
+  replaceExisting = false,
+  customBranch,
+  githubContext
+}) {
+  let parsed;
+  try {
+    parsed = parseRepoInput(repoInput);
+  } catch (error) {
+    throw new ServiceError(400, error.message, 'INVALID_INPUT');
+  }
+  const { owner, repo, fullName } = parsed;
+
+  if (typeof replaceExisting !== 'boolean') {
+    throw new ServiceError(400, 'replaceExisting must be a boolean.', 'INVALID_INPUT');
+  }
+
+  if (!Array.isArray(changes) || changes.length === 0) {
+    throw new ServiceError(400, 'Select at least one documentation file or change to include in the pull request.', 'INVALID_INPUT');
+  }
+
+  if (!githubContext?.isAppConfigured || typeof githubContext.resolveRepoInstallation !== 'function') {
+    throw new ServiceError(
+      503,
+      'GitHub App credentials are not configured on the server. Set GITHUB_APP_ID and private key credentials in .env.',
+      'APP_NOT_CONFIGURED'
+    );
+  }
+
+  let resolution;
+  try {
+    resolution = await githubContext.resolveRepoInstallation(owner, repo);
+  } catch (err) {
+    if (err?.status === 401 || err?.status === 403) {
+      throw new ServiceError(403, 'GitHub App lacks permission to verify repository installation.', 'INSUFFICIENT_PERMISSIONS');
+    }
+    throw new ServiceError(502, `Unable to check GitHub App installation: ${err.message}`, 'GITHUB_API_ERROR');
+  }
+
+  if (!resolution?.installed || !resolution.octokit) {
+    throw new ServiceError(
+      404,
+      `GitHub App is not installed on "${fullName}". Install the GitHub App on this repository first.`,
+      'APP_NOT_INSTALLED'
+    );
+  }
+
+  const perms = resolution.installation?.permissions || {};
+  if (
+    (perms.contents && perms.contents !== 'write') ||
+    (perms.pull_requests && perms.pull_requests !== 'write')
+  ) {
+    throw new ServiceError(
+      403,
+      'GitHub App installation requires Contents (Read & write) and Pull Requests (Read & write) permissions.',
+      'INSUFFICIENT_PERMISSIONS'
+    );
+  }
+
+  const octokit = resolution.octokit;
+
+  let repoData;
+  try {
+    repoData = await repositoryService(octokit, { owner, repo }).metadata();
+  } catch (err) {
+    if (err?.status === 403) throw new ServiceError(403, `GitHub App lacks permission to read metadata for "${fullName}".`, 'INSUFFICIENT_PERMISSIONS');
+    if (err?.status === 404) throw new ServiceError(404, `Repository "${fullName}" was not found.`, 'NOT_FOUND');
+    throw new ServiceError(502, `Failed to load repository details: ${err.message}`, 'GITHUB_API_ERROR');
+  }
+
+  if (repoData.archived) {
+    throw new ServiceError(409, `Repository "${fullName}" is archived and read-only.`, 'REPO_ARCHIVED');
+  }
+
+  const defaultBranch = repoData.default_branch || 'main';
+
+  let baseSha;
+  try {
+    baseSha = await repositoryService(octokit, { owner, repo }).base(defaultBranch);
+  } catch (err) {
+    if (err?.status === 404 || err?.status === 409) {
+      throw new ServiceError(
+        409,
+        `Default branch "${defaultBranch}" has no commits yet. Create an initial commit before opening a documentation PR.`,
+        'EMPTY_REPOSITORY'
+      );
+    }
+    throw new ServiceError(502, `Failed to resolve default branch SHA: ${err.message}`, 'GITHUB_API_ERROR');
+  }
+
+  const filesToCommit = [];
+  const targetPaths = new Set();
+
+  for (const change of changes) {
+    const filePath = String(change.path).trim().replace(/^\/+/, '');
+    if (targetPaths.has(filePath)) {
+      throw new ServiceError(400, `Duplicate target file path "${filePath}".`, 'INVALID_INPUT');
+    }
+    targetPaths.add(filePath);
+
+    let existingSha = null;
+    try {
+      const { data } = await octokit.rest.repos.getContent({ owner, repo, path: filePath, ref: baseSha });
+      if (data?.type === 'file' && data.sha) {
+        existingSha = data.sha;
+      }
+    } catch (err) {
+      if (err?.status !== 404) {
+        throw mapGitHubError(err, `Failed to inspect default branch for "${filePath}".`);
+      }
+    }
+
+    if (existingSha && !replaceExisting) {
+      throw new ServiceError(
+        409,
+        `File "${filePath}" already exists on "${defaultBranch}". Enable replaceExisting to update it.`,
+        'FILE_ALREADY_EXISTS',
+        { existingFile: filePath }
+      );
+    }
+
+    const actionVerb = existingSha ? 'update' : 'add';
+    filesToCommit.push({
+      path: filePath,
+      content: change.content,
+      sha: replaceExisting && existingSha ? existingSha : undefined,
+      message: `docs: ${actionVerb} ${filePath}`
+    });
+  }
+
+  // Create isolated feature branch
+  const baseBranchName = customBranch && typeof customBranch === 'string' && /^[a-zA-Z0-9_\-\.\/]+$/.test(customBranch.trim())
+    ? customBranch.trim()
+    : 'chore/improve-docs';
+
+  const branch = await createFeatureBranch(octokit, {
+    owner,
+    repo,
+    defaultBranch,
+    baseSha,
+    baseBranchName
+  });
+
+  // Commit files sequentially
+  try {
+    await commitFiles(octokit, {
+      owner,
+      repo,
+      branch,
+      defaultBranch,
+      files: filesToCommit
+    });
+  } catch (err) {
+    throw new ServiceError(502, `Failed to commit documentation files: ${err.message}`, 'COMMIT_FAILED');
+  }
+
+  // Open Pull Request
+  const fileNames = filesToCommit.map((f) => f.path);
+  const prTitle = fileNames.length === 1
+    ? `docs: improve ${fileNames[0]}`
+    : `docs: update ${fileNames.slice(0, 2).join(' and ')}${fileNames.length > 2 ? ' and more' : ''}`;
+
+  const prBody = [
+    '## Summary',
+    '',
+    `This pull request updates project documentation using **[Open Workers](https://open-workers.onrender.com)**.`,
+    '',
+    '### Changed Files',
+    '',
+    ...filesToCommit.map((f) => `- \`${f.path}\``),
+    '',
+    '---',
+    '*Automated with [Open Workers](https://open-workers.onrender.com) &bull; Least-privilege GitHub automation*'
+  ].join('\n');
+
+  let prRes;
+  try {
+    prRes = await octokit.rest.pulls.create({
+      owner,
+      repo,
+      title: prTitle,
+      head: branch,
+      base: defaultBranch,
+      body: prBody
+    });
+  } catch (err) {
+    if (err?.status === 422) {
+      throw new ServiceError(409, `A pull request for branch "${branch}" already exists.`, 'PR_ALREADY_EXISTS');
+    }
+    throw mapGitHubError(err, 'Failed to create pull request.');
+  }
+
+  return {
+    success: true,
+    repository: fullName,
+    branch,
+    pullRequest: {
+      number: prRes.data.number,
+      htmlUrl: prRes.data.html_url,
+      title: prRes.data.title,
+      state: prRes.data.state
+    },
+    files: fileNames
   };
 }

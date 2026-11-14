@@ -20,6 +20,20 @@ import {
   previewSecurityPr,
   createSecurityPullRequest
 } from '../modules/security/securityService.js';
+import {
+  listDocumentationChecks,
+  listDocumentationTemplates,
+  generateReadme,
+  improveExistingReadme,
+  generateChangelog,
+  generateBadge
+} from '../modules/documentation/engine.js';
+import {
+  auditDocumentationRepository,
+  checkDocumentationLinks,
+  previewDocumentationPr,
+  createDocumentationPullRequest
+} from '../modules/documentation/documentationService.js';
 import { authorizeRepositoryWrite } from '../core/github/authorize.js';
 import { LICENSE_CATALOG, SPDX_DATA_VERSION } from '../../public/js/catalog-data.js';
 import {
@@ -158,6 +172,98 @@ export function createApiRouter({ githubContext, env = process.env, createUserCl
       const result = await createSecurityPullRequest({
         repoInput: req.body?.repo,
         configs: req.body?.configs,
+        replaceExisting: req.body?.replaceExisting,
+        customBranch: req.body?.branch,
+        githubContext
+      });
+      res.status(201).json(result);
+    })
+  );
+
+  // Documentation module endpoints
+  router.get('/documentation/checks', (_req, res) => {
+    res.json({ checks: listDocumentationChecks() });
+  });
+
+  router.get('/documentation/templates', (_req, res) => {
+    res.json({ templates: listDocumentationTemplates() });
+  });
+
+  router.post(
+    '/documentation/generate',
+    withServiceErrorHandling(async (req, res) => {
+      const templateId = req.body?.templateId;
+      if (templateId === 'readme') {
+        if (req.body?.mode === 'improve') {
+          const result = improveExistingReadme(req.body?.originalContent, req.body?.sections);
+          return res.json(result);
+        }
+        const content = generateReadme(req.body?.options || {});
+        return res.json({ templateId: 'readme', filename: 'README.md', content });
+      }
+
+      if (templateId === 'changelog') {
+        const content = generateChangelog(req.body?.options || {});
+        return res.json({ templateId: 'changelog', filename: 'CHANGELOG.md', content });
+      }
+
+      if (templateId === 'badges') {
+        if (Array.isArray(req.body?.badges)) {
+          const badges = req.body.badges.map(generateBadge).filter(Boolean).join(' ');
+          return res.json({ templateId: 'badges', content: badges });
+        }
+        const badge = generateBadge(req.body?.badge || {});
+        return res.json({ templateId: 'badges', content: badge });
+      }
+
+      throw new ServiceError(400, `Unknown documentation template "${templateId}". Supported: readme, changelog, badges.`, 'INVALID_INPUT');
+    })
+  );
+
+  router.post(
+    '/documentation/analyze',
+    withServiceErrorHandling(async (req, res) => {
+      const repoInput = req.body?.repo;
+      const report = await auditDocumentationRepository({ repoInput, githubContext });
+      res.json(report);
+    })
+  );
+
+  router.post(
+    '/documentation/check-links',
+    withServiceErrorHandling(async (req, res) => {
+      const repoInput = req.body?.repo;
+      const filePath = req.body?.path || 'README.md';
+      const result = await checkDocumentationLinks({ repoInput, path: filePath, githubContext });
+      res.json(result);
+    })
+  );
+
+  router.post(
+    '/documentation/preview-pr',
+    withServiceErrorHandling(async (req, res) => {
+      const preview = await previewDocumentationPr({
+        repoInput: req.body?.repo,
+        changes: req.body?.changes,
+        replaceExisting: req.body?.replaceExisting,
+        githubContext
+      });
+      res.json(preview);
+    })
+  );
+
+  router.post(
+    '/documentation/trigger-pr',
+    withServiceErrorHandling(async (req, res) => {
+      await authorizeRepositoryWrite({
+        authorization: req.get('authorization'),
+        repoInput: req.body?.repo,
+        githubContext,
+        createUserClient
+      });
+      const result = await createDocumentationPullRequest({
+        repoInput: req.body?.repo,
+        changes: req.body?.changes,
         replaceExisting: req.body?.replaceExisting,
         customBranch: req.body?.branch,
         githubContext
