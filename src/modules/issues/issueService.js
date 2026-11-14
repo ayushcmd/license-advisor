@@ -161,6 +161,124 @@ export async function analyzeIssue({ repoInput, issueNumber, githubContext }) {
  * @param {object} params.githubContext
  * @returns {Promise<object>}
  */
+export async function findDuplicateIssues({ repoInput, issueNumber, candidateLimit = 30, githubContext }) {
+  let parsed;
+  try {
+    parsed = parseRepoInput(repoInput);
+  } catch (error) {
+    throw new ServiceError(400, error.message, 'INVALID_INPUT');
+  }
+  const { owner, repo, fullName } = parsed;
+
+  const num = parseInt(issueNumber, 10);
+  if (isNaN(num) || num <= 0) {
+    throw new ServiceError(400, 'A valid positive numeric issue number is required.', 'INVALID_INPUT');
+  }
+
+  const { octokit } = await resolveClient(owner, repo, githubContext);
+
+  let targetIssue;
+  try {
+    const res = await octokit.rest.issues.get({ owner, repo, issue_number: num });
+    targetIssue = res.data;
+  } catch (err) {
+    throw mapGitHubError(err, `Failed to load issue #${num} for "${fullName}".`);
+  }
+
+  // Fetch recent open issues bounded to candidateLimit
+  const limit = Math.min(Math.max(1, parseInt(candidateLimit, 10) || 30), 50);
+  let candidatesRes;
+  try {
+    candidatesRes = await octokit.rest.issues.listForRepo({
+      owner,
+      repo,
+      state: 'open',
+      per_page: limit
+    });
+  } catch (err) {
+    throw mapGitHubError(err, `Failed to list open issues for "${fullName}".`);
+  }
+
+  const candidateList = Array.isArray(candidatesRes.data) ? candidatesRes.data : [];
+  const suggestions = findDuplicateCandidates(targetIssue, candidateList, { limit: 5 });
+
+  return {
+    repository: fullName,
+    targetIssue: {
+      number: targetIssue.number,
+      title: targetIssue.title
+    },
+    scannedCount: candidateList.filter((c) => !c.pull_request && c.number !== num).length,
+    suggestions,
+    notice: 'Suggestions are based on title and keyword text similarity. Never treat similarity as proof of duplicate.'
+  };
+}
+
+/**
+ * Inspect inactive or stale issues
+ *
+ * @param {object} params
+ * @param {string} params.repoInput
+ * @param {number} [params.daysInactive=30]
+ * @param {Array<string>} [params.exemptLabels]
+ * @param {number} [params.limit=30]
+ * @param {object} params.githubContext
+ * @returns {Promise<object>}
+ */
+export async function inspectStaleIssues({ repoInput, daysInactive = 30, exemptLabels, limit = 30, githubContext }) {
+  let parsed;
+  try {
+    parsed = parseRepoInput(repoInput);
+  } catch (error) {
+    throw new ServiceError(400, error.message, 'INVALID_INPUT');
+  }
+  const { owner, repo, fullName } = parsed;
+
+  const days = Math.max(1, parseInt(daysInactive, 10) || 30);
+  const scanLimit = Math.min(Math.max(1, parseInt(limit, 10) || 30), 50);
+  const exempt = Array.isArray(exemptLabels) && exemptLabels.length > 0 ? exemptLabels : DEFAULT_EXEMPT_STALE_LABELS;
+
+  const { octokit } = await resolveClient(owner, repo, githubContext);
+
+  let issuesRes;
+  try {
+    issuesRes = await octokit.rest.issues.listForRepo({
+      owner,
+      repo,
+      state: 'open',
+      sort: 'updated',
+      direction: 'asc',
+      per_page: scanLimit
+    });
+  } catch (err) {
+    throw mapGitHubError(err, `Failed to list issues for "${fullName}".`);
+  }
+
+  const rawIssues = (Array.isArray(issuesRes.data) ? issuesRes.data : []).filter((i) => !i.pull_request);
+  const evaluated = rawIssues.map((issue) => evaluateStaleIssue(issue, { daysInactive: days, exemptLabels: exempt }));
+  const staleIssues = evaluated.filter((e) => e.isStale);
+
+  return {
+    repository: fullName,
+    daysInactive: days,
+    scannedIssues: rawIssues.length,
+    staleCount: staleIssues.length,
+    exemptLabels: exempt,
+    staleIssues,
+    notice: 'Open Workers operates statelessly; stale issues are inspected on demand. Automatic issue closure is not enabled by default.'
+  };
+}
+
+/**
+ * Preview label modifications for an issue without mutating
+ *
+ * @param {object} params
+ * @param {string} params.repoInput
+ * @param {number|string} params.issueNumber
+ * @param {Array<string>} params.labelsToAdd
+ * @param {object} params.githubContext
+ * @returns {Promise<object>}
+ */
 export async function previewIssueLabels({ repoInput, issueNumber, labelsToAdd = [], githubContext }) {
   let parsed;
   try {

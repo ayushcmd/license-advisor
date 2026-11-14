@@ -442,3 +442,148 @@ export function formatWelcomeMessage({ username, repo, customMessage, links = {}
 /**
  * Tokenize text into normalized significant words
  */
+function tokenizeWords(text = '') {
+  const stopWords = new Set([
+    'a', 'an', 'the', 'and', 'or', 'but', 'is', 'are', 'was', 'were', 'in', 'on', 'at', 'to', 'for', 'with',
+    'by', 'about', 'as', 'into', 'like', 'through', 'after', 'over', 'between', 'out', 'against', 'during',
+    'without', 'before', 'under', 'around', 'among', 'this', 'that', 'these', 'those', 'it', 'its', 'from',
+    'not', 'be', 'can', 'will', 'do', 'does', 'did', 'have', 'has', 'had', 'when', 'where', 'which', 'who',
+    'why', 'how', 'all', 'any', 'both', 'each', 'few', 'more', 'most', 'some', 'such', 'no', 'nor', 'only'
+  ]);
+
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]/g, ' ')
+    .split(/\s+/)
+    .filter((w) => w.length > 2 && !stopWords.has(w));
+}
+
+/**
+ * Calculate Jaccard text similarity between two sets of tokens
+ */
+function calculateJaccardSimilarity(tokensA, tokensB) {
+  if (tokensA.length === 0 || tokensB.length === 0) return 0;
+  const setA = new Set(tokensA);
+  const setB = new Set(tokensB);
+  let intersection = 0;
+  for (const token of setA) {
+    if (setB.has(token)) intersection++;
+  }
+  const union = new Set([...setA, ...setB]).size;
+  return union > 0 ? intersection / union : 0;
+}
+
+/**
+ * Find potentially related or duplicate candidate issues
+ *
+ * @param {object} targetIssue
+ * @param {Array<object>} candidateIssues
+ * @param {object} [options]
+ * @param {number} [options.limit=5]
+ * @param {number} [options.minScore=0.25]
+ * @returns {Array<object>}
+ */
+export function findDuplicateCandidates(targetIssue = {}, candidateIssues = [], { limit = 5, minScore = 0.25 } = {}) {
+  const targetNumber = targetIssue.number;
+  const targetTitleTokens = tokenizeWords(targetIssue.title || '');
+  const targetBodyTokens = tokenizeWords(targetIssue.body || '');
+  const targetTokens = [...targetTitleTokens, ...targetBodyTokens];
+
+  const results = [];
+
+  for (const cand of candidateIssues) {
+    if (!cand || cand.number === targetNumber) continue;
+    // Exclude pull requests
+    if (cand.pull_request) continue;
+
+    const candTitleTokens = tokenizeWords(cand.title || '');
+    const candBodyTokens = tokenizeWords(cand.body || '');
+    const candTokens = [...candTitleTokens, ...candBodyTokens];
+
+    // Title similarity has higher weight (60%) than full body similarity (40%)
+    const titleSim = calculateJaccardSimilarity(targetTitleTokens, candTitleTokens);
+    const bodySim = calculateJaccardSimilarity(targetTokens, candTokens);
+    const combinedScore = (titleSim * 0.6) + (bodySim * 0.4);
+
+    if (combinedScore >= minScore) {
+      // Find matching keywords
+      const candSet = new Set(candTokens);
+      const matchingKeywords = Array.from(new Set(targetTitleTokens.filter((t) => candSet.has(t)))).slice(0, 5);
+
+      results.push({
+        number: cand.number,
+        title: cand.title,
+        url: cand.html_url || `https://github.com/issues/${cand.number}`,
+        similarityScore: Math.round(combinedScore * 100),
+        matchingKeywords,
+        state: cand.state || 'open',
+        explanation: matchingKeywords.length > 0
+          ? `Shares keywords: "${matchingKeywords.join(', ')}"`
+          : 'Similar vocabulary in issue title/description'
+      });
+    }
+  }
+
+  // Sort descending by similarity score and slice
+  return results.sort((a, b) => b.similarityScore - a.similarityScore).slice(0, limit);
+}
+
+/**
+ * Inspect an issue to evaluate if it is stale under repository criteria
+ *
+ * @param {object} issue
+ * @param {object} [options]
+ * @param {number} [options.daysInactive=30]
+ * @param {Array<string>} [options.exemptLabels]
+ * @returns {object}
+ */
+export function evaluateStaleIssue(issue = {}, { daysInactive = 30, exemptLabels = DEFAULT_EXEMPT_STALE_LABELS } = {}) {
+  const issueNumber = issue.number || null;
+  const updatedAt = issue.updated_at ? new Date(issue.updated_at) : new Date();
+  const now = new Date();
+  const diffDays = Math.floor((now - updatedAt) / (1000 * 60 * 60 * 24));
+
+  const labels = Array.isArray(issue.labels)
+    ? issue.labels.map((l) => (typeof l === 'string' ? l.toLowerCase() : String(l?.name || '').toLowerCase()))
+    : [];
+
+  const exempt = labels.some((l) => exemptLabels.map((e) => e.toLowerCase()).includes(l));
+  const isSecurity = labels.includes('security') || /security|vulnerabilit/i.test(issue.title || '');
+
+  const isStale = !exempt && !isSecurity && diffDays >= daysInactive;
+
+  let reason = '';
+  if (exempt) {
+    reason = 'Exempt from stale status by protected label.';
+  } else if (isSecurity) {
+    reason = 'Security-related issues are exempt from automated stale classification.';
+  } else if (isStale) {
+    reason = `No activity recorded for ${diffDays} days (threshold is ${daysInactive} days).`;
+  } else {
+    reason = `Active within the last ${diffDays} days (threshold is ${daysInactive} days).`;
+  }
+
+  return {
+    issueNumber,
+    title: issue.title || '',
+    daysInactive: diffDays,
+    thresholdDays: daysInactive,
+    updatedAt: issue.updated_at,
+    isStale,
+    isExempt: exempt || isSecurity,
+    reason,
+    suggestedAction: isStale ? 'Add stale label and notify participants' : 'No action needed'
+  };
+}
+
+/**
+ * Generate draft release notes from merged pull requests
+ *
+ * @param {object} params
+ * @param {Array<object>} params.pulls
+ * @param {string} [params.releaseTitle='Release Notes']
+ * @param {string} [params.previousTag]
+ * @param {string} [params.currentTag]
+ * @param {string} [params.repoUrl]
+ * @returns {string}
+ */
